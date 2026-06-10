@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Carga CSS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.filters select { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; border: 0.5px solid rgba(255,255,255,0.2); cursor: pointer; }
+.filters select option { background: #1a1a2e; }
+.container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; }
+.stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
+.stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-warn .stat-num { color: #854f0b; }
+.grid-2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.tech-row { display: flex; align-items: center; gap: 10px; padding: 0.6rem 0; border-bottom: 0.5px solid #f5f5f0; }
+.tech-row:last-child { border-bottom: none; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 500; flex-shrink: 0; }
+.tech-info { flex: 1; min-width: 0; }
+.tech-name { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tech-meta { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+.bar-wrap { flex: 1; }
+.bar-bg { height: 6px; background: #f0f0e8; border-radius: 3px; position: relative; overflow: visible; }
+.bar-teorico { position: absolute; top: 0; height: 100%; border-radius: 3px; background: #b5d4f4; opacity: 0.7; }
+.bar-real { position: absolute; top: 0; height: 100%; border-radius: 3px; background: #1d9e75; opacity: 0.85; }
+.bar-over { background: #e24b4a !important; }
+.bar-labels { display: flex; justify-content: space-between; font-size: 0.7rem; margin-top: 3px; color: #aaa; }
+.pct-badge { font-size: 0.75rem; font-weight: 500; min-width: 36px; text-align: right; }
+.pct-ok { color: #0f6e56; }
+.pct-warn { color: #854f0b; }
+.pct-over { color: #a32d2d; }
+.pct-none { color: #bbb; }
+.tag { display: inline-block; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; }
+.tag-blue { background: #eeeefa; color: #4a4a8a; }
+.tag-green { background: #e1f5ee; color: #0f6e56; }
+.tag-warn { background: #faeeda; color: #854f0b; }
+.tag-red { background: #fcebeb; color: #a32d2d; }
+.resp-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 0.5px solid #f5f5f0; font-size: 0.82rem; }
+.resp-row:last-child { border-bottom: none; }
+.legend { display: flex; gap: 12px; font-size: 0.72rem; color: #888; margin-top: 0.75rem; }
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 6px; border-radius: 2px; }
+.loading { text-align: center; padding: 3rem; color: #aaa; font-size: 0.875rem; }
+.spinner { width: 28px; height: 28px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 0.75rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.semana-label { font-size: 0.78rem; color: #9090b0; }
+.no-data { text-align: center; padding: 1.5rem; color: #bbb; font-size: 0.82rem; }
+@media (max-width: 700px) { .stats-grid { grid-template-columns: 1fr 1fr; } .grid-2, .grid-2b { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>📊 Dashboard de carga CSS</h1>
+    <div class="semana-label" id="semanaLabel">Cargando...</div>
+  </div>
+  <div class="filters">
+    <select id="filtroSemana" onchange="renderAll()"><option value="">Todas las semanas</option></select>
+    <select id="filtroContrato" onchange="renderAll()"><option value="">Todos los contratos</option></select>
+    <select id="filtroTerritorio" onchange="renderAll()"><option value="">Todos los territorios</option></select>
+  </div>
+</div>
+
+<div class="container">
+  <div id="loadingDiv" class="loading"><div class="spinner"></div>Cargando datos...</div>
+  <div id="mainDash" style="display:none;">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Carga por técnico — teórica vs real</div>
+        <div id="techList"></div>
+        <div class="legend">
+          <span><span class="legend-dot" style="background:#b5d4f4;opacity:0.7;"></span>Teórico</span>
+          <span><span class="legend-dot" style="background:#1d9e75;opacity:0.85;"></span>Real</span>
+          <span><span class="legend-dot" style="background:#e24b4a;"></span>Sobrecarga</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Estado de respuestas — semana actual</div>
+        <div id="respList"></div>
+      </div>
+    </div>
+    <div class="grid-2b">
+      <div class="card">
+        <div class="card-title">Carga por contrato</div>
+        <canvas id="chartContrato" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Carga por territorio</div>
+        <canvas id="chartTerritorio" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Detalle de respuestas</div>
+      <div id="detalleTabla" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+var obras = [], respuestas = [];
+var chartContrato = null, chartTerritorio = null;
+
+async function fetchAll() {
+  const [o, r] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/respuestas?select=*&limit=1000&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+  ]);
+  obras = Array.isArray(o) ? o : [];
+  respuestas = Array.isArray(r) ? r : [];
+}
+
+function getFilters() {
+  return {
+    semana: document.getElementById('filtroSemana').value,
+    contrato: document.getElementById('filtroContrato').value,
+    territorio: document.getElementById('filtroTerritorio').value
+  };
+}
+
+function populateFilters() {
+  const semanas = [...new Set(respuestas.map(r => r.semana_inicio))].sort().reverse();
+  const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))].sort();
+  const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
+
+  const sel = document.getElementById('filtroSemana');
+  sel.innerHTML = '<option value="">Todas las semanas</option>';
+  semanas.forEach(s => { const op = document.createElement('option'); op.value = s; op.textContent = 'Semana del ' + s; sel.appendChild(op); });
+  if (semanas.length) sel.value = semanas[0];
+
+  const selC = document.getElementById('filtroContrato');
+  contratos.forEach(s => { const op = document.createElement('option'); op.value = s; op.textContent = s; selC.appendChild(op); });
+
+  const selT = document.getElementById('filtroTerritorio');
+  territorios.forEach(s => { const op = document.createElement('option'); op.value = s; op.textContent = s; selT.appendChild(op); });
+}
+
+function getFilteredResp() {
+  const f = getFilters();
+  return respuestas.filter(r =>
+    (!f.semana || r.semana_inicio === f.semana) &&
+    (!f.contrato || obras.find(o => o.cod_obra === r.cod_obra && o.cod_contrato === f.contrato)) &&
+    (!f.territorio || obras.find(o => o.cod_obra === r.cod_obra && o.territorio === f.territorio))
+  );
+}
+
+function calcCargaReal(r) {
+  const h = (r.actas_visita||0)*0.75 + (r.reuniones||0)*3 + (r.informes_mensuales||0)*0.75 +
+            (r.revision_pss||0)*1 + (r.anotaciones||0)*0.25 + (r.anexos||0)*0.5;
+  return Math.round((h / 30) * 100);
+}
+
+function renderStats(resp) {
+  const tecnicos = [...new Set(obras.map(o => o.tecnico))];
+  const conResp = [...new Set(resp.map(r => r.tecnico))];
+  const sobrecargas = conResp.filter(t => {
+    const total = resp.filter(r => r.tecnico === t).reduce((s, r) => s + calcCargaReal(r), 0);
+    return total > 90;
+  });
+  document.getElementById('statsGrid').innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + obras.length + '</div><div class="stat-label">Obras activas</div></div>' +
+    '<div class="stat-box' + (sobrecargas.length ? ' stat-warn' : '') + '"><div class="stat-num">' + sobrecargas.length + '</div><div class="stat-label">Sobrecargas >90%</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>';
+  const f = getFilters();
+  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  document.getElementById('semanaLabel').textContent = semana ? 'Semana del ' + semana : 'Sin datos de encuesta aún';
+}
+
+function renderTechList(resp) {
+  const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+  let html = '';
+  tecnicos.forEach(t => {
+    const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const obrasTec = obras.filter(o => o.tecnico === t);
+    const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
+    const respTec = resp.filter(r => r.tecnico === t);
+    const cargaReal = respTec.reduce((s, r) => s + calcCargaReal(r), 0);
+    const tieneResp = respTec.length > 0;
+    const pctT = Math.min(cargaTeorica, 100);
+    const isOver = cargaReal > 90;
+    let pctClass = 'pct-none', pctText = '—';
+    if (tieneResp) {
+      pctText = cargaReal + '%';
+      pctClass = isOver ? 'pct-over' : cargaReal > 70 ? 'pct-warn' : 'pct-ok';
+    }
+    html += '<div class="tech-row">'
+      + '<div class="avatar">' + ini + '</div>'
+      + '<div class="tech-info"><div class="tech-name">' + t + '</div>'
+      + '<div class="tech-meta">' + obrasTec.length + ' obras · teórico: ' + Math.round(cargaTeorica) + '%</div></div>'
+      + '<div class="bar-wrap"><div class="bar-bg">'
+      + '<div class="bar-teorico" style="width:' + pctT + '%;"></div>'
+      + (tieneResp ? '<div class="bar-real' + (isOver?' bar-over':'') + '" style="width:' + Math.min(cargaReal,100) + '%;"></div>' : '')
+      + '</div></div>'
+      + '<div class="pct-badge ' + pctClass + '">' + pctText + '</div>'
+      + '</div>';
+  });
+  document.getElementById('techList').innerHTML = html || '<div class="no-data">Sin datos</div>';
+}
+
+function renderRespList(resp) {
+  const f = getFilters();
+  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+  const conResp = [...new Set(resp.filter(r => !f.semana || r.semana_inicio === semana).map(r => r.tecnico))];
+  let html = '';
+  tecnicos.forEach(t => {
+    const tiene = conResp.includes(t);
+    html += '<div class="resp-row">'
+      + '<span>' + t.split(' ').slice(0,2).join(' ') + '</span>'
+      + '<span class="tag ' + (tiene ? 'tag-green' : 'tag-warn') + '">' + (tiene ? '✓ Respondido' : '⏳ Pendiente') + '</span>'
+      + '</div>';
+  });
+  document.getElementById('respList').innerHTML = html || '<div class="no-data">Sin datos</div>';
+}
+
+function renderChartContrato(resp) {
+  const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))].sort();
+  const teoricos = contratos.map(c => {
+    const oc = obras.filter(o => o.cod_contrato === c);
+    return oc.length ? Math.round(oc.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0)/oc.length) : 0;
+  });
+  const reales = contratos.map(c => {
+    const oc = obras.filter(o => o.cod_contrato === c);
+    const tecs = [...new Set(oc.map(o => o.tecnico))];
+    const vals = tecs.map(t => resp.filter(r => r.tecnico === t).reduce((s,r) => s+calcCargaReal(r), 0));
+    return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+  });
+  if (chartContrato) chartContrato.destroy();
+  chartContrato = new Chart(document.getElementById('chartContrato').getContext('2d'), {
+    type: 'bar',
+    data: { labels: contratos, datasets: [
+      { label: 'Teórico', data: teoricos, backgroundColor: 'rgba(181,212,244,0.8)', borderRadius: 4 },
+      { label: 'Real', data: reales, backgroundColor: 'rgba(29,158,117,0.8)', borderRadius: 4 }
+    ]},
+    options: { responsive: true, plugins: { legend: { labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v+'%', font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } } }
+  });
+}
+
+function renderChartTerritorio(resp) {
+  const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
+  const reales = territorios.map(t => {
+    const ot = obras.filter(o => o.territorio === t);
+    const tecs = [...new Set(ot.map(o => o.tecnico))];
+    const vals = tecs.map(tc => resp.filter(r => r.tecnico === tc).reduce((s,r) => s+calcCargaReal(r), 0));
+    return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+  });
+  if (chartTerritorio) chartTerritorio.destroy();
+  chartTerritorio = new Chart(document.getElementById('chartTerritorio').getContext('2d'), {
+    type: 'bar',
+    data: { labels: territorios, datasets: [{ label: 'Carga real media', data: reales, backgroundColor: 'rgba(74,74,138,0.75)', borderRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v+'%', font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } } }
+  });
+}
+
+function renderDetalle(resp) {
+  if (!resp.length) { document.getElementById('detalleTabla').innerHTML = '<div class="no-data">No hay respuestas para mostrar</div>'; return; }
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;"><thead><tr style="background:#f5f5f0;">';
+  ['Técnico','Nº Obra','Cliente','Semana','Rev.PSS','Anot.','Reun.','Anex.','Inf.','Actas','Carga est.'].forEach(h => {
+    html += '<th style="padding:6px 8px;text-align:left;font-weight:500;color:#888;font-size:0.7rem;text-transform:uppercase;border-bottom:0.5px solid #e0e0d8;">' + h + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  resp.slice(0,100).forEach(r => {
+    const carga = calcCargaReal(r);
+    const color = carga > 90 ? '#a32d2d' : carga > 70 ? '#854f0b' : '#0f6e56';
+    html += '<tr style="border-bottom:0.5px solid #f0f0e8;">';
+    html += '<td style="padding:5px 8px;white-space:nowrap;">' + r.tecnico + '</td>';
+    html += '<td style="padding:5px 8px;"><span style="background:#eeeefa;color:#4a4a8a;padding:1px 6px;border-radius:10px;font-size:0.7rem;">' + r.cod_obra + '</span></td>';
+    html += '<td style="padding:5px 8px;color:#888;">' + (r.cliente||'—') + '</td>';
+    html += '<td style="padding:5px 8px;color:#888;">' + r.semana_inicio + '</td>';
+    [r.revision_pss,r.anotaciones,r.reuniones,r.anexos,r.informes_mensuales,r.actas_visita].forEach(v => {
+      html += '<td style="padding:5px 8px;text-align:center;">' + (v||0) + '</td>';
+    });
+    html += '<td style="padding:5px 8px;text-align:center;font-weight:500;color:' + color + ';">' + carga + '%</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('detalleTabla').innerHTML = html;
+}
+
+function renderAll() {
+  const resp = getFilteredResp();
+  renderStats(resp);
+  renderTechList(resp);
+  renderRespList(resp);
+  renderChartContrato(resp);
+  renderChartTerritorio(resp);
+  renderDetalle(resp);
+}
+
+async function init() {
+  await fetchAll();
+  populateFilters();
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('mainDash').style.display = 'block';
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
