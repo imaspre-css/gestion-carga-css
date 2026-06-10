@@ -38,6 +38,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .done-icon { font-size: 3rem; margin-bottom: 1rem; }
 .done h2 { font-size: 1.3rem; font-weight: 600; color: #1a1a2e; margin-bottom: 0.5rem; }
 .done p { font-size: 0.875rem; color: #666; line-height: 1.6; max-width: 320px; margin: 0 auto; }
+.loading-state { text-align: center; padding: 4rem 1.5rem; }
+.loading-state p { font-size: 0.875rem; color: #888; }
+.spinner { width: 32px; height: 32px; border: 3px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .error-state { display: none; text-align: center; padding: 4rem 1.5rem; }
 .error-state p { font-size: 0.875rem; color: #888; }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.82rem; display: none; z-index: 999; }
@@ -49,7 +53,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
   <p id="headerSub">Cargando...</p>
 </div>
 <div class="container">
-  <div id="mainContent">
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <p>Cargando tus obras...</p>
+  </div>
+  <div id="mainContent" style="display:none;">
     <div class="tech-bar">
       <div class="name" id="techName">—</div>
       <div class="week" id="weekLabel">—</div>
@@ -74,13 +82,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 var TAREAS = ['Revision PSS','Anotaciones','Reuniones','Anexos','Informes mensuales','Actas visita'];
+var SESSION_DATA = null;
 
-function getParams() {
-  try {
-    var h = window.location.hash.slice(1);
-    if (h) return JSON.parse(decodeURIComponent(atob(h)));
-  } catch(e) {}
-  return null;
+function show(id) {
+  ['loadingState','mainContent','doneState','errorState'].forEach(function(s) {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
 }
 
 function cnt(id, d) {
@@ -96,24 +103,21 @@ function showToast(msg, dur) {
 }
 
 function renderForm(data) {
+  SESSION_DATA = data;
   document.getElementById('techName').textContent = data.tecnico;
   document.getElementById('weekLabel').textContent = 'Semana del ' + data.semana_inicio + ' al ' + data.semana_fin;
   document.getElementById('headerSub').textContent = 'Semana del ' + data.semana_inicio + ' al ' + data.semana_fin;
+  var obras = data.obras;
   var html = '';
-  for (var i = 0; i < data.obras.length; i++) {
-    var o = data.obras[i];
-    html += '<div class="obra-card">';
-    html += '<div class="obra-head">';
-    html += '<div class="obra-meta">';
+  for (var i = 0; i < obras.length; i++) {
+    var o = obras[i];
+    html += '<div class="obra-card"><div class="obra-head"><div class="obra-meta">';
     if (o.cliente) html += '<span class="cliente-tag">' + o.cliente + '</span>';
     html += '<span class="obra-cod">' + o.num + '</span>';
-    html += '</div>';
-    html += '<div class="obra-desc">' + (o.desc || 'Sin descripcion') + '</div>';
-    html += '</div>';
+    html += '</div><div class="obra-desc">' + (o.desc || 'Sin descripcion') + '</div></div>';
     html += '<div class="tareas">';
     for (var j = 0; j < TAREAS.length; j++) {
-      html += '<div class="tarea-row">';
-      html += '<span class="tarea-label">' + TAREAS[j] + '</span>';
+      html += '<div class="tarea-row"><span class="tarea-label">' + TAREAS[j] + '</span>';
       html += '<div class="counter">';
       html += '<button type="button" onclick="cnt(\'t_' + i + '_' + j + '\',-1)">-</button>';
       html += '<input type="number" id="t_' + i + '_' + j + '" value="0" min="0">';
@@ -123,29 +127,48 @@ function renderForm(data) {
     html += '</div></div>';
   }
   document.getElementById('obrasList').innerHTML = html;
+  show('mainContent');
+}
+
+async function loadSession() {
+  var hash = window.location.hash.slice(1);
+  if (!hash) { show('errorState'); return; }
+  if (hash.length <= 10) {
+    try {
+      var res = await fetch(SUPABASE_URL + '/rest/v1/sesiones?id=eq.' + hash + '&select=*', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      var rows = await res.json();
+      if (rows && rows.length > 0) { renderForm(rows[0]); return; }
+    } catch(e) {}
+  }
+  try {
+    var data = JSON.parse(decodeURIComponent(atob(hash)));
+    if (data && data.tecnico) { renderForm(data); return; }
+  } catch(e) {}
+  show('errorState');
 }
 
 async function enviar() {
-  var data = getParams();
-  if (!data) return;
+  if (!SESSION_DATA) return;
   var btn = document.getElementById('btnEnviar');
   btn.disabled = true;
   btn.textContent = 'Guardando...';
   var errores = 0;
-  var camposTareas = ['revision_pss','anotaciones','reuniones','anexos','informes_mensuales','actas_visita'];
-  for (var i = 0; i < data.obras.length; i++) {
-    var o = data.obras[i];
+  var campos = ['revision_pss','anotaciones','reuniones','anexos','informes_mensuales','actas_visita'];
+  for (var i = 0; i < SESSION_DATA.obras.length; i++) {
+    var o = SESSION_DATA.obras[i];
     var payload = {
-      tecnico: data.tecnico,
+      tecnico: SESSION_DATA.tecnico,
       cod_obra: o.num,
       desc_obra: o.desc || '',
       cliente: o.cliente || '',
-      semana_inicio: data.semana_inicio,
-      semana_fin: data.semana_fin || ''
+      semana_inicio: SESSION_DATA.semana_inicio,
+      semana_fin: SESSION_DATA.semana_fin || ''
     };
-    for (var j = 0; j < camposTareas.length; j++) {
+    for (var j = 0; j < campos.length; j++) {
       var el = document.getElementById('t_' + i + '_' + j);
-      payload[camposTareas[j]] = parseInt(el ? el.value : 0) || 0;
+      payload[campos[j]] = parseInt(el ? el.value : 0) || 0;
     }
     try {
       var res = await fetch(SUPABASE_URL + '/rest/v1/respuestas', {
@@ -162,8 +185,7 @@ async function enviar() {
     } catch(e) { errores++; }
   }
   if (errores === 0) {
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('doneState').style.display = 'block';
+    show('doneState');
   } else {
     btn.disabled = false;
     btn.textContent = 'Enviar respuestas';
@@ -171,13 +193,7 @@ async function enviar() {
   }
 }
 
-var data = getParams();
-if (data && data.tecnico && data.obras && data.obras.length > 0) {
-  renderForm(data);
-} else {
-  document.getElementById('mainContent').style.display = 'none';
-  document.getElementById('errorState').style.display = 'block';
-}
+loadSession();
 </script>
 </body>
 </html>
