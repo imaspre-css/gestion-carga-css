@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Carga CSS — Imaspre</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1.5rem 2rem; }
+.header h1 { font-size: 1.25rem; font-weight: 500; }
+.header p { font-size: 0.82rem; color: #9090b0; margin-top: 4px; }
+.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+.stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; text-align: center; }
+.stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
+.stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-warn .stat-num { color: #854f0b; }
+.modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.module-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: #1a1a1a; transition: all 0.15s; display: flex; flex-direction: column; gap: 0.5rem; }
+.module-card:hover { border-color: #4a4a8a; box-shadow: 0 4px 12px rgba(74,74,138,0.1); transform: translateY(-1px); }
+.module-icon { font-size: 1.75rem; }
+.module-title { font-size: 1rem; font-weight: 500; }
+.module-desc { font-size: 0.82rem; color: #888; line-height: 1.5; }
+.module-tag { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; background: #eeeefa; color: #4a4a8a; margin-top: 0.25rem; align-self: flex-start; }
+.section-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; }
+.alert-list { display: flex; flex-direction: column; gap: 8px; }
+.alert-item { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+.alert-item.warn { border-color: #fac775; background: #faeeda; }
+.alert-item.ok { border-color: #9fe1cb; background: #e1f5ee; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.spinner { width: 20px; height: 20px; border: 2px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } .modules-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Gestión de Carga CSS</h1>
+  <p>Ingeniería y Prevención de Riesgos S.L.</p>
+</div>
+
+<div class="container">
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-box"><div class="spinner" style="margin:0.5rem auto;"></div></div>
+    <div class="stat-box"></div><div class="stat-box"></div><div class="stat-box"></div>
+  </div>
+
+  <div class="section-title" style="margin-bottom:0.75rem;">Módulos</div>
+  <div class="modules-grid" style="margin-bottom:2rem;">
+    <a href="solicitudes.html" class="module-card">
+      <div class="module-icon">📋</div>
+      <div class="module-title">Solicitudes de obra</div>
+      <div class="module-desc">Gestiona las solicitudes entrantes, asigna técnicos y sigue el estado de cada obra.</div>
+      <span class="module-tag">Staffer · Delegado</span>
+    </a>
+    <a href="dashboard.html" class="module-card">
+      <div class="module-icon">📊</div>
+      <div class="module-title">Dashboard de carga</div>
+      <div class="module-desc">Visualiza la carga teórica vs real por técnico, contrato y territorio en tiempo real.</div>
+      <span class="module-tag">Staffer · Delegado</span>
+    </a>
+    <a href="nueva-solicitud.html" class="module-card">
+      <div class="module-icon">➕</div>
+      <div class="module-title">Nueva solicitud</div>
+      <div class="module-desc">Registra una nueva obra CSS, configura el baremo del contrato y calcula la carga teórica automáticamente.</div>
+      <span class="module-tag">Delegado</span>
+    </a>
+    <a href="tecnicos.html" class="module-card">
+      <div class="module-icon">👥</div>
+      <div class="module-title">Técnicos</div>
+      <div class="module-desc">Gestiona el equipo de coordinadores. Ve su carga actual, horizonte anual y obras asignadas.</div>
+      <span class="module-tag">Staffer</span>
+    </a>
+  </div>
+
+  <div class="section-title">Estado del sistema</div>
+  <div class="alert-list" id="alertList">
+    <div class="alert-item"><span>Cargando...</span></div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+async function init() {
+  const [obras, solicitudes, respuestas] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico,carga_teorica_semanal&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/solicitudes?select=estado,prioridad&limit=200', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/respuestas?select=tecnico,semana_inicio&limit=500&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+  ]);
+
+  const tecnicos = [...new Set(obras.map(o => o.tecnico))];
+  const pendientes = solicitudes.filter(s => s.estado === 'PENDIENTE').length;
+  const urgentes = solicitudes.filter(s => s.estado === 'PENDIENTE' && s.prioridad === 'URGENTE').length;
+  const ultimaSemana = respuestas[0]?.semana_inicio || '';
+  const conResp = ultimaSemana ? [...new Set(respuestas.filter(r => r.semana_inicio === ultimaSemana).map(r => r.tecnico))].length : 0;
+
+  document.getElementById('statsGrid').innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + obras.length + '</div><div class="stat-label">Obras activas</div></div>' +
+    '<div class="stat-box' + (pendientes ? ' stat-warn' : '') + '"><div class="stat-num">' + pendientes + '</div><div class="stat-label">Solicitudes pendientes</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + conResp + '/' + tecnicos.length + '</div><div class="stat-label">Encuestas esta semana</div></div>';
+
+  const alerts = [];
+  if (urgentes > 0) alerts.push({ type: 'warn', text: urgentes + ' solicitud' + (urgentes>1?'es':'') + ' urgente' + (urgentes>1?'s':'') + ' pendiente' + (urgentes>1?'s':'') + ' de asignación', link: 'solicitudes.html', btn: 'Ver solicitudes' });
+  if (conResp < tecnicos.length && ultimaSemana) alerts.push({ type: 'warn', text: (tecnicos.length - conResp) + ' técnico' + (tecnicos.length-conResp>1?'s':'') + ' sin responder la encuesta de la semana ' + ultimaSemana, link: 'dashboard.html', btn: 'Ver dashboard' });
+  if (alerts.length === 0) alerts.push({ type: 'ok', text: '✅ Todo en orden — sin alertas pendientes', link: null });
+
+  document.getElementById('alertList').innerHTML = alerts.map(a =>
+    '<div class="alert-item ' + a.type + '">'
+    + '<span>' + a.text + '</span>'
+    + (a.link ? '<a href="' + a.link + '" class="btn btn-primary">' + a.btn + '</a>' : '')
+    + '</div>'
+  ).join('');
+}
+
+init();
+</script>
+</body>
+</html>
