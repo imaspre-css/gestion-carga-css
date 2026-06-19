@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Técnicos — CSS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+.container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.tech-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; cursor: pointer; transition: all 0.15s; }
+.tech-card:hover { border-color: #4a4a8a; box-shadow: 0 2px 8px rgba(74,74,138,0.1); }
+.tech-card.selected { border-color: #4a4a8a; background: #f8f8fe; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.6rem; }
+.tech-card-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 2px; }
+.tech-card-meta { font-size: 0.72rem; color: #aaa; }
+.bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; transition: width 0.3s; }
+.bar-warn { background: #ef9f27 !important; }
+.bar-over { background: #e24b4a !important; }
+.pct { font-size: 0.75rem; font-weight: 500; margin-top: 3px; }
+.pct-ok { color: #0f6e56; }
+.pct-warn { color: #854f0b; }
+.pct-over { color: #a32d2d; }
+
+/* Detalle técnico */
+.detalle { display: none; }
+.detalle.active { display: block; }
+.detalle-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.avatar-lg { width: 52px; height: 52px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 500; flex-shrink: 0; }
+.detalle-name { font-size: 1.1rem; font-weight: 500; }
+.detalle-meta { font-size: 0.78rem; color: #888; margin-top: 2px; }
+.stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.mini-stat { background: #f5f5f0; border-radius: 8px; padding: 0.6rem 1rem; text-align: center; flex: 1; min-width: 80px; }
+.mini-stat-num { font-size: 1.3rem; font-weight: 500; color: #1a1a2e; }
+.mini-stat-label { font-size: 0.68rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+/* Horizonte calendario */
+.cal-wrap { overflow-x: auto; }
+.cal-grid { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; }
+.cal-label { font-size: 0.68rem; color: #aaa; display: flex; align-items: center; }
+.cal-cell { height: 20px; border-radius: 3px; cursor: pointer; transition: opacity 0.1s; position: relative; }
+.cal-cell:hover { opacity: 0.8; }
+.cal-month-row { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; margin-bottom: 4px; }
+.cal-month-label { font-size: 0.65rem; color: #bbb; text-align: center; }
+.cal-legend { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #888; flex-wrap: wrap; }
+.cal-legend-cell { width: 14px; height: 10px; border-radius: 2px; }
+.tooltip { position: fixed; background: #1a1a2e; color: #fff; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 999; display: none; white-space: nowrap; }
+
+/* Obras table */
+.obras-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.obras-table th { background: #f5f5f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 500; color: #888; border-bottom: 0.5px solid #e0e0d8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.obras-table td { padding: 0.5rem 0.75rem; border-bottom: 0.5px solid #f0f0e8; vertical-align: middle; }
+.obras-table tr:last-child td { border-bottom: none; }
+.pill { display: inline-block; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; }
+.pill-blue { background: #eeeefa; color: #4a4a8a; }
+.pill-green { background: #e1f5ee; color: #0f6e56; }
+.empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.85rem; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>👥 Técnicos</h1>
+  <div class="nav">
+    <a href="index.html">Inicio</a>
+    <a href="solicitudes.html">Solicitudes</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="tecnicos.html" class="active">Técnicos</a>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<div class="container">
+  <div id="loadingDiv"><div class="spinner"></div></div>
+  <div id="mainContent" style="display:none;">
+    <div class="card">
+      <div class="card-title">Equipo de coordinadores</div>
+      <div class="tech-grid" id="techGrid"></div>
+    </div>
+    <div class="detalle card" id="detalleWrap">
+      <div id="detalleContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+var obras = [], tecSeleccionado = null;
+
+function getColor(pct) {
+  if (!pct) return '#f0f0e8';
+  if (pct >= 100) return '#e24b4a';
+  if (pct >= 85) return '#ef9f27';
+  if (pct >= 60) return '#0f6e56';
+  if (pct >= 30) return '#5dcaa5';
+  return '#e1f5ee';
+}
+
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+}
+
+function getMonday(year, week) {
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek1 = new Date(jan4);
+  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+  const monday = new Date(startOfWeek1);
+  monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
+  return monday;
+}
+
+function calcCargaPorSemana(obrasTec, year) {
+  const semanas = new Array(53).fill(0);
+  obrasTec.forEach(o => {
+    const carga = parseFloat(o.carga_teorica_semanal) || 0;
+    if (!carga) return;
+    const inicio = o.fecha_inicio ? new Date(o.fecha_inicio) : null;
+    const fin = o.fecha_fin ? new Date(o.fecha_fin) : null;
+    for (let w = 1; w <= 52; w++) {
+      const monday = getMonday(year, w);
+      const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+      const desde = inicio || new Date(year, 0, 1);
+      const hasta = fin || new Date(year, 11, 31);
+      if (monday <= hasta && friday >= desde) semanas[w] += carga;
+    }
+  });
+  return semanas;
+}
+
+function renderTechGrid() {
+  const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+  document.getElementById('techGrid').innerHTML = tecnicos.map(t => {
+    const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const obrasTec = obras.filter(o => o.tecnico === t);
+    const carga = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const barClass = carga >= 100 ? 'bar-over' : carga >= 85 ? 'bar-warn' : '';
+    const pctClass = carga >= 100 ? 'pct-over' : carga >= 85 ? 'pct-warn' : 'pct-ok';
+    return '<div class="tech-card" id="tc_' + t.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.replace(/'/g,"\\'") + '\')">'
+      + '<div class="avatar">' + ini + '</div>'
+      + '<div class="tech-card-name">' + t + '</div>'
+      + '<div class="tech-card-meta">' + obrasTec.length + ' obras activas</div>'
+      + '<div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(carga,100) + '%;"></div></div>'
+      + '<div class="pct ' + pctClass + '">' + carga + '% carga teórica</div>'
+      + '</div>';
+  }).join('');
+}
+
+function seleccionarTecnico(nombre) {
+  tecSeleccionado = nombre;
+  document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('tc_' + nombre.replace(/\s/g,'_'))?.classList.add('selected');
+  renderDetalle(nombre);
+  document.getElementById('detalleWrap').classList.add('active');
+  document.getElementById('detalleWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderDetalle(nombre) {
+  const obrasTec = obras.filter(o => o.tecnico === nombre);
+  const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+  const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+  const email = obrasTec[0]?.email || '';
+  const year = new Date().getFullYear();
+  const cargas = calcCargaPorSemana(obrasTec, year);
+  const currentWeek = getWeekNumber(new Date());
+  const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
+
+  // Month labels
+  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+  let monthLabels = '<div style="grid-column:1;"></div>';
+  let lastMonth = -1;
+  for (let w = 1; w <= 52; w++) {
+    const monday = getMonday(year, w);
+    const m = monday.getMonth();
+    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
+    lastMonth = m;
+  }
+
+  // Calendar cells
+  let cells = '<div class="cal-label">' + year + '</div>';
+  for (let w = 1; w <= 52; w++) {
+    const pct = Math.round(cargas[w]);
+    const color = getColor(pct);
+    const monday = getMonday(year, w);
+    const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+    const isCurrent = w === currentWeek;
+    cells += '<div class="cal-cell" style="background:' + color + ';'
+      + (isCurrent ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
+      + (w > currentWeek ? 'opacity:0.55;' : '')
+      + '" onmouseenter="showTip(event,\'S' + w + ' (' + dateStr + '): ' + pct + '%\')" onmouseleave="hideTip()"></div>';
+  }
+
+  // Obras table
+  const obrasHTML = obrasTec.length ? obrasTec.map(o => {
+    const c = parseFloat(o.carga_teorica_semanal)||0;
+    return '<tr><td><span class="pill pill-blue">' + o.cod_obra + '</span></td>'
+      + '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (o.descripcion||'') + '">' + (o.descripcion||'—') + '</td>'
+      + '<td>' + (o.cliente||'—') + '</td>'
+      + '<td>' + (o.territorio||'—') + '</td>'
+      + '<td>' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
+      + '<td>' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
+      + '<td style="font-weight:500;color:' + getColor(c*1.5) + ';">' + Math.round(c) + '%</td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">Sin obras activas</td></tr>';
+
+  document.getElementById('detalleContent').innerHTML =
+    '<div class="detalle-header">'
+    + '<div class="avatar-lg">' + ini + '</div>'
+    + '<div><div class="detalle-name">' + nombre + '</div>'
+    + '<div class="detalle-meta">' + email + ' · ' + obrasTec.length + ' obras activas</div></div>'
+    + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
+    + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
+    + '</div>'
+
+    + '<div class="stats-row">'
+    + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num ' + pctClass + '">' + cargaTotal + '%</div><div class="mini-stat-label">Carga teórica</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num">' + Math.round(100 - cargaTotal) + '%</div><div class="mini-stat-label">Disponibilidad</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.filter(o=>o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>'
+    + '</div>'
+
+    + '<div class="card-title">Horizonte de carga ' + year + '</div>'
+    + '<div class="cal-wrap">'
+    + '<div class="cal-month-row">' + monthLabels + '</div>'
+    + '<div class="cal-grid">' + cells + '</div>'
+    + '</div>'
+    + '<div class="cal-legend">'
+    + '<span><div class="cal-legend-cell" style="background:#e1f5ee;"></div> 0-30%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#5dcaa5;"></div> 30-60%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#0f6e56;"></div> 60-85%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#ef9f27;"></div> 85-100%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
+    + '<span style="margin-left:8px;opacity:0.6;">▪ Futuro (teórico)</span>'
+    + '<span>▪ Pasado (histórico)</span>'
+    + '</div>'
+
+    + '<div class="card-title" style="margin-top:1.25rem;">Obras asignadas</div>'
+    + '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
+    + '<th>Nº Obra</th><th>Descripción</th><th>Cliente</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th>'
+    + '</tr></thead><tbody>' + obrasHTML + '</tbody></table></div>';
+}
+
+function showTip(e, text) {
+  const t = document.getElementById('tooltip');
+  t.textContent = text;
+  t.style.display = 'block';
+  t.style.left = (e.clientX + 10) + 'px';
+  t.style.top = (e.clientY - 30) + 'px';
+}
+function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+
+async function init() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+  obras = await res.json();
+  if (!Array.isArray(obras)) obras = [];
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  renderTechGrid();
+  // Auto-select first technician
+  const primero = [...new Set(obras.map(o => o.tecnico))].sort()[0];
+  if (primero) seleccionarTecnico(primero);
+}
+
+init();
+</script>
+</body>
+</html>
