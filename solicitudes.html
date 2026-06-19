@@ -284,6 +284,30 @@ async function confirmarAsignacion() {
   });
 
   if (res.ok) {
+    // Auto-create obra in obras table
+    const obraPayload = {
+      tecnico: tecnicoSeleccionado,
+      email: obras.find(o => o.tecnico === tecnicoSeleccionado)?.email || '',
+      cliente: solicitudActual.cliente || '',
+      cod_contrato: solicitudActual.cod_contrato || '',
+      cod_obra: 'SOL-' + solicitudActual.id.slice(0,8).toUpperCase(),
+      descripcion: solicitudActual.denominacion || '',
+      territorio: solicitudActual.territorio || '',
+      estado: 'ACTIVA',
+      fecha_inicio: solicitudActual.fecha_inicio || null,
+      fecha_fin: null,
+      carga_teorica_semanal: solicitudActual.carga_teorica_calculada || null
+    };
+    await fetch(SUPABASE_URL + '/rest/v1/obras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + SUPABASE_KEY,
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify(obraPayload)
+    });
     closeModal();
     await init();
   } else {
