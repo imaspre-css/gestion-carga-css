@@ -77,9 +77,11 @@ tr:hover td { background: #fafaf8; }
 <body>
 <div class="header">
   <h1>📋 Gestión de carga CSS</h1>
-  <div class="nav">
+    <div class="nav">
+    <a href="index.html">Inicio</a>
     <a href="solicitudes.html" class="active">Solicitudes</a>
     <a href="dashboard.html">Dashboard</a>
+    <a href="tecnicos.html">Técnicos</a>
     <a href="nueva-solicitud.html">+ Nueva solicitud</a>
   </div>
 </div>
@@ -298,7 +300,7 @@ async function confirmarAsignacion() {
       fecha_fin: null,
       carga_teorica_semanal: solicitudActual.carga_teorica_calculada || null
     };
-    await fetch(SUPABASE_URL + '/rest/v1/obras', {
+    const obraRes = await fetch(SUPABASE_URL + '/rest/v1/obras', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -308,6 +310,10 @@ async function confirmarAsignacion() {
       },
       body: JSON.stringify(obraPayload)
     });
+    if (!obraRes.ok) {
+      const errTxt = await obraRes.text();
+      console.error('Error creando obra:', errTxt, obraPayload);
+    }
     closeModal();
     await init();
   } else {
