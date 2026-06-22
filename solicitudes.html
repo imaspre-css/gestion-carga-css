@@ -314,6 +314,34 @@ async function confirmarAsignacion() {
       const errTxt = await obraRes.text();
       console.error('Error creando obra:', errTxt, obraPayload);
     }
+    // Send notification email to delegado
+    if (solicitudActual.delegado) {
+      const asunto = 'Obra asignada — ' + (solicitudActual.denominacion||'');
+      const cuerpo = 'Hola,
+
+Te confirmamos la asignación de la siguiente obra:
+
+'
+        + '• Obra: ' + (solicitudActual.denominacion||'') + '
+'
+        + '• Contrato: ' + (solicitudActual.cod_contrato||'') + '
+'
+        + '• Territorio: ' + (solicitudActual.territorio||'') + '
+'
+        + '• Técnico asignado: ' + tecnicoSeleccionado + '
+'
+        + '• Carga teórica: ' + (solicitudActual.carga_teorica_calculada||'—') + '%
+
+'
+        + 'Por favor contacta con el técnico para coordinar el inicio de la obra.
+
+'
+        + 'Saludos,
+Equipo de Staffing';
+      window.open('mailto:' + encodeURIComponent(solicitudActual.delegado)
+        + '?subject=' + encodeURIComponent(asunto)
+        + '&body=' + encodeURIComponent(cuerpo));
+    }
     closeModal();
     await init();
   } else {
