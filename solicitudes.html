@@ -317,27 +317,13 @@ async function confirmarAsignacion() {
     // Send notification email to delegado
     if (solicitudActual.delegado) {
       const asunto = 'Obra asignada — ' + (solicitudActual.denominacion||'');
-      const cuerpo = 'Hola,
-
-Te confirmamos la asignación de la siguiente obra:
-
-'
-        + '• Obra: ' + (solicitudActual.denominacion||'') + '
-'
-        + '• Contrato: ' + (solicitudActual.cod_contrato||'') + '
-'
-        + '• Territorio: ' + (solicitudActual.territorio||'') + '
-'
-        + '• Técnico asignado: ' + tecnicoSeleccionado + '
-'
-        + '• Carga teórica: ' + (solicitudActual.carga_teorica_calculada||'—') + '%
-
-'
-        + 'Por favor contacta con el técnico para coordinar el inicio de la obra.
-
-'
-        + 'Saludos,
-Equipo de Staffing';
+      const cuerpo = 'Hola,\n\nTe confirmamos la asignacion de la siguiente obra:\n\n'
+        + '* Obra: ' + (solicitudActual.denominacion||'') + '\n'
+        + '* Contrato: ' + (solicitudActual.cod_contrato||'') + '\n'
+        + '* Territorio: ' + (solicitudActual.territorio||'') + '\n'
+        + '* Tecnico asignado: ' + tecnicoSeleccionado + '\n'
+        + '* Carga teorica: ' + (solicitudActual.carga_teorica_calculada||'-') + '%\n\n'
+        + 'Por favor contacta con el tecnico para coordinar el inicio de la obra.\n\nSaludos,\nEquipo de Staffing';
       window.open('mailto:' + encodeURIComponent(solicitudActual.delegado)
         + '?subject=' + encodeURIComponent(asunto)
         + '&body=' + encodeURIComponent(cuerpo));
