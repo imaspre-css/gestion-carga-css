@@ -72,6 +72,9 @@ input:checked + .slider:before { transform: translateX(16px); }
 .baremo-preview tr:last-child td { border-bottom: none; }
 .baremo-preview td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 1.25rem; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
 </style>
 </head>
 <body>
@@ -102,6 +105,10 @@ input:checked + .slider:before { transform: translateX(16px); }
       <div class="field">
         <label>Denominación de la obra *</label>
         <input type="text" id="fDenominacion" placeholder="Descripción de los trabajos">
+      </div>
+      <div class="field">
+        <label>Tu email (delegado) *</label>
+        <input type="email" id="fEmailDelegado" placeholder="delegado@imaspre.net">
       </div>
       <div class="field-row">
         <div class="field">
@@ -456,6 +463,7 @@ async function enviarSolicitud() {
   const btn = document.getElementById('btnEnviar');
   btn.disabled = true; btn.textContent = '⏳ Enviando...';
   const payload = {
+    delegado: document.getElementById('fEmailDelegado').value.trim(),
     cod_contrato: contrato,
     cliente: document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'',
     denominacion,
