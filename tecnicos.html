@@ -379,10 +379,11 @@ function renderDetalleMultiple(nombres) {
       const color = getColor(pct);
       const monday = getMonday(year, w);
       const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+      var tipText = nombre.split(' ')[0] + ' S' + w + ': ' + pct + '%';
       cells += '<div class="cal-cell" style="background:' + color + ';'
         + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
         + (w > currentWeek ? 'opacity:0.55;' : '')
-        + '" onmouseenter="showTip(event,'' + nombre.split(' ')[0] + ' S' + w + ': ' + pct + '%')" onmouseleave="hideTip()"></div>';
+        + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()" data-tip="' + tipText + '"></div>';
     }
     cals += '<div class="cal-grid" style="margin-bottom:4px;">' + cells + '</div>';
   });
