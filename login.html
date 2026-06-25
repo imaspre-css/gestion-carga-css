@@ -82,7 +82,7 @@ function acceder() {
   const pin = document.getElementById('pinInput').value;
   if (!rolSeleccionado || !pin) return;
   if (pin === PINS[rolSeleccionado]) {
-    sessionStorage.setItem('css_rol', rolSeleccionado);
+    localStorage.setItem('css_rol', rolSeleccionado);
     const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
     window.location.href = redirect;
   } else {
