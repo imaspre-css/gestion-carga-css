@@ -80,7 +80,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 <body>
 <script>
 (function() {
-  var rol = sessionStorage.getItem('css_rol');
+  var rol = localStorage.getItem('css_rol');
   if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
 })();
 </script>
@@ -94,7 +94,7 @@ input:checked + .slider:before { transform: translateX(16px); }
     <a href="dashboard.html">Dashboard</a>
     <a href="tecnicos.html">Técnicos</a>
     <a href="nueva-solicitud.html" class="active">+ Nueva solicitud</a>
-    <a href="#" onclick="sessionStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
 </div>
 
