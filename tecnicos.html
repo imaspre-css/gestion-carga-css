@@ -352,38 +352,35 @@ function seleccionarTecnico(nombre) { toggleSeleccion(nombre); }
 
 function renderDetalleMultiple(nombres) {
   if (nombres.length === 1) { renderDetalle(nombres[0]); return; }
-  const year = new Date().getFullYear();
-  const currentWeek = getWeekNumber(new Date());
-  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+  var year = new Date().getFullYear();
+  var currentWeek = getWeekNumber(new Date());
+  var months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
 
-  let monthLabels = '<div style="grid-column:1;"></div>';
-  let lastMonth = -1;
-  for (let w = 1; w <= 52; w++) {
-    const monday = getMonday(year, w);
-    const m = monday.getMonth();
+  var monthLabels = '<div style="grid-column:1;"></div>';
+  var lastMonth = -1;
+  for (var w = 1; w <= 52; w++) {
+    var monday = getMonday(year, w);
+    var m = monday.getMonth();
     monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
     lastMonth = m;
   }
 
-  let cals = '';
-  nombres.forEach(nombre => {
-    const obrasTec = obras.filter(o => o.tecnico === nombre);
-    const cargas = calcCargaPorSemana(obrasTec, year);
-    const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
-    const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
-    const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-
-    let cells = '<div class="cal-label" style="font-size:0.65rem;">' + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
-    for (let w = 1; w <= 52; w++) {
-      const pct = Math.round(cargas[w]);
-      const color = getColor(pct);
-      const monday = getMonday(year, w);
-      const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+  var cals = '';
+  nombres.forEach(function(nombre) {
+    var obrasTec = obras.filter(function(o) { return o.tecnico === nombre; });
+    var cargas = calcCargaPorSemana(obrasTec, year);
+    var cargaTotal = Math.round(obrasTec.reduce(function(s,o) { return s+(parseFloat(o.carga_teorica_semanal)||0); }, 0));
+    var pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
+    var ini = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('');
+    var cells = '<div class="cal-label" style="font-size:0.65rem;">' + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
+    for (var w = 1; w <= 52; w++) {
+      var pct = Math.round(cargas[w]);
+      var color = getColor(pct);
       var tipText = nombre.split(' ')[0] + ' S' + w + ': ' + pct + '%';
       cells += '<div class="cal-cell" style="background:' + color + ';'
         + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
         + (w > currentWeek ? 'opacity:0.55;' : '')
-        + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()" data-tip="' + tipText + '"></div>';
+        + '" data-tip="' + tipText + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()"></div>';
     }
     cals += '<div class="cal-grid" style="margin-bottom:4px;">' + cells + '</div>';
   });
@@ -399,6 +396,7 @@ function renderDetalleMultiple(nombres) {
     + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
     + '</div>';
 }
+
 
 function renderDetalle(nombre) {
   const obrasTec = obras.filter(o => o.tecnico === nombre);
