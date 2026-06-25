@@ -657,7 +657,7 @@ async function init() {
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   // Populate territory filters from actual data
-  const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
+  const territorios = [...new Set(obras.map(o => (o.territorio||'').toUpperCase()).filter(Boolean))].sort();
   ['filtroTerritorioEquipo','filtroTerritorioGestion'].forEach(id => {
     const sel = document.getElementById(id);
     if (sel) {
