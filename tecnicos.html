@@ -273,8 +273,16 @@ function calcCargaPorSemana(obrasTec, year) {
   return semanas;
 }
 
+function getAllTecnicos() {
+  // Union of tecnicos from obras table and tecnicos table
+  const nombresObras = [...new Set(obras.map(o => o.tecnico))];
+  const nombresDB = tecnicosDB.filter(t => t.activo !== false).map(t => t.nombre);
+  const todos = [...new Set([...nombresObras, ...nombresDB])].sort();
+  return todos;
+}
+
 function renderTechGrid() {
-  const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+  const tecnicos = getAllTecnicos();
   document.getElementById('techGrid').innerHTML = tecnicos.map(t => {
     const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const obrasTec = obras.filter(o => o.tecnico === t);
@@ -284,7 +292,7 @@ function renderTechGrid() {
     return '<div class="tech-card" id="tc_' + t.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.replace(/'/g,"\\'") + '\')">'
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-card-name">' + t + '</div>'
-      + '<div class="tech-card-meta">' + obrasTec.length + ' obras activas</div>'
+      + '<div class="tech-card-meta">' + (obrasTec.length ? obrasTec.length + ' obras activas' : 'Sin obras activas') + '</div>'
       + '<div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(carga,100) + '%;"></div></div>'
       + '<div class="pct ' + pctClass + '">' + carga + '% carga teórica</div>'
       + '</div>';
@@ -378,9 +386,17 @@ function renderDetalle(nombre) {
 
 // ── GESTIÓN DE TÉCNICOS ────────────────────────────────────────
 function renderTablaGestion() {
+  // Merge tecnicosDB with tecnicos from obras not yet in DB
+  const nombresDB = tecnicosDB.map(t => t.nombre);
+  const soloEnObras = [...new Set(obras.map(o => o.tecnico))]
+    .filter(n => !nombresDB.includes(n))
+    .map(n => {
+      const o = obras.find(x => x.tecnico === n);
+      return { id: null, nombre: n, email: o?.email||'', territorio: o?.territorio||'', activo: true, _soloObras: true };
+    });
   const activos = tecnicosDB.filter(t => t.activo !== false);
   const inactivos = tecnicosDB.filter(t => t.activo === false);
-  const todos = [...activos, ...inactivos];
+  const todos = [...activos, ...soloEnObras, ...inactivos];
 
   if (!todos.length) {
     document.getElementById('tablaGestion').innerHTML = '<div class="empty">No hay técnicos registrados. Pulsa "+ Nuevo técnico" para añadir el primero,<br>o sincroniza el Excel desde la app de gestión.</div>';
@@ -402,10 +418,14 @@ function renderTablaGestion() {
       + '<td>' + (t.colegiado ? '✓' : '—') + '</td>'
       + '<td><span class="pill ' + (t.activo !== false ? 'pill-green' : '') + '" style="' + (t.activo === false ? 'background:#f5f5f0;color:#888;' : '') + '">' + (t.activo !== false ? 'Activo' : 'Inactivo') + '</span></td>';
     if (isStaffer) {
-      html += '<td style="white-space:nowrap;">'
-        + '<button class="btn btn-sm" onclick="editarTecnico(\'' + t.id + '\')">✏️</button> '
-        + '<button class="btn btn-sm btn-danger" onclick="toggleActivo(\'' + t.id + '\',' + (t.activo !== false) + ')">' + (t.activo !== false ? 'Desactivar' : 'Activar') + '</button>'
-        + '</td>';
+      if (t._soloObras) {
+        html += '<td><button class="btn btn-sm btn-primary" onclick="editarDesdeObras(\'' + t.nombre.replace(/'/g,"\\'") + '\')">+ Registrar</button></td>';
+      } else {
+        html += '<td style="white-space:nowrap;">'
+          + '<button class="btn btn-sm" onclick="editarTecnico(\'' + t.id + '\')">✏️</button> '
+          + '<button class="btn btn-sm btn-danger" onclick="toggleActivo(\'' + t.id + '\',' + (t.activo !== false) + ')">' + (t.activo !== false ? 'Desactivar' : 'Activar') + '</button>'
+          + '</td>';
+      }
     }
     html += '</tr>';
   });
