@@ -140,7 +140,17 @@ input:checked + .slider:before { transform: translateX(16px); }
     <div id="loadingDiv"><div class="spinner"></div></div>
     <div id="mainContent" style="display:none;">
       <div class="card">
-        <div class="card-title">Equipo de coordinadores</div>
+        <div class="card-header">
+          <div class="card-title">Equipo de coordinadores</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="filtroTerritorioEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+              <option value="">Todos los territorios</option>
+              <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
+            </select>
+            <span style="font-size:0.75rem;color:#888;" id="seleccionLabel"></span>
+            <button class="btn btn-sm" onclick="limpiarSeleccion()">Limpiar selección</button>
+          </div>
+        </div>
         <div class="tech-grid" id="techGrid"></div>
       </div>
       <div class="detalle card" id="detalleWrap">
@@ -154,7 +164,13 @@ input:checked + .slider:before { transform: translateX(16px); }
     <div class="card">
       <div class="card-header">
         <div class="card-title">Lista de técnicos</div>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalNuevo()">+ Nuevo técnico</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="filtroTerritorioGestion" onchange="renderTablaGestion()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+            <option value="">Todos los territorios</option>
+            <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalNuevo()">+ Nuevo técnico</button>
+        </div>
       </div>
       <div id="tablaGestion"></div>
     </div>
@@ -273,23 +289,40 @@ function calcCargaPorSemana(obrasTec, year) {
   return semanas;
 }
 
+var tecSeleccionados = [];
+
 function getAllTecnicos() {
-  // Union of tecnicos from obras table and tecnicos table
   const nombresObras = [...new Set(obras.map(o => o.tecnico))];
   const nombresDB = tecnicosDB.filter(t => t.activo !== false).map(t => t.nombre);
-  const todos = [...new Set([...nombresObras, ...nombresDB])].sort();
-  return todos;
+  return [...new Set([...nombresObras, ...nombresDB])].sort();
+}
+
+function getTecnicoTerritorio(nombre) {
+  const o = obras.find(x => x.tecnico === nombre);
+  if (o?.territorio) return o.territorio;
+  const t = tecnicosDB.find(x => x.nombre === nombre);
+  return t?.territorio || '';
+}
+
+function limpiarSeleccion() {
+  tecSeleccionados = [];
+  renderTechGrid();
+  document.getElementById('detalleWrap').classList.remove('active');
+  document.getElementById('seleccionLabel').textContent = '';
 }
 
 function renderTechGrid() {
-  const tecnicos = getAllTecnicos();
+  const filtro = document.getElementById('filtroTerritorioEquipo')?.value || '';
+  let tecnicos = getAllTecnicos();
+  if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t) === filtro);
   document.getElementById('techGrid').innerHTML = tecnicos.map(t => {
     const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const obrasTec = obras.filter(o => o.tecnico === t);
     const carga = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
     const barClass = carga >= 100 ? 'bar-over' : carga >= 85 ? 'bar-warn' : '';
     const pctClass = carga >= 100 ? 'pct-over' : carga >= 85 ? 'pct-warn' : 'pct-ok';
-    return '<div class="tech-card" id="tc_' + t.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.replace(/'/g,"\\'") + '\')">'
+    const isSelected = tecSeleccionados.includes(t);
+    return '<div class="tech-card' + (isSelected ? ' selected' : '') + '" id="tc_' + t.replace(/\s/g,'_') + '" onclick="toggleSeleccion(\'' + t.replace(/'/g,"\\'") + '\')">'
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-card-name">' + t + '</div>'
       + '<div class="tech-card-meta">' + (obrasTec.length ? obrasTec.length + ' obras activas' : 'Sin obras activas') + '</div>'
@@ -299,13 +332,71 @@ function renderTechGrid() {
   }).join('');
 }
 
-function seleccionarTecnico(nombre) {
-  tecSeleccionado = nombre;
-  document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('tc_' + nombre.replace(/\s/g,'_'))?.classList.add('selected');
-  renderDetalle(nombre);
-  document.getElementById('detalleWrap').classList.add('active');
-  document.getElementById('detalleWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function toggleSeleccion(nombre) {
+  const idx = tecSeleccionados.indexOf(nombre);
+  if (idx >= 0) tecSeleccionados.splice(idx, 1);
+  else tecSeleccionados.push(nombre);
+  renderTechGrid();
+  if (tecSeleccionados.length > 0) {
+    renderDetalleMultiple(tecSeleccionados);
+    document.getElementById('detalleWrap').classList.add('active');
+    document.getElementById('detalleWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('seleccionLabel').textContent = tecSeleccionados.length + ' seleccionado' + (tecSeleccionados.length > 1 ? 's' : '');
+  } else {
+    document.getElementById('detalleWrap').classList.remove('active');
+    document.getElementById('seleccionLabel').textContent = '';
+  }
+}
+
+function seleccionarTecnico(nombre) { toggleSeleccion(nombre); }
+
+function renderDetalleMultiple(nombres) {
+  if (nombres.length === 1) { renderDetalle(nombres[0]); return; }
+  const year = new Date().getFullYear();
+  const currentWeek = getWeekNumber(new Date());
+  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+
+  let monthLabels = '<div style="grid-column:1;"></div>';
+  let lastMonth = -1;
+  for (let w = 1; w <= 52; w++) {
+    const monday = getMonday(year, w);
+    const m = monday.getMonth();
+    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
+    lastMonth = m;
+  }
+
+  let cals = '';
+  nombres.forEach(nombre => {
+    const obrasTec = obras.filter(o => o.tecnico === nombre);
+    const cargas = calcCargaPorSemana(obrasTec, year);
+    const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
+    const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+
+    let cells = '<div class="cal-label" style="font-size:0.65rem;">' + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
+    for (let w = 1; w <= 52; w++) {
+      const pct = Math.round(cargas[w]);
+      const color = getColor(pct);
+      const monday = getMonday(year, w);
+      const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+      cells += '<div class="cal-cell" style="background:' + color + ';'
+        + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
+        + (w > currentWeek ? 'opacity:0.55;' : '')
+        + '" onmouseenter="showTip(event,'' + nombre.split(' ')[0] + ' S' + w + ': ' + pct + '%')" onmouseleave="hideTip()"></div>';
+    }
+    cals += '<div class="cal-grid" style="margin-bottom:4px;">' + cells + '</div>';
+  });
+
+  document.getElementById('detalleContent').innerHTML =
+    '<div class="card-title">Horizonte comparativo ' + year + ' — ' + nombres.length + ' técnicos</div>'
+    + '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>' + cals + '</div>'
+    + '<div class="cal-legend">'
+    + '<span><div class="cal-legend-cell" style="background:#e1f5ee;"></div> 0-30%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#5dcaa5;"></div> 30-60%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#0f6e56;"></div> 60-85%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#ef9f27;"></div> 85-100%</span>'
+    + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
+    + '</div>';
 }
 
 function renderDetalle(nombre) {
@@ -386,6 +477,7 @@ function renderDetalle(nombre) {
 
 // ── GESTIÓN DE TÉCNICOS ────────────────────────────────────────
 function renderTablaGestion() {
+  const filtroGestion = document.getElementById('filtroTerritorioGestion')?.value || '';
   // Merge tecnicosDB with tecnicos from obras not yet in DB
   const nombresDB = tecnicosDB.map(t => t.nombre);
   const soloEnObras = [...new Set(obras.map(o => o.tecnico))]
@@ -396,7 +488,8 @@ function renderTablaGestion() {
     });
   const activos = tecnicosDB.filter(t => t.activo !== false);
   const inactivos = tecnicosDB.filter(t => t.activo === false);
-  const todos = [...activos, ...soloEnObras, ...inactivos];
+  let todos = [...activos, ...soloEnObras, ...inactivos];
+  if (filtroGestion) todos = todos.filter(t => (t.territorio||getTecnicoTerritorio(t.nombre)) === filtroGestion);
 
   if (!todos.length) {
     document.getElementById('tablaGestion').innerHTML = '<div class="empty">No hay técnicos registrados. Pulsa "+ Nuevo técnico" para añadir el primero,<br>o sincroniza el Excel desde la app de gestión.</div>';
