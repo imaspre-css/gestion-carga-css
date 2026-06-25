@@ -71,6 +71,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 </style>
 </head>
 <body>
+<script>
+(function() {
+  var rol = sessionStorage.getItem('css_rol');
+  if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
+})();
+</script>
+
 <div class="header">
   <h1>👥 Técnicos</h1>
     <div class="nav">
