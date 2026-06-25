@@ -15,15 +15,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
 .card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
 .card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+.tabs { display: flex; gap: 2px; border-bottom: 0.5px solid #e0e0d8; margin-bottom: 1.5rem; }
+.tab { padding: 0.6rem 1.1rem; font-size: 0.85rem; cursor: pointer; border-bottom: 2px solid transparent; color: #888; }
+.tab.active { color: #1a1a2e; border-color: #1a1a2e; font-weight: 500; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.btn-primary:hover { background: #2a2a4e; }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+.btn-danger { color: #a32d2d; border-color: #f7c1c1; }
+.btn-danger:hover { background: #fcebeb; }
+
+/* Tech grid */
 .tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
 .tech-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; cursor: pointer; transition: all 0.15s; }
 .tech-card:hover { border-color: #4a4a8a; box-shadow: 0 2px 8px rgba(74,74,138,0.1); }
 .tech-card.selected { border-color: #4a4a8a; background: #f8f8fe; }
+.tech-card.inactivo { opacity: 0.5; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.6rem; }
 .tech-card-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 2px; }
 .tech-card-meta { font-size: 0.72rem; color: #aaa; }
 .bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 6px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; transition: width 0.3s; }
+.bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
 .bar-warn { background: #ef9f27 !important; }
 .bar-over { background: #e24b4a !important; }
 .pct { font-size: 0.75rem; font-weight: 500; margin-top: 3px; }
@@ -31,7 +45,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .pct-warn { color: #854f0b; }
 .pct-over { color: #a32d2d; }
 
-/* Detalle técnico */
+/* Detalle */
 .detalle { display: none; }
 .detalle.active { display: block; }
 .detalle-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
@@ -43,11 +57,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .mini-stat-num { font-size: 1.3rem; font-weight: 500; color: #1a1a2e; }
 .mini-stat-label { font-size: 0.68rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
 
-/* Horizonte calendario */
+/* Calendario */
 .cal-wrap { overflow-x: auto; }
 .cal-grid { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; }
 .cal-label { font-size: 0.68rem; color: #aaa; display: flex; align-items: center; }
-.cal-cell { height: 20px; border-radius: 3px; cursor: pointer; transition: opacity 0.1s; position: relative; }
+.cal-cell { height: 20px; border-radius: 3px; cursor: pointer; position: relative; }
 .cal-cell:hover { opacity: 0.8; }
 .cal-month-row { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; margin-bottom: 4px; }
 .cal-month-label { font-size: 0.65rem; color: #bbb; text-align: center; }
@@ -66,39 +80,144 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.85rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
-.btn:hover { background: #f5f5f0; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { margin-bottom: 0.75rem; }
+.field label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; }
+.field input:focus, .field select:focus { outline: none; border-color: #4a4a8a; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 0.5px solid #f5f5f0; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: #d0d0c8; border-radius: 20px; transition: 0.2s; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+input:checked + .slider { background: #4a4a8a; }
+input:checked + .slider:before { transform: translateX(16px); }
+.notice { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+.notice-success { background: #e1f5ee; color: #0f6e56; border: 0.5px solid #9fe1cb; }
+.notice-error { background: #fcebeb; color: #a32d2d; border: 0.5px solid #f7c1c1; }
+
+/* Modal */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 92%; max-width: 560px; max-height: 88vh; overflow-y: auto; }
+.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; }
+.modal-head h3 { font-size: 1rem; font-weight: 500; }
+.modal-body { padding: 1.5rem; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
 </style>
 </head>
 <body>
 <script>
 (function() {
   var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
+  if (!rol) { window.location.href = 'login.html?redirect=tecnicos.html'; }
 })();
 </script>
+<div class="tooltip" id="tooltip"></div>
 
 <div class="header">
   <h1>👥 Técnicos</h1>
-    <div class="nav">
+  <div class="nav">
     <a href="index.html">Inicio</a>
     <a href="solicitudes.html">Solicitudes</a>
     <a href="dashboard.html">Dashboard</a>
     <a href="tecnicos.html" class="active">Técnicos</a>
     <a href="nueva-solicitud.html">+ Nueva solicitud</a>
+    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
 </div>
-<div class="tooltip" id="tooltip"></div>
 
 <div class="container">
-  <div id="loadingDiv"><div class="spinner"></div></div>
-  <div id="mainContent" style="display:none;">
-    <div class="card">
-      <div class="card-title">Equipo de coordinadores</div>
-      <div class="tech-grid" id="techGrid"></div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('equipo')">Equipo</div>
+    <div class="tab" onclick="switchTab('gestionar')">Gestionar técnicos</div>
+  </div>
+
+  <!-- TAB EQUIPO -->
+  <div id="tab-equipo">
+    <div id="loadingDiv"><div class="spinner"></div></div>
+    <div id="mainContent" style="display:none;">
+      <div class="card">
+        <div class="card-title">Equipo de coordinadores</div>
+        <div class="tech-grid" id="techGrid"></div>
+      </div>
+      <div class="detalle card" id="detalleWrap">
+        <div id="detalleContent"></div>
+      </div>
     </div>
-    <div class="detalle card" id="detalleWrap">
-      <div id="detalleContent"></div>
+  </div>
+
+  <!-- TAB GESTIONAR -->
+  <div id="tab-gestionar" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Lista de técnicos</div>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalNuevo()">+ Nuevo técnico</button>
+      </div>
+      <div id="tablaGestion"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nuevo/editar técnico -->
+<div class="modal-bg" id="modalTecnico">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTecTitle">Nuevo técnico</h3>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalStatus"></div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Nombre completo *</label>
+          <input type="text" id="tNombre" placeholder="Nombre Apellido">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="tEmail" placeholder="tecnico@imaspre.net">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="tel" id="tTelefono" placeholder="600 000 000">
+        </div>
+        <div class="field">
+          <label>Territorio</label>
+          <select id="tTerritorio">
+            <option value="">Selecciona...</option>
+            <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Titulación</label>
+          <input type="text" id="tTitulacion" placeholder="Ing. Industrial, Arquitecto...">
+        </div>
+        <div class="field">
+          <label>Fecha de alta</label>
+          <input type="date" id="tFechaAlta">
+        </div>
+      </div>
+      <div style="margin:0.75rem 0;">
+        <div class="toggle-row">
+          <label>Colegiado</label>
+          <label class="toggle"><input type="checkbox" id="tColegiado"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Activo</label>
+          <label class="toggle"><input type="checkbox" id="tActivo" checked><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Notas</label>
+        <textarea id="tNotas" placeholder="Información adicional..." style="min-height:60px;resize:vertical;width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;"></textarea>
+      </div>
+      <input type="hidden" id="tId">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarTecnico()">Guardar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -107,7 +226,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
-var obras = [], tecSeleccionado = null;
+var obras = [], tecnicosDB = [], tecSeleccionado = null;
+var isStaffer = localStorage.getItem('css_rol') === 'staffer';
 
 function getColor(pct) {
   if (!pct) return '#f0f0e8';
@@ -190,7 +310,6 @@ function renderDetalle(nombre) {
   const currentWeek = getWeekNumber(new Date());
   const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
 
-  // Month labels
   const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
   let monthLabels = '<div style="grid-column:1;"></div>';
   let lastMonth = -1;
@@ -201,7 +320,6 @@ function renderDetalle(nombre) {
     lastMonth = m;
   }
 
-  // Calendar cells
   let cells = '<div class="cal-label">' + year + '</div>';
   for (let w = 1; w <= 52; w++) {
     const pct = Math.round(cargas[w]);
@@ -215,7 +333,6 @@ function renderDetalle(nombre) {
       + '" onmouseenter="showTip(event,\'S' + w + ' (' + dateStr + '): ' + pct + '%\')" onmouseleave="hideTip()"></div>';
   }
 
-  // Obras table
   const obrasHTML = obrasTec.length ? obrasTec.map(o => {
     const c = parseFloat(o.carga_teorica_semanal)||0;
     return '<tr><td><span class="pill pill-blue">' + o.cod_obra + '</span></td>'
@@ -224,7 +341,7 @@ function renderDetalle(nombre) {
       + '<td>' + (o.territorio||'—') + '</td>'
       + '<td>' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td>' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
-      + '<td style="font-weight:500;color:' + getColor(c*1.5) + ';">' + Math.round(c) + '%</td>'
+      + '<td style="font-weight:500;">' + Math.round(c) + '%</td>'
       + '</tr>';
   }).join('') : '<tr><td colspan="7" class="empty">Sin obras activas</td></tr>';
 
@@ -232,60 +349,210 @@ function renderDetalle(nombre) {
     '<div class="detalle-header">'
     + '<div class="avatar-lg">' + ini + '</div>'
     + '<div><div class="detalle-name">' + nombre + '</div>'
-    + '<div class="detalle-meta">' + email + ' · ' + obrasTec.length + ' obras activas</div></div>'
+    + '<div class="detalle-meta">' + (email||'sin email') + '</div></div>'
     + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
     + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
+    + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
     + '</div>'
-
     + '<div class="stats-row">'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
     + '<div class="mini-stat"><div class="mini-stat-num ' + pctClass + '">' + cargaTotal + '%</div><div class="mini-stat-label">Carga teórica</div></div>'
-    + '<div class="mini-stat"><div class="mini-stat-num">' + Math.round(100 - cargaTotal) + '%</div><div class="mini-stat-label">Disponibilidad</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num">' + Math.max(0, 100-cargaTotal) + '%</div><div class="mini-stat-label">Disponibilidad</div></div>'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.filter(o=>o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>'
     + '</div>'
-
     + '<div class="card-title">Horizonte de carga ' + year + '</div>'
-    + '<div class="cal-wrap">'
-    + '<div class="cal-month-row">' + monthLabels + '</div>'
-    + '<div class="cal-grid">' + cells + '</div>'
-    + '</div>'
+    + '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>'
+    + '<div class="cal-grid">' + cells + '</div></div>'
     + '<div class="cal-legend">'
     + '<span><div class="cal-legend-cell" style="background:#e1f5ee;"></div> 0-30%</span>'
     + '<span><div class="cal-legend-cell" style="background:#5dcaa5;"></div> 30-60%</span>'
     + '<span><div class="cal-legend-cell" style="background:#0f6e56;"></div> 60-85%</span>'
     + '<span><div class="cal-legend-cell" style="background:#ef9f27;"></div> 85-100%</span>'
     + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
-    + '<span style="margin-left:8px;opacity:0.6;">▪ Futuro (teórico)</span>'
-    + '<span>▪ Pasado (histórico)</span>'
     + '</div>'
-
     + '<div class="card-title" style="margin-top:1.25rem;">Obras asignadas</div>'
     + '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
     + '<th>Nº Obra</th><th>Descripción</th><th>Cliente</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th>'
     + '</tr></thead><tbody>' + obrasHTML + '</tbody></table></div>';
 }
 
-function showTip(e, text) {
-  const t = document.getElementById('tooltip');
-  t.textContent = text;
-  t.style.display = 'block';
-  t.style.left = (e.clientX + 10) + 'px';
-  t.style.top = (e.clientY - 30) + 'px';
+// ── GESTIÓN DE TÉCNICOS ────────────────────────────────────────
+function renderTablaGestion() {
+  const activos = tecnicosDB.filter(t => t.activo !== false);
+  const inactivos = tecnicosDB.filter(t => t.activo === false);
+  const todos = [...activos, ...inactivos];
+
+  if (!todos.length) {
+    document.getElementById('tablaGestion').innerHTML = '<div class="empty">No hay técnicos registrados. Pulsa "+ Nuevo técnico" para añadir el primero,<br>o sincroniza el Excel desde la app de gestión.</div>';
+    return;
+  }
+
+  let html = '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
+    + '<th>Nombre</th><th>Email</th><th>Teléfono</th><th>Territorio</th><th>Titulación</th><th>Colegiado</th><th>Estado</th>';
+  if (isStaffer) html += '<th></th>';
+  html += '</tr></thead><tbody>';
+
+  todos.forEach(t => {
+    html += '<tr style="' + (t.activo === false ? 'opacity:0.5;' : '') + '">'
+      + '<td style="font-weight:500;">' + t.nombre + '</td>'
+      + '<td style="font-size:0.78rem;">' + (t.email||'—') + '</td>'
+      + '<td style="font-size:0.78rem;">' + (t.telefono||'—') + '</td>'
+      + '<td>' + (t.territorio||'—') + '</td>'
+      + '<td style="font-size:0.78rem;">' + (t.titulacion||'—') + '</td>'
+      + '<td>' + (t.colegiado ? '✓' : '—') + '</td>'
+      + '<td><span class="pill ' + (t.activo !== false ? 'pill-green' : '') + '" style="' + (t.activo === false ? 'background:#f5f5f0;color:#888;' : '') + '">' + (t.activo !== false ? 'Activo' : 'Inactivo') + '</span></td>';
+    if (isStaffer) {
+      html += '<td style="white-space:nowrap;">'
+        + '<button class="btn btn-sm" onclick="editarTecnico(\'' + t.id + '\')">✏️</button> '
+        + '<button class="btn btn-sm btn-danger" onclick="toggleActivo(\'' + t.id + '\',' + (t.activo !== false) + ')">' + (t.activo !== false ? 'Desactivar' : 'Activar') + '</button>'
+        + '</td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('tablaGestion').innerHTML = html;
 }
-function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+
+function abrirModalNuevo() {
+  document.getElementById('tId').value = '';
+  document.getElementById('tNombre').value = '';
+  document.getElementById('tEmail').value = '';
+  document.getElementById('tTelefono').value = '';
+  document.getElementById('tTerritorio').value = '';
+  document.getElementById('tTitulacion').value = '';
+  document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
+  document.getElementById('tColegiado').checked = false;
+  document.getElementById('tActivo').checked = true;
+  document.getElementById('tNotas').value = '';
+  document.getElementById('modalTecTitle').textContent = 'Nuevo técnico';
+  document.getElementById('modalStatus').innerHTML = '';
+  document.getElementById('modalTecnico').classList.add('open');
+}
+
+function editarTecnico(id) {
+  const t = tecnicosDB.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('tId').value = t.id;
+  document.getElementById('tNombre').value = t.nombre || '';
+  document.getElementById('tEmail').value = t.email || '';
+  document.getElementById('tTelefono').value = t.telefono || '';
+  document.getElementById('tTerritorio').value = t.territorio || '';
+  document.getElementById('tTitulacion').value = t.titulacion || '';
+  document.getElementById('tFechaAlta').value = t.fecha_alta || '';
+  document.getElementById('tColegiado').checked = t.colegiado || false;
+  document.getElementById('tActivo').checked = t.activo !== false;
+  document.getElementById('tNotas').value = t.notas || '';
+  document.getElementById('modalTecTitle').textContent = 'Editar técnico';
+  document.getElementById('modalStatus').innerHTML = '';
+  document.getElementById('modalTecnico').classList.add('open');
+}
+
+function editarDesdeObras(nombre) {
+  const t = tecnicosDB.find(x => x.nombre === nombre);
+  if (t) { editarTecnico(t.id); }
+  else {
+    // Pre-fill with data from obras
+    const o = obras.find(x => x.tecnico === nombre);
+    document.getElementById('tId').value = '';
+    document.getElementById('tNombre').value = nombre;
+    document.getElementById('tEmail').value = o?.email || '';
+    document.getElementById('tTelefono').value = '';
+    document.getElementById('tTerritorio').value = o?.territorio || '';
+    document.getElementById('tTitulacion').value = '';
+    document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
+    document.getElementById('tColegiado').checked = false;
+    document.getElementById('tActivo').checked = true;
+    document.getElementById('tNotas').value = '';
+    document.getElementById('modalTecTitle').textContent = 'Añadir técnico al registro';
+    document.getElementById('modalStatus').innerHTML = '';
+    document.getElementById('modalTecnico').classList.add('open');
+  }
+}
+
+async function guardarTecnico() {
+  const nombre = document.getElementById('tNombre').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio.'); return; }
+  const id = document.getElementById('tId').value;
+  const payload = {
+    nombre,
+    email: document.getElementById('tEmail').value.trim(),
+    telefono: document.getElementById('tTelefono').value.trim(),
+    territorio: document.getElementById('tTerritorio').value,
+    titulacion: document.getElementById('tTitulacion').value.trim(),
+    fecha_alta: document.getElementById('tFechaAlta').value || null,
+    colegiado: document.getElementById('tColegiado').checked,
+    activo: document.getElementById('tActivo').checked,
+    notas: document.getElementById('tNotas').value.trim()
+  };
+
+  let res;
+  if (id) {
+    res = await fetch(SUPABASE_URL + '/rest/v1/tecnicos?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+  } else {
+    res = await fetch(SUPABASE_URL + '/rest/v1/tecnicos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  if (res.ok) {
+    document.getElementById('modalStatus').innerHTML = '<div class="notice notice-success">✅ Guardado correctamente</div>';
+    await loadTecnicos();
+    renderTablaGestion();
+    setTimeout(() => closeModal(), 1000);
+  } else {
+    document.getElementById('modalStatus').innerHTML = '<div class="notice notice-error">❌ Error al guardar.</div>';
+  }
+}
+
+async function toggleActivo(id, activo) {
+  if (!confirm(activo ? '¿Desactivar este técnico?' : '¿Activar este técnico?')) return;
+  await fetch(SUPABASE_URL + '/rest/v1/tecnicos?id=eq.' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+    body: JSON.stringify({ activo: !activo, fecha_baja: !activo ? null : new Date().toISOString().split('T')[0] })
+  });
+  await loadTecnicos();
+  renderTablaGestion();
+}
+
+function switchTab(name) {
+  ['equipo','gestionar'].forEach((t,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t===name);
+    document.getElementById('tab-'+t).style.display = t===name ? '' : 'none';
+  });
+}
+
+function closeModal() { document.getElementById('modalTecnico').classList.remove('open'); }
+function showTip(e, text) { const t=document.getElementById('tooltip'); t.textContent=text; t.style.display='block'; t.style.left=(e.clientX+10)+'px'; t.style.top=(e.clientY-30)+'px'; }
+function hideTip() { document.getElementById('tooltip').style.display='none'; }
+
+async function loadTecnicos() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=*&order=nombre', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+  tecnicosDB = await res.json();
+  if (!Array.isArray(tecnicosDB)) tecnicosDB = [];
+}
 
 async function init() {
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
   obras = await res.json();
   if (!Array.isArray(obras)) obras = [];
+  await loadTecnicos();
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   renderTechGrid();
-  // Auto-select first technician
+  renderTablaGestion();
   const primero = [...new Set(obras.map(o => o.tecnico))].sort()[0];
   if (primero) seleccionarTecnico(primero);
 }
 
+document.getElementById('modalTecnico').addEventListener('click', e => { if(e.target===document.getElementById('modalTecnico')) closeModal(); });
 init();
 </script>
 </body>
