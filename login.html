@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acceso — Gestión de Carga CSS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.login-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 16px; padding: 2.5rem 2rem; width: 100%; max-width: 380px; text-align: center; }
+.logo { background: #1a1a2e; color: #fff; width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 1.25rem; }
+h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
+.subtitle { font-size: 0.82rem; color: #888; margin-bottom: 2rem; }
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+.role-btn { border: 1.5px solid #e0e0d8; border-radius: 10px; padding: 1rem 0.75rem; cursor: pointer; transition: all 0.15s; background: #fff; }
+.role-btn:hover { border-color: #4a4a8a; background: #f8f8fe; }
+.role-btn.selected { border-color: #4a4a8a; background: #eeeefa; }
+.role-icon { font-size: 1.5rem; display: block; margin-bottom: 6px; }
+.role-name { font-size: 0.85rem; font-weight: 500; }
+.role-desc { font-size: 0.7rem; color: #888; margin-top: 2px; }
+.pin-wrap { margin-bottom: 1.25rem; }
+.pin-label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 8px; text-align: left; }
+.pin-input { width: 100%; padding: 0.65rem 0.9rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 1.1rem; letter-spacing: 0.3em; text-align: center; color: #1a1a2e; }
+.pin-input:focus { outline: none; border-color: #4a4a8a; box-shadow: 0 0 0 2px rgba(74,74,138,0.1); }
+.btn-acceder { width: 100%; padding: 0.75rem; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.btn-acceder:hover { background: #2a2a4e; }
+.btn-acceder:disabled { background: #aaa; cursor: not-allowed; }
+.error { color: #a32d2d; font-size: 0.8rem; margin-top: 0.5rem; display: none; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo">📋</div>
+  <h1>Gestión de Carga CSS</h1>
+  <p class="subtitle">Ingeniería y Prevención de Riesgos S.L.</p>
+
+  <div class="role-grid">
+    <div class="role-btn" onclick="selectRole('staffer')" id="btn_staffer">
+      <span class="role-icon">🎯</span>
+      <div class="role-name">Staffer</div>
+      <div class="role-desc">Gestión completa</div>
+    </div>
+    <div class="role-btn" onclick="selectRole('delegado')" id="btn_delegado">
+      <span class="role-icon">📋</span>
+      <div class="role-name">Delegado</div>
+      <div class="role-desc">Solicitudes y consulta</div>
+    </div>
+  </div>
+
+  <div class="pin-wrap">
+    <label class="pin-label">PIN de acceso</label>
+    <input type="password" class="pin-input" id="pinInput" placeholder="••••" maxlength="4" oninput="onPinInput()" onkeydown="if(event.key==='Enter')acceder()">
+  </div>
+
+  <button class="btn-acceder" id="btnAcceder" onclick="acceder()" disabled>Acceder</button>
+  <div class="error" id="errorMsg">PIN incorrecto. Inténtalo de nuevo.</div>
+</div>
+
+<script>
+var PINS = { staffer: '1627', delegado: '1997' };
+var rolSeleccionado = null;
+
+function selectRole(rol) {
+  rolSeleccionado = rol;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btn_' + rol).classList.add('selected');
+  document.getElementById('pinInput').focus();
+  checkReady();
+}
+
+function onPinInput() {
+  document.getElementById('errorMsg').style.display = 'none';
+  checkReady();
+}
+
+function checkReady() {
+  const pin = document.getElementById('pinInput').value;
+  document.getElementById('btnAcceder').disabled = !(rolSeleccionado && pin.length === 4);
+}
+
+function acceder() {
+  const pin = document.getElementById('pinInput').value;
+  if (!rolSeleccionado || !pin) return;
+  if (pin === PINS[rolSeleccionado]) {
+    sessionStorage.setItem('css_rol', rolSeleccionado);
+    const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+    window.location.href = redirect;
+  } else {
+    document.getElementById('errorMsg').style.display = 'block';
+    document.getElementById('pinInput').value = '';
+    checkReady();
+  }
+}
+</script>
+</body>
+</html>
