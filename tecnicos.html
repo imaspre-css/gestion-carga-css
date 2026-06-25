@@ -145,7 +145,6 @@ input:checked + .slider:before { transform: translateX(16px); }
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <select id="filtroTerritorioEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
               <option value="">Todos los territorios</option>
-              <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
             </select>
             <span style="font-size:0.75rem;color:#888;" id="seleccionLabel"></span>
             <button class="btn btn-sm" onclick="limpiarSeleccion()">Limpiar selección</button>
@@ -167,7 +166,6 @@ input:checked + .slider:before { transform: translateX(16px); }
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select id="filtroTerritorioGestion" onchange="renderTablaGestion()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
             <option value="">Todos los territorios</option>
-            <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
           </select>
           <button class="btn btn-primary btn-sm" onclick="abrirModalNuevo()">+ Nuevo técnico</button>
         </div>
@@ -314,7 +312,7 @@ function limpiarSeleccion() {
 function renderTechGrid() {
   const filtro = document.getElementById('filtroTerritorioEquipo')?.value || '';
   let tecnicos = getAllTecnicos();
-  if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t) === filtro);
+  if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t).toUpperCase() === filtro.toUpperCase());
   document.getElementById('techGrid').innerHTML = tecnicos.map(t => {
     const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const obrasTec = obras.filter(o => o.tecnico === t);
@@ -488,7 +486,7 @@ function renderTablaGestion() {
   const activos = tecnicosDB.filter(t => t.activo !== false);
   const inactivos = tecnicosDB.filter(t => t.activo === false);
   let todos = [...activos, ...soloEnObras, ...inactivos];
-  if (filtroGestion) todos = todos.filter(t => (t.territorio||getTecnicoTerritorio(t.nombre)) === filtroGestion);
+  if (filtroGestion) todos = todos.filter(t => (t.territorio||getTecnicoTerritorio(t.nombre)||'').toUpperCase() === filtroGestion.toUpperCase());
 
   if (!todos.length) {
     document.getElementById('tablaGestion').innerHTML = '<div class="empty">No hay técnicos registrados. Pulsa "+ Nuevo técnico" para añadir el primero,<br>o sincroniza el Excel desde la app de gestión.</div>';
@@ -658,6 +656,15 @@ async function init() {
   await loadTecnicos();
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
+  // Populate territory filters from actual data
+  const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
+  ['filtroTerritorioEquipo','filtroTerritorioGestion'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) {
+      sel.innerHTML = '<option value="">Todos los territorios</option>';
+      territorios.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
+    }
+  });
   renderTechGrid();
   renderTablaGestion();
   const primero = [...new Set(obras.map(o => o.tecnico))].sort()[0];
