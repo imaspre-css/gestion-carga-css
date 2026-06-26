@@ -290,7 +290,7 @@ function processFile(file) {
       const INCLUIR = ['ACTIVA','ACTIVA (SIN ACTIVIDAD)','EN PROCESO FINALIZACIÓN','PENDIENTE DESIG. CSS','PENDIENTE INICIO','SUSTITUCIÓN'];
       if (!INCLUIR.includes(est)) continue;
       const fin = cF >= 0 ? row[cF] : null;
-      if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-30*864e5)) continue; }
+      if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-60*864e5)) continue; }
       const num = cN >= 0 ? String(row[cN]||'').trim() : '';
       const desc = cD >= 0 ? String(row[cD]||'').trim() : '';
       if (!num || num==='null' || num.length < 2) continue;
