@@ -126,8 +126,7 @@ input[type="file"] { display: none; }
     <div class="stats-grid" id="statsGrid"></div>
     <div class="tab-bar">
       <div class="tab active" onclick="switchTab('envio')">📤 Envío</div>
-      <div class="tab" onclick="switchTab('importar')">📥 Importar respuestas</div>
-      <div class="tab" onclick="switchTab('respuestas')">📊 Respuestas</div>
+
     </div>
 
     <div id="tab-envio">
@@ -137,13 +136,8 @@ input[type="file"] { display: none; }
           <label>Semana del</label><input type="date" id="weekStart">
           <label>al</label><input type="date" id="weekEnd">
         </div>
-        <div class="week-row">
-          <label>Tu email (receptor de respuestas)</label>
-          <input type="email" id="emailDest" placeholder="coordinador@empresa.com">
-        </div>
-        <div class="notice notice-info" style="margin-bottom:0;">
-          <strong>¿Cómo funciona?</strong> Se genera un enlace único por técnico con sus obras precargadas. El técnico lo abre en cualquier navegador, rellena los datos con botones +/− y pulsa "Enviar". Se abre su email con los datos listos para enviarte. Sin servidores ni instalaciones.
-        </div>
+
+        
       </div>
       <div class="card">
         <div class="card-title">👥 Técnicos con obras activas</div>
@@ -156,7 +150,7 @@ input[type="file"] { display: none; }
       </div>
       <div class="actions-bar">
         <button class="btn btn-primary" onclick="generarEmails()">📧 Generar emails con formularios</button>
-        <button class="btn btn-success" onclick="sincronizarObras()" id="btnSync">☁️ Sincronizar obras con Supabase</button>
+
         <button class="btn" onclick="goBack()">← Volver</button>
       </div>
       <div id="syncStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
@@ -380,8 +374,7 @@ function toggleAll(cb) { tecData.forEach((_,i)=>{ const c=document.getElementByI
 async function generarEmails() {
   const ws=document.getElementById('weekStart').value;
   const we=document.getElementById('weekEnd').value;
-  const dest=document.getElementById('emailDest').value.trim();
-  if (!dest) { alert('Introduce tu email (receptor de respuestas) antes de continuar.'); document.getElementById('emailDest').focus(); return; }
+  const dest='';
   const sel=tecData.filter((_,i)=>document.getElementById('chk_'+i)?.checked);
   if (!sel.length) { alert('Selecciona al menos un técnico.'); return; }
 
