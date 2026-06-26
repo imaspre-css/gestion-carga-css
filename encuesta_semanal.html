@@ -150,7 +150,7 @@ input[type="file"] { display: none; }
       </div>
       <div class="actions-bar">
         <button class="btn btn-primary" onclick="generarEmails()">📧 Generar emails con formularios</button>
-
+        <button class="btn btn-success" onclick="sincronizarObras()" id="btnSync">☁️ Sincronizar obras con Supabase</button>
         <button class="btn" onclick="goBack()">← Volver</button>
       </div>
       <div id="syncStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
@@ -193,6 +193,7 @@ input[type="file"] { display: none; }
 
 <script>
 let tecData = [];
+let origenDatos = 'excel';
 let responses = JSON.parse(localStorage.getItem('enc_resp_v3') || '[]');
 
 // Form template stored as pure base64 - zero escaping issues
@@ -316,6 +317,7 @@ function processFile(file) {
     }
 
     tecData = Object.values(map).filter(t=>t.obras.length>0).sort((a,b)=>a.name.localeCompare(b.name));
+    origenDatos = 'excel';
     initWeek(); renderMain();
   };
   reader.readAsArrayBuffer(file);
@@ -346,6 +348,8 @@ function renderMain() {
   }).join('');
   document.getElementById('selAll').checked=true;
   updateSelCount(); renderRespuestas();
+  const btnSync=document.getElementById('btnSync');
+  if(btnSync) btnSync.style.display=origenDatos==='excel'?'':'none';
 }
 
 function updateDot(i) {
@@ -691,6 +695,7 @@ async function cargarDesdeSupabase() {
     });
 
     tecData = Object.values(map).filter(t => t.obras.length > 0).sort((a,b) => a.name.localeCompare(b.name));
+    origenDatos = 'supabase';
     initWeek();
     renderMain();
   } catch(e) {
