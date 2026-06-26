@@ -98,13 +98,26 @@ input[type="file"] { display: none; }
 
   <div class="step active" id="step-upload">
     <div class="card">
-      <div class="card-title">📂 Cargar archivo Excel</div>
-      <div class="upload-zone" id="dropzone" onclick="document.getElementById('fi').click()">
-        <span class="icon">📊</span>
-        <p>Arrastra tu Excel aquí o haz clic para seleccionar</p>
-        <small>CARGA_TRABAJO*.xlsx — hojas 2025 o 2026</small>
+      <div class="card-title">📂 Cargar obras</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem;">
+        <div>
+          <div style="font-size:0.78rem;color:#666;margin-bottom:8px;font-weight:500;">Opción A — Desde Excel</div>
+          <div class="upload-zone" id="dropzone" onclick="document.getElementById('fi').click()" style="padding:1.5rem;">
+            <span class="icon" style="font-size:1.75rem;">📊</span>
+            <p style="font-size:0.82rem;">Arrastra tu Excel o haz clic</p>
+            <small>Para cargas masivas o cambios de estado</small>
+          </div>
+          <input type="file" id="fi" accept=".xlsx,.xls">
+        </div>
+        <div>
+          <div style="font-size:0.78rem;color:#666;margin-bottom:8px;font-weight:500;">Opción B — Desde Supabase</div>
+          <div style="border:1.5px dashed #4a4a8a;border-radius:10px;padding:1.5rem;text-align:center;background:#f8f8fe;cursor:pointer;transition:all 0.2s;" onclick="cargarDesdeSupabase()">
+            <span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">☁️</span>
+            <p style="font-size:0.82rem;color:#666;">Cargar obras activas desde Supabase</p>
+            <small style="color:#aaa;font-size:0.75rem;margin-top:4px;display:block;">Sin necesidad de Excel · Incluye obras de nuevas solicitudes</small>
+          </div>
+        </div>
       </div>
-      <input type="file" id="fi" accept=".xlsx,.xls">
     </div>
     <div class="notice notice-info">Se cargan las obras con estado <strong>ACTIVA</strong> o sin fecha de fin pasada. Finalizadas y paralizadas se excluyen automáticamente.</div>
   </div>
@@ -644,6 +657,52 @@ async function enviarOutlook(toEmail, asunto, enlace) {
     btn.textContent = '⚡ Enviar directo';
     msToken = null;
     alert('Error al enviar: ' + e.message + '\n\nUsa el botón "Abrir en email" como alternativa.');
+  }
+}
+
+
+// ── CARGAR DESDE SUPABASE ─────────────────────────────────────
+async function cargarDesdeSupabase() {
+  const zone = document.getElementById('supabaseZone') || document.querySelector('[onclick="cargarDesdeSupabase()"]');
+  if (zone) { zone.style.opacity = '0.6'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">⏳</span><p style="font-size:0.82rem;color:#666;">Cargando...</p>'; }
+
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=eq.ACTIVA&limit=500', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) {
+      alert('No se encontraron obras activas en Supabase.');
+      if (zone) { zone.style.opacity = '1'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">☁️</span><p style="font-size:0.82rem;color:#666;">Cargar obras activas desde Supabase</p><small style="color:#aaa;font-size:0.75rem;margin-top:4px;display:block;">Sin necesidad de Excel</small>'; }
+      return;
+    }
+
+    // Filter by date (60 days)
+    const cutoff = new Date(Date.now() - 60*864e5);
+    const filtered = rows.filter(o => {
+      if (!o.fecha_fin) return true;
+      const d = new Date(o.fecha_fin);
+      return isNaN(d) || d >= cutoff;
+    });
+
+    // Build tecData
+    const map = {};
+    filtered.forEach(o => {
+      const tec = o.tecnico;
+      if (!tec) return;
+      if (!map[tec]) map[tec] = { name: tec, email: o.email||'', obras: [] };
+      if (o.email && !map[tec].email) map[tec].email = o.email;
+      if (!map[tec].obras.find(x => x.num === o.cod_obra)) {
+        map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'' });
+      }
+    });
+
+    tecData = Object.values(map).filter(t => t.obras.length > 0).sort((a,b) => a.name.localeCompare(b.name));
+    initWeek();
+    renderMain();
+  } catch(e) {
+    alert('Error al cargar desde Supabase: ' + e.message);
+    if (zone) zone.style.opacity = '1';
   }
 }
 
