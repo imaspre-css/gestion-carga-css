@@ -212,8 +212,13 @@ function renderTabla() {
   document.getElementById('tablaWrap').innerHTML = html;
 }
 
-function getTecnicosConCarga() {
-  const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+function getTecnicosConCarga(territorio) {
+  let tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
+  if (territorio) {
+    const tUpper = territorio.toUpperCase();
+    const tecsFiltrados = [...new Set(obras.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))];
+    if (tecsFiltrados.length > 0) tecnicos = tecsFiltrados.sort();
+  }
   return tecnicos.map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
@@ -230,7 +235,7 @@ function abrirAsignar(id) {
   document.getElementById('modalTitle').textContent = 'Asignar técnico — ' + (solicitudActual.denominacion||'').substring(0, 40);
 
   const cargaNueva = solicitudActual.carga_teorica_calculada || 0;
-  const tecnicos = getTecnicosConCarga();
+  const tecnicos = getTecnicosConCarga(solicitudActual.territorio);
 
   let html = '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
     + '<div style="font-weight:500;margin-bottom:4px;">' + (solicitudActual.denominacion||'') + '</div>'
