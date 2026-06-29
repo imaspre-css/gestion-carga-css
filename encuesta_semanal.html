@@ -287,6 +287,7 @@ function processFile(file) {
     const cCL = hdr.findIndex(h => h==='CLIENTE');
 
     const EXCLUIR = ['FINALIZADA','SUSPENDIDA','PARALIZADA','PENDIENTE','EN PROCESO','SIN ACTIVIDAD'];
+    const INCLUIR_ENCUESTA = ['ACTIVA','SUSTITUCIÓN'];
     const map = {};
 
     // First pass: collect all emails per technician
@@ -305,8 +306,11 @@ function processFile(file) {
       const tec = String(row[cT]).trim();
       if (tec.length < 3) continue;
       const est = cE >= 0 ? String(row[cE]||'').trim().toUpperCase() : '';
-      const INCLUIR = ['ACTIVA','ACTIVA (SIN ACTIVIDAD)','EN PROCESO FINALIZACIÓN','PENDIENTE DESIG. CSS','PENDIENTE INICIO','SUSTITUCIÓN'];
-      if (!INCLUIR.includes(est)) continue;
+      // All estados are synced to Supabase - state management is done in the platform
+      const EXCLUIR_SYNC = ['FINALIZADA'];
+      if (EXCLUIR_SYNC.includes(est)) continue;
+      const EN_ENCUESTA = ['ACTIVA','SUSTITUCIÓN'];
+      const paraEncuesta = EN_ENCUESTA.includes(est);
       const fin = cF >= 0 ? row[cF] : null;
       if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-60*864e5)) continue; }
       const num = cN >= 0 ? String(row[cN]||'').trim() : '';
@@ -322,10 +326,12 @@ function processFile(file) {
         const _ff = cF >= 0 ? row[cF] : null;
         const fecha_inicio = (_fi instanceof Date || (typeof _fi === 'string' && _fi.match(/^\d{4}/))) ? _fi : null;
         const fecha_fin = (_ff instanceof Date || (typeof _ff === 'string' && _ff.match(/^\d{4}/))) ? _ff : null;
-        map[tec].obras.push({num, desc:desc.substring(0,120), cliente, cod_contrato, territorio, carga_teorica, fecha_inicio, fecha_fin});
+        map[tec].obras.push({num, desc:desc.substring(0,120), cliente, cod_contrato, territorio, carga_teorica, fecha_inicio, fecha_fin, estado: est, paraEncuesta});
       }
     }
 
+    // For encuesta, only show obras marked for encuesta
+    Object.values(map).forEach(t => { t.obras = t.obras.filter(o => o.paraEncuesta); });
     tecData = Object.values(map).filter(t=>t.obras.length>0).sort((a,b)=>a.name.localeCompare(b.name));
     origenDatos = 'excel';
     initWeek(); renderMain();
