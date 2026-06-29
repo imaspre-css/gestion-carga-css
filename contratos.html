@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contratos — CSS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+.container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; }
+.stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
+.stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 1rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters select, .filters input { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 0.5px solid #d0d0c8; background: #fff; }
+
+/* Contrato card */
+.contrato-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; transition: box-shadow 0.15s; }
+.contrato-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.contrato-header { padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; gap: 12px; flex-wrap: wrap; }
+.contrato-header:hover { background: #fafaf8; }
+.contrato-cod { font-size: 0.72rem; font-weight: 600; color: #4a4a8a; background: #eeeefa; padding: 2px 8px; border-radius: 20px; }
+.contrato-nombre { font-size: 0.95rem; font-weight: 500; flex: 1; }
+.contrato-meta { font-size: 0.75rem; color: #888; }
+.contrato-stats { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.contrato-stat { text-align: center; }
+.contrato-stat-num { font-size: 1.1rem; font-weight: 500; color: #1a1a2e; }
+.contrato-stat-label { font-size: 0.65rem; color: #aaa; text-transform: uppercase; }
+.chevron { font-size: 0.75rem; color: #aaa; transition: transform 0.2s; }
+.chevron.open { transform: rotate(180deg); }
+
+/* Obras table */
+.obras-wrap { display: none; border-top: 0.5px solid #f0f0e8; }
+.obras-wrap.open { display: block; }
+.obras-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.obras-table th { background: #f8f8f5; padding: 0.5rem 1rem; text-align: left; font-weight: 500; color: #888; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid #e8e8e0; }
+.obras-table td { padding: 0.6rem 1rem; border-bottom: 0.5px solid #f5f5f0; vertical-align: middle; }
+.obras-table tr:last-child td { border-bottom: none; }
+.obras-table tr:hover td { background: #fafaf8; }
+.pill { display: inline-block; font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.pill-blue { background: #eeeefa; color: #4a4a8a; }
+
+/* Estado selector */
+.estado-select { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; border: 1.5px solid; cursor: pointer; font-weight: 500; appearance: none; -webkit-appearance: none; padding-right: 20px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+.estado-ACTIVA { background: #e1f5ee; color: #0f6e56; border-color: #9fe1cb; }
+.estado-SUSTITUCION { background: #e6f1fb; color: #185fa5; border-color: #b5d4f4; }
+.estado-PDTE { background: #faeeda; color: #854f0b; border-color: #fac775; }
+.estado-SUSPENDIDA { background: #f5f5f0; color: #666; border-color: #d0d0c8; }
+.estado-FINALIZADA { background: #fcebeb; color: #a32d2d; border-color: #f7c1c1; }
+
+.empty { text-align: center; padding: 3rem; color: #bbb; font-size: 0.875rem; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.82rem; display: none; z-index: 999; }
+@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<script>
+(function() {
+  var rol = localStorage.getItem('css_rol');
+  if (!rol) { window.location.href = 'login.html?redirect=contratos.html'; }
+})();
+</script>
+
+<div class="header">
+  <h1>📁 Contratos y obras</h1>
+  <div class="nav">
+    <a href="index.html">Inicio</a>
+    <a href="solicitudes.html">Solicitudes</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="tecnicos.html">Técnicos</a>
+    <a href="contratos.html" class="active">Contratos</a>
+    <a href="nueva-solicitud.html">+ Nueva solicitud</a>
+    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
+    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="container">
+  <div id="loadingDiv"><div class="spinner"></div></div>
+  <div id="mainContent" style="display:none;">
+
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Contratos activos</div>
+        <div class="filters">
+          <select id="filtroTerritorio" onchange="renderContratos()">
+            <option value="">Todos los territorios</option>
+          </select>
+          <select id="filtroEstado" onchange="renderContratos()">
+            <option value="">Todos los estados</option>
+            <option value="ACTIVA">Activa</option>
+            <option value="PDTE. INICIO">Pdte. inicio</option>
+            <option value="SUSTITUCIÓN">Sustitución</option>
+            <option value="SUSPENDIDA">Suspendida</option>
+            <option value="FINALIZADA">Finalizada</option>
+          </select>
+          <input type="text" id="buscarContrato" placeholder="Buscar contrato..." oninput="renderContratos()" style="min-width:160px;">
+        </div>
+      </div>
+      <div id="contratosWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+var obras = [];
+var isStaffer = localStorage.getItem('css_rol') === 'staffer';
+var openContratos = new Set();
+
+// Show encuesta link for staffers
+if (isStaffer) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var e = document.getElementById('navEncuesta');
+    if (e) e.style.display = '';
+  });
+}
+
+function getEstadoClass(estado) {
+  if (!estado) return 'estado-SUSPENDIDA';
+  const e = estado.toUpperCase();
+  if (e === 'ACTIVA') return 'estado-ACTIVA';
+  if (e.includes('SUSTIT')) return 'estado-SUSTITUCION';
+  if (e.includes('PDTE') || e.includes('PENDIENTE')) return 'estado-PDTE';
+  if (e === 'SUSPENDIDA') return 'estado-SUSPENDIDA';
+  if (e === 'FINALIZADA') return 'estado-FINALIZADA';
+  return 'estado-SUSPENDIDA';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+function renderStats() {
+  const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))];
+  const activas = obras.filter(o => o.estado === 'ACTIVA').length;
+  const suspendidas = obras.filter(o => o.estado === 'SUSPENDIDA').length;
+  document.getElementById('statsGrid').innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + contratos.length + '</div><div class="stat-label">Contratos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + obras.length + '</div><div class="stat-label">Obras totales</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + activas + '</div><div class="stat-label">Obras activas</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + suspendidas + '</div><div class="stat-label">Suspendidas</div></div>';
+}
+
+function populateFilters() {
+  const territorios = [...new Set(obras.map(o => (o.territorio||'').toUpperCase()).filter(Boolean))].sort();
+  const sel = document.getElementById('filtroTerritorio');
+  sel.innerHTML = '<option value="">Todos los territorios</option>';
+  territorios.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
+}
+
+function renderContratos() {
+  const filtroT = document.getElementById('filtroTerritorio').value.toUpperCase();
+  const filtroE = document.getElementById('filtroEstado').value.toUpperCase();
+  const buscar = document.getElementById('buscarContrato').value.toLowerCase();
+
+  // Group obras by contrato
+  const contratoMap = {};
+  obras.forEach(o => {
+    const cod = o.cod_contrato || '(sin contrato)';
+    if (!contratoMap[cod]) contratoMap[cod] = { cod, cliente: o.cliente||'', obras: [] };
+    contratoMap[cod].obras.push(o);
+  });
+
+  let contratos = Object.values(contratoMap).sort((a,b) => a.cod.localeCompare(b.cod));
+
+  // Filter
+  if (filtroT) contratos = contratos.filter(c => c.obras.some(o => (o.territorio||'').toUpperCase() === filtroT));
+  if (filtroE) contratos = contratos.filter(c => c.obras.some(o => (o.estado||'').toUpperCase() === filtroE));
+  if (buscar) contratos = contratos.filter(c => c.cod.toLowerCase().includes(buscar) || c.cliente.toLowerCase().includes(buscar));
+
+  if (!contratos.length) {
+    document.getElementById('contratosWrap').innerHTML = '<div class="empty">No hay contratos con estos filtros</div>';
+    return;
+  }
+
+  document.getElementById('contratosWrap').innerHTML = contratos.map(cont => {
+    const activas = cont.obras.filter(o => o.estado === 'ACTIVA').length;
+    const cargaTotal = Math.round(cont.obras.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const tecnicos = [...new Set(cont.obras.map(o => o.tecnico).filter(Boolean))];
+    const isOpen = openContratos.has(cont.cod);
+
+    // Obras table
+    let obrasHTML = '';
+    if (isOpen) {
+      let obrasFiltered = cont.obras;
+      if (filtroT) obrasFiltered = obrasFiltered.filter(o => (o.territorio||'').toUpperCase() === filtroT);
+      if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
+
+      obrasHTML = '<div class="obras-wrap open"><table class="obras-table"><thead><tr>'
+        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>'
+        + '</tr></thead><tbody>'
+        + obrasFiltered.map(o => {
+          const estados = ['ACTIVA','PDTE. INICIO','SUSTITUCIÓN','SUSPENDIDA','FINALIZADA'];
+          const estadoOpts = estados.map(e =>
+            '<option value="' + e + '"' + (o.estado === e ? ' selected' : '') + '>' + e + '</option>'
+          ).join('');
+          return '<tr>'
+            + '<td><span class="pill pill-blue">' + (o.cod_obra||'—') + '</span></td>'
+            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (o.descripcion||'') + '">' + (o.descripcion||'—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (o.tecnico||'—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (o.territorio||'—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
+            + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
+            + '<td>' + (isStaffer
+              ? '<select class="estado-select ' + getEstadoClass(o.estado) + '" onchange="cambiarEstado(\'' + o.id + '\',this)" data-id="' + o.id + '">' + estadoOpts + '</select>'
+              : '<span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span>')
+            + '</td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table></div>';
+    }
+
+    return '<div class="contrato-card" id="cont_' + cont.cod.replace(/[^a-zA-Z0-9]/g,'_') + '">'
+      + '<div class="contrato-header" onclick="toggleContrato(\'' + cont.cod.replace(/'/g,"\\'") + '\')">'
+      + '<span class="contrato-cod">' + cont.cod + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div class="contrato-nombre">' + (cont.cliente||'—') + '</div>'
+      + '<div class="contrato-meta">' + tecnicos.length + ' técnico' + (tecnicos.length!==1?'s':'') + ' · ' + cont.obras.length + ' obras</div>'
+      + '</div>'
+      + '<div class="contrato-stats">'
+      + '<div class="contrato-stat"><div class="contrato-stat-num">' + activas + '</div><div class="contrato-stat-label">Activas</div></div>'
+      + '<div class="contrato-stat"><div class="contrato-stat-num">' + cargaTotal + '%</div><div class="contrato-stat-label">Carga total</div></div>'
+      + '</div>'
+      + '<span class="chevron' + (isOpen?' open':'') + '">▼</span>'
+      + '</div>'
+      + (isOpen ? obrasHTML : '<div class="obras-wrap"></div>')
+      + '</div>';
+  }).join('');
+}
+
+function toggleContrato(cod) {
+  if (openContratos.has(cod)) openContratos.delete(cod);
+  else openContratos.add(cod);
+  renderContratos();
+}
+
+async function cambiarEstado(id, selectEl) {
+  const nuevoEstado = selectEl.value;
+  // Update select style immediately
+  selectEl.className = 'estado-select ' + getEstadoClass(nuevoEstado);
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: 'Bearer ' + SUPABASE_KEY,
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify({ estado: nuevoEstado })
+  });
+
+  if (res.ok) {
+    // Update local data
+    const obra = obras.find(o => o.id === id);
+    if (obra) obra.estado = nuevoEstado;
+    showToast('Estado actualizado: ' + nuevoEstado);
+    renderStats();
+  } else {
+    showToast('Error al actualizar el estado');
+    // Revert
+    const obra = obras.find(o => o.id === id);
+    if (obra) selectEl.value = obra.estado;
+  }
+}
+
+async function init() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=500&order=cod_contrato', {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  obras = await res.json();
+  if (!Array.isArray(obras)) obras = [];
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  renderStats();
+  populateFilters();
+  renderContratos();
+}
+
+init();
+</script>
+</body>
+</html>
