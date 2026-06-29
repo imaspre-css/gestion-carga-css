@@ -66,6 +66,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 @keyframes spin { to { transform: rotate(360deg); } }
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 0.65rem 1.25rem; border-radius: 8px; font-size: 0.82rem; display: none; z-index: 999; }
 @media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 92%; max-width: 560px; max-height: 88vh; overflow-y: auto; }
+.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; }
+.modal-head h3 { font-size: 1rem; font-weight: 500; }
+.modal-body { padding: 1.5rem; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
 </style>
 </head>
 <body>
@@ -212,7 +219,7 @@ function renderContratos() {
       if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
 
       obrasHTML = '<div class="obras-wrap open"><table class="obras-table"><thead><tr>'
-        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>'
+        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (isStaffer ? '<th></th>' : '<th></th>')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
           const estados = ['ACTIVA','PDTE. INICIO','SUSTITUCIÓN','SUSPENDIDA','FINALIZADA'];
@@ -231,6 +238,7 @@ function renderContratos() {
               ? '<select class="estado-select ' + getEstadoClass(o.estado) + '" onchange="cambiarEstado(\'' + o.id + '\',this)" data-id="' + o.id + '">' + estadoOpts + '</select>'
               : '<span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span>')
             + '</td>'
+            + (isStaffer ? '<td><button class="btn btn-sm" style="padding:2px 8px;" onclick="abrirEditarObra(event,'' + o.id + '')">✏️</button></td>' : '<td></td>')
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
@@ -304,6 +312,125 @@ async function init() {
 }
 
 init();
+
+function abrirEditarObra(event, id) {
+  event.stopPropagation();
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('eId').value = id;
+  document.getElementById('eDescripcion').value = o.descripcion || '';
+  document.getElementById('eCliente').value = o.cliente || '';
+  document.getElementById('eTerritorio').value = o.territorio || '';
+  document.getElementById('eFechaInicio').value = o.fecha_inicio ? o.fecha_inicio.split('T')[0] : '';
+  document.getElementById('eFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
+  document.getElementById('eCarga').value = o.carga_teorica_semanal || '';
+  document.getElementById('eEstado').value = o.estado || 'ACTIVA';
+  document.getElementById('editStatus').innerHTML = '';
+  document.getElementById('modalEditarObra').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('modalEditarObra').classList.remove('open');
+}
+
+async function guardarObra() {
+  const id = document.getElementById('eId').value;
+  const payload = {
+    descripcion: document.getElementById('eDescripcion').value.trim(),
+    cliente: document.getElementById('eCliente').value.trim(),
+    territorio: document.getElementById('eTerritorio').value,
+    fecha_inicio: document.getElementById('eFechaInicio').value || null,
+    fecha_fin: document.getElementById('eFechaFin').value || null,
+    carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null,
+    estado: document.getElementById('eEstado').value
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: 'Bearer ' + SUPABASE_KEY,
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    // Update local data
+    const obra = obras.find(o => o.id === id);
+    if (obra) Object.assign(obra, payload);
+    closeEditModal();
+    showToast('Obra actualizada correctamente');
+    renderStats();
+    renderContratos();
+  } else {
+    document.getElementById('editStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar.</div>';
+  }
+}
+
+document.getElementById('modalEditarObra').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalEditarObra')) closeEditModal();
+});
+
 </script>
+
+<!-- Modal editar obra -->
+<div class="modal-bg" id="modalEditarObra">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-head">
+      <h3>Editar obra</h3>
+      <button class="close-btn" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="editStatus"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="grid-column:1/-1;">
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
+          <input type="text" id="eDescripcion" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
+          <input type="text" id="eCliente" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
+          <select id="eTerritorio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="">Selecciona...</option>
+            <option>CENTRO</option><option>FUNCIONAL</option><option>ESTE</option><option>NORTE</option><option>SUR</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Fecha inicio</label>
+          <input type="date" id="eFechaInicio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Fecha fin</label>
+          <input type="date" id="eFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Carga teórica semanal (%)</label>
+          <input type="number" id="eCarga" min="0" max="200" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Estado</label>
+          <select id="eEstado" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="ACTIVA">ACTIVA</option>
+            <option value="PDTE. INICIO">PDTE. INICIO</option>
+            <option value="SUSTITUCIÓN">SUSTITUCIÓN</option>
+            <option value="SUSPENDIDA">SUSPENDIDA</option>
+            <option value="FINALIZADA">FINALIZADA</option>
+          </select>
+        </div>
+      </div>
+      <input type="hidden" id="eId">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+        <button class="btn" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarObra()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
