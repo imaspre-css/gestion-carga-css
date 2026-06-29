@@ -100,6 +100,7 @@ input[type="file"] { display: none; }
     <a href="solicitudes.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Solicitudes</a>
     <a href="dashboard.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Dashboard</a>
     <a href="tecnicos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Técnicos</a>
+    <a href="contratos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Contratos</a>
     <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
   </div>
 </div>
@@ -547,7 +548,7 @@ async function sincronizarObras() {
         cod_obra: o.num,
         descripcion: o.desc || '',
         territorio: o.territorio || '',
-        estado: 'ACTIVA',
+        estado: est || 'ACTIVA',
         carga_teorica_semanal: o.carga_teorica ? parseFloat(o.carga_teorica) * 100 : null,
         fecha_inicio: o.fecha_inicio ? (o.fecha_inicio instanceof Date ? o.fecha_inicio.toISOString().split('T')[0] : String(o.fecha_inicio).split('T')[0]) : null,
         fecha_fin: o.fecha_fin ? (o.fecha_fin instanceof Date ? o.fecha_fin.toISOString().split('T')[0] : String(o.fecha_fin).split('T')[0]) : null
