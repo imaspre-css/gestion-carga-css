@@ -84,6 +84,9 @@ input:checked + .slider:before { transform: translateX(16px); }
   if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
 })();
 </script>
+<script>
+if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMContentLoaded',function(){var e=document.getElementById('navEncuesta');if(e)e.style.display='';});}
+</script>
 
 <div class="header">
   <a href="solicitudes.html">← Solicitudes</a>
@@ -94,6 +97,7 @@ input:checked + .slider:before { transform: translateX(16px); }
     <a href="dashboard.html">Dashboard</a>
     <a href="tecnicos.html">Técnicos</a>
     <a href="nueva-solicitud.html" class="active">+ Nueva solicitud</a>
+    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
     <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
 </div>
