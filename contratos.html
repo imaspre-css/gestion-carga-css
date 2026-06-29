@@ -238,7 +238,7 @@ function renderContratos() {
               ? '<select class="estado-select ' + getEstadoClass(o.estado) + '" onchange="cambiarEstado(\'' + o.id + '\',this)" data-id="' + o.id + '">' + estadoOpts + '</select>'
               : '<span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span>')
             + '</td>'
-            + (isStaffer ? '<td><button class="btn btn-sm" style="padding:2px 8px;" onclick="abrirEditarObra(event,'' + o.id + '')">✏️</button></td>' : '<td></td>')
+            + (isStaffer ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '<td></td>')
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
@@ -312,6 +312,12 @@ async function init() {
 }
 
 init();
+
+function abrirEditarObraBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  abrirEditarObra(event, id);
+}
 
 function abrirEditarObra(event, id) {
   event.stopPropagation();
