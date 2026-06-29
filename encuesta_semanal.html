@@ -90,9 +90,18 @@ input[type="file"] { display: none; }
 })();
 </script>
 
-<div class="header">
-  <h1>📋 Encuesta Semanal de Obras</h1>
-  <p>Panel de gestión · Coordinación</p>
+<div class="header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+  <div>
+    <h1>📋 Encuesta Semanal de Obras</h1>
+    <p>Panel de gestión · Coordinación</p>
+  </div>
+  <div class="nav" style="display:flex;gap:4px;">
+    <a href="index.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Inicio</a>
+    <a href="solicitudes.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Solicitudes</a>
+    <a href="dashboard.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Dashboard</a>
+    <a href="tecnicos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Técnicos</a>
+    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
+  </div>
 </div>
 <div class="container">
 
