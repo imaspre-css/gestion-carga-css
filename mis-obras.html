@@ -51,6 +51,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .empty { text-align: center; padding: 3rem; color: #bbb; font-size: 0.875rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 92%; max-width: 480px; }
+.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; }
+.modal-head h3 { font-size: 1rem; font-weight: 500; }
+.modal-body { padding: 1.5rem; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 </style>
 </head>
 <body>
@@ -195,6 +203,7 @@ function renderObras() {
       + (o.fecha_inicio ? 'Inicio: ' + new Date(o.fecha_inicio).toLocaleDateString('es-ES') : 'Sin fecha inicio')
       + ' · ' + (o.fecha_fin ? 'Fin: ' + new Date(o.fecha_fin).toLocaleDateString('es-ES') : 'Sin fecha fin')
       + '</div>'
+      + '<button class="btn btn-sm" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" data-id="' + o.id + '" onclick="abrirProponer(event)">📅 Proponer cambio de fecha</button>'
       + '</div>';
   }).join('');
 }
@@ -227,6 +236,90 @@ async function init() {
 }
 
 init();
+
+function abrirProponer(event) {
+  const id = event.currentTarget.dataset.id;
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('pObraId').value = id;
+  document.getElementById('proponerObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
+  document.getElementById('pFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
+  document.getElementById('pMotivo').value = '';
+  document.getElementById('proponerStatus').innerHTML = '';
+  document.getElementById('modalProponer').classList.add('open');
+}
+
+function closeProponerModal() {
+  document.getElementById('modalProponer').classList.remove('open');
+}
+
+async function enviarPropuesta() {
+  const obraId = document.getElementById('pObraId').value;
+  const nuevaFecha = document.getElementById('pFechaFin').value;
+  const motivo = document.getElementById('pMotivo').value.trim();
+  const o = obras.find(x => x.id === obraId);
+
+  if (!nuevaFecha) { alert('Introduce la nueva fecha propuesta.'); return; }
+
+  const payload = {
+    obra_id: obraId,
+    tecnico: tecnicoNombre,
+    campo: 'fecha_fin',
+    valor_actual: o?.fecha_fin || '',
+    valor_propuesto: nuevaFecha,
+    motivo: motivo,
+    estado: 'PENDIENTE'
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El staffer la revisará.</div>';
+    setTimeout(closeProponerModal, 1500);
+  } else {
+    document.getElementById('proponerStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar.</div>';
+  }
+}
+
+document.getElementById('modalProponer').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalProponer')) closeProponerModal();
+});
+
 </script>
+
+<!-- Modal proponer cambio -->
+<div class="modal-bg" id="modalProponer">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Proponer cambio de fecha</h3>
+      <button class="close-btn" onclick="closeProponerModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="proponerStatus"></div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Obra</label>
+        <div id="proponerObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Nueva fecha de fin propuesta</label>
+        <input type="date" id="pFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo</label>
+        <textarea id="pMotivo" placeholder="Explica brevemente por qué propones este cambio..." style="width:100%;min-height:70px;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;resize:vertical;"></textarea>
+      </div>
+      <input type="hidden" id="pObraId">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn" onclick="closeProponerModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarPropuesta()">Enviar propuesta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
