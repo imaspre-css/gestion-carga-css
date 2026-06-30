@@ -120,8 +120,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
           </select>
           <select id="filtroEstado" onchange="renderContratos()">
             <option value="">Todos los estados</option>
-            <option value="PENDIENTE DESIG. CSS">Pendiente desig. CSS</option>
-            <option value="PENDIENTE INICIO">Pendiente inicio</option>
+            <option value="PDTE. DESIG. CSS">Pendiente desig. CSS</option>
+            <option value="PDTE. INICIO">Pendiente inicio</option>
             <option value="ACTIVA">Activa</option>
             <option value="SIN ACTIVIDAD">Sin actividad</option>
             <option value="SUSPENDIDA">Suspendida</option>
@@ -234,7 +234,7 @@ function renderContratos() {
         + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '<th></th>')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
-          const estados = ['PENDIENTE DESIG. CSS','PENDIENTE INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
+          const estados = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
           const estadoOpts = estados.map(e =>
             '<option value="' + e + '"' + (o.estado === e ? ' selected' : '') + '>' + e + '</option>'
           ).join('');
@@ -499,8 +499,8 @@ document.getElementById('modalEditarObra').addEventListener('click', e => {
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Estado</label>
           <select id="eEstado" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
-            <option value="PENDIENTE DESIG. CSS">PENDIENTE DESIG. CSS</option>
-            <option value="PENDIENTE INICIO">PENDIENTE INICIO</option>
+            <option value="PDTE. DESIG. CSS">PDTE. DESIG. CSS</option>
+            <option value="PDTE. INICIO">PDTE. INICIO</option>
             <option value="ACTIVA">ACTIVA</option>
             <option value="SIN ACTIVIDAD">SIN ACTIVIDAD</option>
             <option value="SUSPENDIDA">SUSPENDIDA</option>
