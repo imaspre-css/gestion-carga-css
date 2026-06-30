@@ -10,7 +10,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
 .header h1 { font-size: 1rem; font-weight: 500; }
 .header-sub { font-size: 0.78rem; color: #9090b0; margin-top: 2px; }
-.nav a { color: #ff8888; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.nav a.logout { color: #ff8888; }
 .container { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
 .card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
 .card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
@@ -76,7 +79,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     <h1 id="headerNombre">Mis obras</h1>
     <div class="header-sub" id="headerEmail"></div>
   </div>
-  <a href="#" class="nav" onclick="localStorage.removeItem('css_rol');localStorage.removeItem('css_tecnico');window.location.href='login.html'">Salir</a>
+  <div class="nav"><a href="#" class="logout" onclick="localStorage.removeItem('css_rol');localStorage.removeItem('css_tecnico');window.location.href='login.html'">Salir</a></div>
 </div>
 
 <div class="container">
