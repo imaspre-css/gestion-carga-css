@@ -34,7 +34,7 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
   <h1>Gestión de Carga CSS</h1>
   <p class="subtitle">Ingeniería y Prevención de Riesgos S.L.</p>
 
-  <div class="role-grid">
+  <div class="role-grid" style="grid-template-columns:1fr 1fr 1fr;">
     <div class="role-btn" onclick="selectRole('staffer')" id="btn_staffer">
       <span class="role-icon">🎯</span>
       <div class="role-name">Staffer</div>
@@ -45,6 +45,18 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
       <div class="role-name">Delegado</div>
       <div class="role-desc">Solicitudes y consulta</div>
     </div>
+    <div class="role-btn" onclick="selectRole('tecnico')" id="btn_tecnico">
+      <span class="role-icon">👷</span>
+      <div class="role-name">Técnico</div>
+      <div class="role-desc">Mis obras</div>
+    </div>
+  </div>
+
+  <div class="pin-wrap" id="tecnicoSelectWrap" style="display:none;">
+    <label class="pin-label">Selecciona tu nombre</label>
+    <select id="tecnicoSelect" class="pin-input" style="letter-spacing:normal;font-size:0.9rem;text-align:left;" onchange="checkReady()">
+      <option value="">Cargando técnicos...</option>
+    </select>
   </div>
 
   <div class="pin-wrap">
@@ -57,14 +69,28 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
 </div>
 
 <script>
-var PINS = { staffer: '1627', delegado: '1997' };
+var PINS = { staffer: '1627', delegado: '1997', tecnico: '0000' };
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+async function loadTecnicos() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+    const rows = await res.json();
+    const tecnicos = [...new Set(rows.map(r => r.tecnico).filter(Boolean))].sort();
+    const sel = document.getElementById('tecnicoSelect');
+    sel.innerHTML = '<option value="">Selecciona...</option>' + tecnicos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  } catch(e) {}
+}
+loadTecnicos();
 var rolSeleccionado = null;
 
 function selectRole(rol) {
   rolSeleccionado = rol;
   document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('btn_' + rol).classList.add('selected');
-  document.getElementById('pinInput').focus();
+  document.getElementById('tecnicoSelectWrap').style.display = rol === 'tecnico' ? 'block' : 'none';
+  if (rol !== 'tecnico') document.getElementById('pinInput').focus();
   checkReady();
 }
 
@@ -75,7 +101,12 @@ function onPinInput() {
 
 function checkReady() {
   const pin = document.getElementById('pinInput').value;
-  document.getElementById('btnAcceder').disabled = !(rolSeleccionado && pin.length === 4);
+  if (rolSeleccionado === 'tecnico') {
+    const tecnico = document.getElementById('tecnicoSelect').value;
+    document.getElementById('btnAcceder').disabled = !(tecnico && pin.length === 4);
+  } else {
+    document.getElementById('btnAcceder').disabled = !(rolSeleccionado && pin.length === 4);
+  }
 }
 
 function acceder() {
@@ -83,6 +114,12 @@ function acceder() {
   if (!rolSeleccionado || !pin) return;
   if (pin === PINS[rolSeleccionado]) {
     localStorage.setItem('css_rol', rolSeleccionado);
+    if (rolSeleccionado === 'tecnico') {
+      const tecnico = document.getElementById('tecnicoSelect').value;
+      localStorage.setItem('css_tecnico', tecnico);
+      window.location.href = 'mis-obras.html';
+      return;
+    }
     const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
     window.location.href = redirect;
   } else {
