@@ -60,6 +60,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .estado-PDTE { background: #faeeda; color: #854f0b; border-color: #fac775; }
 .estado-SUSPENDIDA { background: #f5f5f0; color: #666; border-color: #d0d0c8; }
 .estado-FINALIZADA { background: #fcebeb; color: #a32d2d; border-color: #f7c1c1; }
+.estado-SINACTIVIDAD { background: #f0f0e8; color: #888; border-color: #d8d8d0; }
+.estado-PROCESOFIN { background: #fde6e0; color: #c0532b; border-color: #f5b8a3; }
 
 .empty { text-align: center; padding: 3rem; color: #bbb; font-size: 0.875rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
@@ -118,10 +120,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
           </select>
           <select id="filtroEstado" onchange="renderContratos()">
             <option value="">Todos los estados</option>
+            <option value="PENDIENTE DESIG. CSS">Pendiente desig. CSS</option>
+            <option value="PENDIENTE INICIO">Pendiente inicio</option>
             <option value="ACTIVA">Activa</option>
-            <option value="PDTE. INICIO">Pdte. inicio</option>
-            <option value="SUSTITUCIÓN">Sustitución</option>
+            <option value="SIN ACTIVIDAD">Sin actividad</option>
             <option value="SUSPENDIDA">Suspendida</option>
+            <option value="EN PROCESO DE FINALIZACIÓN">En proceso de finalización</option>
             <option value="FINALIZADA">Finalizada</option>
           </select>
           <input type="text" id="buscarContrato" placeholder="Buscar contrato..." oninput="renderContratos()" style="min-width:160px;">
@@ -139,6 +143,8 @@ var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 var obras = [];
 var isStaffer = localStorage.getItem('css_rol') === 'staffer';
+var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
+var puedeEditar = isStaffer || isDelegadoRol;
 var openContratos = new Set();
 
 // Show encuesta link for staffers
@@ -153,9 +159,10 @@ function getEstadoClass(estado) {
   if (!estado) return 'estado-SUSPENDIDA';
   const e = estado.toUpperCase();
   if (e === 'ACTIVA') return 'estado-ACTIVA';
-  if (e.includes('SUSTIT')) return 'estado-SUSTITUCION';
-  if (e.includes('PDTE') || e.includes('PENDIENTE')) return 'estado-PDTE';
+  if (e === 'SIN ACTIVIDAD') return 'estado-SINACTIVIDAD';
+  if (e.includes('PENDIENTE')) return 'estado-PDTE';
   if (e === 'SUSPENDIDA') return 'estado-SUSPENDIDA';
+  if (e.includes('PROCESO DE FINALIZACIÓN')) return 'estado-PROCESOFIN';
   if (e === 'FINALIZADA') return 'estado-FINALIZADA';
   return 'estado-SUSPENDIDA';
 }
@@ -224,10 +231,10 @@ function renderContratos() {
       if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
 
       obrasHTML = '<div class="obras-wrap open"><table class="obras-table"><thead><tr>'
-        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (isStaffer ? '<th></th>' : '<th></th>')
+        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '<th></th>')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
-          const estados = ['ACTIVA','PDTE. INICIO','SUSTITUCIÓN','SUSPENDIDA','FINALIZADA'];
+          const estados = ['PENDIENTE DESIG. CSS','PENDIENTE INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
           const estadoOpts = estados.map(e =>
             '<option value="' + e + '"' + (o.estado === e ? ' selected' : '') + '>' + e + '</option>'
           ).join('');
@@ -243,7 +250,7 @@ function renderContratos() {
               ? '<select class="estado-select ' + getEstadoClass(o.estado) + '" onchange="cambiarEstado(\'' + o.id + '\',this)" data-id="' + o.id + '">' + estadoOpts + '</select>'
               : '<span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span>')
             + '</td>'
-            + (isStaffer ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '<td></td>')
+            + (puedeEditar ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '<td></td>')
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
@@ -492,10 +499,12 @@ document.getElementById('modalEditarObra').addEventListener('click', e => {
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Estado</label>
           <select id="eEstado" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="PENDIENTE DESIG. CSS">PENDIENTE DESIG. CSS</option>
+            <option value="PENDIENTE INICIO">PENDIENTE INICIO</option>
             <option value="ACTIVA">ACTIVA</option>
-            <option value="PDTE. INICIO">PDTE. INICIO</option>
-            <option value="SUSTITUCIÓN">SUSTITUCIÓN</option>
+            <option value="SIN ACTIVIDAD">SIN ACTIVIDAD</option>
             <option value="SUSPENDIDA">SUSPENDIDA</option>
+            <option value="EN PROCESO DE FINALIZACIÓN">EN PROCESO DE FINALIZACIÓN</option>
             <option value="FINALIZADA">FINALIZADA</option>
           </select>
         </div>
