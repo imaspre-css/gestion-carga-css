@@ -319,8 +319,7 @@ async function init() {
 var propuestas = [];
 var isDelegado = localStorage.getItem('css_rol') === 'delegado';
 
-init();
-loadPropuestas();
+init().then(() => loadPropuestas());
 
 // ── PROPUESTAS DE CAMBIO ───────────────────────────────────────
 async function loadPropuestas() {
