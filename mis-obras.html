@@ -278,7 +278,7 @@ async function enviarPropuesta() {
   });
 
   if (res.ok) {
-    document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El staffer la revisará.</div>';
+    document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El delegado del contrato la revisará.</div>';
     setTimeout(closeProponerModal, 1500);
   } else {
     document.getElementById('proponerStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar.</div>';
