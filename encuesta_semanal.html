@@ -307,11 +307,11 @@ function processFile(file) {
       if (tec.length < 3) continue;
       const est = cE >= 0 ? String(row[cE]||'').trim().toUpperCase() : '';
       // All estados are synced to Supabase - state management is done in the platform
-      const ESTADOS_VALIDOS = ['PENDIENTE DESIG. CSS','PENDIENTE INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
+      const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
       function normalizarEstado(e) {
         if (ESTADOS_VALIDOS.includes(e)) return e;
-        if (e.includes('PENDIENTE') && e.includes('CSS')) return 'PENDIENTE DESIG. CSS';
-        if (e.includes('PENDIENTE') || e.includes('PDTE')) return 'PENDIENTE INICIO';
+        if (e.includes('PENDIENTE') && e.includes('CSS')) return 'PDTE. DESIG. CSS';
+        if (e.includes('PENDIENTE') || e.includes('PDTE')) return 'PDTE. INICIO';
         if (e.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
         if (e.includes('SUSPEND') || e.includes('PARALIZ')) return 'SUSPENDIDA';
         if (e.includes('PROCESO') && e.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
@@ -322,7 +322,7 @@ function processFile(file) {
       const estadoNorm = normalizarEstado(est);
       const EXCLUIR_SYNC = ['FINALIZADA'];
       if (EXCLUIR_SYNC.includes(estadoNorm)) continue;
-      const EN_ENCUESTA = ['PENDIENTE INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'];
+      const EN_ENCUESTA = ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'];
       const paraEncuesta = EN_ENCUESTA.includes(estadoNorm);
       const fin = cF >= 0 ? row[cF] : null;
       if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-60*864e5)) continue; }
@@ -693,7 +693,7 @@ async function cargarDesdeSupabase() {
   if (zone) { zone.style.opacity = '0.6'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">⏳</span><p style="font-size:0.82rem;color:#666;">Cargando...</p>'; }
 
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PENDIENTE INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=500', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=500', {
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     });
     const rows = await res.json();
