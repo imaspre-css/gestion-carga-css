@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis obras — CSS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.header-sub { font-size: 0.78rem; color: #9090b0; margin-top: 2px; }
+.nav a { color: #ff8888; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; }
+.container { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.mini-stat { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 0.85rem 1rem; text-align: center; flex: 1; min-width: 110px; }
+.mini-stat-num { font-size: 1.4rem; font-weight: 500; color: #1a1a2e; }
+.mini-stat-label { font-size: 0.68rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+.pct-ok { color: #0f6e56; }
+.pct-warn { color: #854f0b; }
+.pct-over { color: #a32d2d; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.6rem 1.1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.btn-primary:hover { background: #2a2a4e; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* Horizonte */
+.cal-wrap { overflow-x: auto; }
+.cal-grid { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; }
+.cal-label { font-size: 0.68rem; color: #aaa; display: flex; align-items: center; }
+.cal-cell { height: 20px; border-radius: 3px; cursor: pointer; }
+.cal-month-row { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; margin-bottom: 4px; }
+.cal-month-label { font-size: 0.65rem; color: #bbb; text-align: center; }
+.cal-legend { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #888; flex-wrap: wrap; }
+.cal-legend-cell { width: 14px; height: 10px; border-radius: 2px; }
+.tooltip { position: fixed; background: #1a1a2e; color: #fff; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 999; display: none; white-space: nowrap; }
+
+/* Obras */
+.obra-card { border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
+.obra-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+.cliente-tag { font-size: 0.68rem; font-weight: 600; color: #fff; background: #4a4a8a; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
+.obra-cod { font-size: 0.72rem; font-weight: 500; color: #4a4a8a; background: #eeeefa; padding: 2px 8px; border-radius: 20px; }
+.estado-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.estado-ACTIVA { background: #e1f5ee; color: #0f6e56; }
+.estado-SUSTITUCION { background: #e6f1fb; color: #185fa5; }
+.obra-desc { font-size: 0.85rem; color: #333; margin-bottom: 6px; }
+.obra-fechas { font-size: 0.75rem; color: #888; }
+
+.empty { text-align: center; padding: 3rem; color: #bbb; font-size: 0.875rem; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<script>
+(function() {
+  var rol = localStorage.getItem('css_rol');
+  var tecnico = localStorage.getItem('css_tecnico');
+  if (rol !== 'tecnico' || !tecnico) { window.location.href = 'login.html?redirect=mis-obras.html'; }
+})();
+</script>
+<div class="tooltip" id="tooltip"></div>
+
+<div class="header">
+  <div>
+    <h1 id="headerNombre">Mis obras</h1>
+    <div class="header-sub" id="headerEmail"></div>
+  </div>
+  <a href="#" class="nav" onclick="localStorage.removeItem('css_rol');localStorage.removeItem('css_tecnico');window.location.href='login.html'">Salir</a>
+</div>
+
+<div class="container">
+  <div id="loadingDiv"><div class="spinner"></div></div>
+  <div id="mainContent" style="display:none;">
+
+    <div class="stats-row" id="statsRow"></div>
+
+
+    <div class="card">
+      <div class="card-title">Mis obras activas</div>
+      <div id="obrasWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+var tecnicoNombre = localStorage.getItem('css_tecnico');
+var obras = [];
+
+function getColor(pct) {
+  if (!pct) return '#f0f0e8';
+  if (pct >= 100) return '#e24b4a';
+  if (pct >= 85) return '#ef9f27';
+  if (pct >= 60) return '#0f6e56';
+  if (pct >= 30) return '#5dcaa5';
+  return '#e1f5ee';
+}
+
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+}
+
+function getMonday(year, week) {
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek1 = new Date(jan4);
+  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+  const monday = new Date(startOfWeek1);
+  monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
+  return monday;
+}
+
+function calcCargaPorSemana(year) {
+  const semanas = new Array(53).fill(0);
+  obras.forEach(o => {
+    const carga = parseFloat(o.carga_teorica_semanal) || 0;
+    if (!carga) return;
+    const inicio = o.fecha_inicio ? new Date(o.fecha_inicio) : null;
+    const fin = o.fecha_fin ? new Date(o.fecha_fin) : null;
+    for (let w = 1; w <= 52; w++) {
+      const monday = getMonday(year, w);
+      const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+      const desde = inicio || new Date(year, 0, 1);
+      const hasta = fin || new Date(year, 11, 31);
+      if (monday <= hasta && friday >= desde) semanas[w] += carga;
+    }
+  });
+  return semanas;
+}
+
+function renderStats() {
+  const proxFin = obras.filter(o => o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length;
+  const visitasSemana = obras.length;
+
+  document.getElementById('statsRow').innerHTML =
+    '<div class="mini-stat"><div class="mini-stat-num">' + obras.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num">' + proxFin + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>';
+}
+
+function renderCalendario() {
+  const year = new Date().getFullYear();
+  const cargas = calcCargaPorSemana(year);
+  const currentWeek = getWeekNumber(new Date());
+  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+
+  let monthLabels = '<div></div>';
+  let lastMonth = -1;
+  for (let w = 1; w <= 52; w++) {
+    const monday = getMonday(year, w);
+    const m = monday.getMonth();
+    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
+    lastMonth = m;
+  }
+  document.getElementById('monthRow').innerHTML = monthLabels;
+
+  let cells = '<div class="cal-label">' + year + '</div>';
+  for (let w = 1; w <= 52; w++) {
+    const pct = Math.round(cargas[w]);
+    const color = getColor(pct);
+    const monday = getMonday(year, w);
+    const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+    const tip = 'S' + w + ' (' + dateStr + '): ' + pct + '%';
+    cells += '<div class="cal-cell" style="background:' + color + ';'
+      + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
+      + (w > currentWeek ? 'opacity:0.55;' : '')
+      + '" data-tip="' + tip + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()"></div>';
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+}
+
+function renderObras() {
+  if (!obras.length) {
+    document.getElementById('obrasWrap').innerHTML = '<div class="empty">No tienes obras activas asignadas</div>';
+    return;
+  }
+  document.getElementById('obrasWrap').innerHTML = obras.map(o => {
+    const estadoClass = (o.estado||'').toUpperCase().includes('SUSTIT') ? 'estado-SUSTITUCION' : 'estado-ACTIVA';
+    return '<div class="obra-card">'
+      + '<div class="obra-meta">'
+      + (o.cliente ? '<span class="cliente-tag">' + o.cliente + '</span>' : '')
+      + '<span class="obra-cod">' + (o.cod_obra||'—') + '</span>'
+      + '<span class="estado-tag ' + estadoClass + '">' + (o.estado||'ACTIVA') + '</span>'
+      + '</div>'
+      + '<div class="obra-desc">' + (o.descripcion||'Sin descripción') + '</div>'
+      + '<div class="obra-fechas">'
+      + (o.fecha_inicio ? 'Inicio: ' + new Date(o.fecha_inicio).toLocaleDateString('es-ES') : 'Sin fecha inicio')
+      + ' · ' + (o.fecha_fin ? 'Fin: ' + new Date(o.fecha_fin).toLocaleDateString('es-ES') : 'Sin fecha fin')
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function showTip(e, text) {
+  const t = document.getElementById('tooltip');
+  t.textContent = text;
+  t.style.display = 'block';
+  t.style.left = (e.clientX + 10) + 'px';
+  t.style.top = (e.clientY - 30) + 'px';
+}
+function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+
+async function init() {
+  document.getElementById('headerNombre').textContent = tecnicoNombre;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&tecnico=eq.' + encodeURIComponent(tecnicoNombre) + '&order=fecha_fin', {
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+  });
+  const all = await res.json();
+  obras = (Array.isArray(all) ? all : []).filter(o => {
+    const e = (o.estado||'').toUpperCase();
+    return e === 'ACTIVA' || e.includes('SUSTIT');
+  });
+  if (obras[0]?.email) document.getElementById('headerEmail').textContent = obras[0].email;
+
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  renderStats();
+  renderObras();
+}
+
+init();
+</script>
+</body>
+</html>
