@@ -307,10 +307,23 @@ function processFile(file) {
       if (tec.length < 3) continue;
       const est = cE >= 0 ? String(row[cE]||'').trim().toUpperCase() : '';
       // All estados are synced to Supabase - state management is done in the platform
+      const ESTADOS_VALIDOS = ['PENDIENTE DESIG. CSS','PENDIENTE INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
+      function normalizarEstado(e) {
+        if (ESTADOS_VALIDOS.includes(e)) return e;
+        if (e.includes('PENDIENTE') && e.includes('CSS')) return 'PENDIENTE DESIG. CSS';
+        if (e.includes('PENDIENTE') || e.includes('PDTE')) return 'PENDIENTE INICIO';
+        if (e.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
+        if (e.includes('SUSPEND') || e.includes('PARALIZ')) return 'SUSPENDIDA';
+        if (e.includes('PROCESO') && e.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
+        if (e.includes('FINAL')) return 'FINALIZADA';
+        if (e.includes('ACTIV')) return 'ACTIVA';
+        return e; // keep original if no match, for manual review
+      }
+      const estadoNorm = normalizarEstado(est);
       const EXCLUIR_SYNC = ['FINALIZADA'];
-      if (EXCLUIR_SYNC.includes(est)) continue;
-      const EN_ENCUESTA = ['ACTIVA','SUSTITUCIÓN'];
-      const paraEncuesta = EN_ENCUESTA.includes(est);
+      if (EXCLUIR_SYNC.includes(estadoNorm)) continue;
+      const EN_ENCUESTA = ['PENDIENTE INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'];
+      const paraEncuesta = EN_ENCUESTA.includes(estadoNorm);
       const fin = cF >= 0 ? row[cF] : null;
       if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-60*864e5)) continue; }
       const num = cN >= 0 ? String(row[cN]||'').trim() : '';
@@ -326,7 +339,7 @@ function processFile(file) {
         const _ff = cF >= 0 ? row[cF] : null;
         const fecha_inicio = (_fi instanceof Date || (typeof _fi === 'string' && _fi.match(/^\d{4}/))) ? _fi : null;
         const fecha_fin = (_ff instanceof Date || (typeof _ff === 'string' && _ff.match(/^\d{4}/))) ? _ff : null;
-        map[tec].obras.push({num, desc:desc.substring(0,120), cliente, cod_contrato, territorio, carga_teorica, fecha_inicio, fecha_fin, estado: est, paraEncuesta});
+        map[tec].obras.push({num, desc:desc.substring(0,120), cliente, cod_contrato, territorio, carga_teorica, fecha_inicio, fecha_fin, estado: estadoNorm, paraEncuesta});
       }
     }
 
@@ -554,7 +567,7 @@ async function sincronizarObras() {
         cod_obra: o.num,
         descripcion: o.desc || '',
         territorio: o.territorio || '',
-        estado: est || 'ACTIVA',
+        estado: o.estado || 'ACTIVA',
         carga_teorica_semanal: o.carga_teorica ? parseFloat(o.carga_teorica) * 100 : null,
         fecha_inicio: o.fecha_inicio ? (o.fecha_inicio instanceof Date ? o.fecha_inicio.toISOString().split('T')[0] : String(o.fecha_inicio).split('T')[0]) : null,
         fecha_fin: o.fecha_fin ? (o.fecha_fin instanceof Date ? o.fecha_fin.toISOString().split('T')[0] : String(o.fecha_fin).split('T')[0]) : null
@@ -680,7 +693,7 @@ async function cargarDesdeSupabase() {
   if (zone) { zone.style.opacity = '0.6'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">⏳</span><p style="font-size:0.82rem;color:#666;">Cargando...</p>'; }
 
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=eq.ACTIVA&limit=500', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PENDIENTE INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=500', {
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     });
     const rows = await res.json();
