@@ -292,19 +292,21 @@ function processFile(file) {
 
     // First pass: collect all emails per technician
     for (const row of raw.slice(hdrIdx + 1)) {
-      if (!row||!row[cT]) continue;
+      if (!row||!row[cT]) { countSinTec++; continue; }
       const tec = String(row[cT]).trim();
-      if (tec.length < 3) continue;
+      if (tec.length < 3) { countSinTec++; continue; }
       const email = cEM >= 0 ? String(row[cEM]||'').trim() : '';
       if (!map[tec]) map[tec] = {name:tec, email:'', obras:[]};
       if (email && !map[tec].email) map[tec].email = email;
     }
 
     // Second pass: collect active obras
+    console.log('Total filas Excel:', raw.slice(hdrIdx + 1).length);
+    let countFinalizada=0, countSinNum=0, countSinTec=0, countOk=0;
     for (const row of raw.slice(hdrIdx + 1)) {
-      if (!row||!row[cT]) continue;
+      if (!row||!row[cT]) { countSinTec++; continue; }
       const tec = String(row[cT]).trim();
-      if (tec.length < 3) continue;
+      if (tec.length < 3) { countSinTec++; continue; }
       const est = cE >= 0 ? String(row[cE]||'').trim().toUpperCase() : '';
       // All estados are synced to Supabase - state management is done in the platform
       const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
@@ -328,14 +330,13 @@ function processFile(file) {
       }
       const estadoNorm = normalizarEstado(est);
       const EXCLUIR_SYNC = ['FINALIZADA'];
-      if (EXCLUIR_SYNC.includes(estadoNorm)) continue;
+      if (EXCLUIR_SYNC.includes(estadoNorm)) { countFinalizada++; continue; }
       const EN_ENCUESTA = ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'];
       const paraEncuesta = EN_ENCUESTA.includes(estadoNorm);
       const fin = cF >= 0 ? row[cF] : null;
-      if (fin) { const d=fin instanceof Date?fin:new Date(fin); if(!isNaN(d)&&d<new Date(Date.now()-60*864e5)) continue; }
       const num = cN >= 0 ? String(row[cN]||'').trim() : '';
       const desc = cD >= 0 ? String(row[cD]||'').trim() : '';
-      if (!num || num==='null' || num.length < 2) continue;
+      if (!num || num==='null' || num.length < 2) { countSinNum++; continue; }
       if (!map[tec]) map[tec] = {name:tec, email:'', obras:[]};
       if (!map[tec].obras.find(o => o.num===num)) {
         const cliente = cCL >= 0 ? String(row[cCL]||'').trim() : '';
@@ -350,6 +351,7 @@ function processFile(file) {
       }
     }
 
+    console.log('Sin técnico:', countSinTec, '| Finalizada:', countFinalizada, '| Sin cod_obra:', countSinNum, '| OK:', Object.values(map).reduce((s,t)=>s+t.obras.length,0));
     // For encuesta, only show obras marked for encuesta
     Object.values(map).forEach(t => { t.obras = t.obras.filter(o => o.paraEncuesta); });
     tecData = Object.values(map).filter(t=>t.obras.length>0).sort((a,b)=>a.name.localeCompare(b.name));
@@ -712,11 +714,8 @@ async function cargarDesdeSupabase() {
 
     // Filter by date (60 days)
     const cutoff = new Date(Date.now() - 60*864e5);
-    const filtered = rows.filter(o => {
-      if (!o.fecha_fin) return true;
-      const d = new Date(o.fecha_fin);
-      return isNaN(d) || d >= cutoff;
-    });
+    // No date filter for loading - show all obras with valid estados
+    const filtered = rows;
 
     // Build tecData
     const map = {};
