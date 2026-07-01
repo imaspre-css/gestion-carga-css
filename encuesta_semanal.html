@@ -573,6 +573,8 @@ async function sincronizarObras() {
   // Then insert all current active obras
   const payload = [];
   const syncSource = window._mapSync ? Object.values(window._mapSync) : tecData;
+  const totalObrasSync = syncSource.reduce((s,t) => s+t.obras.length, 0);
+  console.log('Total obras para sync:', totalObrasSync, '| Técnicos:', syncSource.length);
   syncSource.forEach(t => {
     t.obras.forEach(o => {
       payload.push({
