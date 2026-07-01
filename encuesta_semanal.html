@@ -309,15 +309,22 @@ function processFile(file) {
       // All estados are synced to Supabase - state management is done in the platform
       const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
       function normalizarEstado(e) {
-        if (ESTADOS_VALIDOS.includes(e)) return e;
-        if (e.includes('PENDIENTE') && e.includes('CSS')) return 'PDTE. DESIG. CSS';
-        if (e.includes('PENDIENTE') || e.includes('PDTE')) return 'PDTE. INICIO';
-        if (e.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
-        if (e.includes('SUSPEND') || e.includes('PARALIZ')) return 'SUSPENDIDA';
-        if (e.includes('PROCESO') && e.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
-        if (e.includes('FINAL')) return 'FINALIZADA';
-        if (e.includes('ACTIV')) return 'ACTIVA';
-        return e; // keep original if no match, for manual review
+        const clean = e.trim().toUpperCase()
+          .replace(/Ó/g,'Ó').replace(/ó/g,'ó')
+          .replace(/É/g,'É').replace(/é/g,'é')
+          .normalize('NFC');
+        const eNorm = clean;
+        if (ESTADOS_VALIDOS.map(s=>s.toUpperCase()).includes(eNorm)) {
+          return ESTADOS_VALIDOS.find(s=>s.toUpperCase()===eNorm) || e;
+        }
+        if (eNorm.includes('CSS')) return 'PDTE. DESIG. CSS';
+        if (eNorm.includes('PENDIENTE') || eNorm.includes('PDTE')) return 'PDTE. INICIO';
+        if (eNorm.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
+        if (eNorm.includes('SUSPEND') || eNorm.includes('PARALIZ')) return 'SUSPENDIDA';
+        if (eNorm.includes('PROCESO') && eNorm.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
+        if (eNorm.includes('FINAL')) return 'FINALIZADA';
+        if (eNorm.includes('ACTIV')) return 'ACTIVA';
+        return e;
       }
       const estadoNorm = normalizarEstado(est);
       const EXCLUIR_SYNC = ['FINALIZADA'];
