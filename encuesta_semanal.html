@@ -352,9 +352,15 @@ function processFile(file) {
     }
 
     console.log('Sin técnico:', countSinTec, '| Finalizada:', countFinalizada, '| Sin cod_obra:', countSinNum, '| OK:', Object.values(map).reduce((s,t)=>s+t.obras.length,0));
-    // For encuesta, only show obras marked for encuesta
-    Object.values(map).forEach(t => { t.obras = t.obras.filter(o => o.paraEncuesta); });
-    tecData = Object.values(map).filter(t=>t.obras.length>0).sort((a,b)=>a.name.localeCompare(b.name));
+    // Keep full map for sync, filter for encuesta display
+    const mapSync = map; // full data for Supabase sync
+    const mapEncuesta = {};
+    Object.entries(map).forEach(([k,v]) => {
+      const obras = v.obras.filter(o => o.paraEncuesta);
+      if (obras.length > 0) mapEncuesta[k] = {...v, obras};
+    });
+    tecData = Object.values(mapEncuesta).sort((a,b) => a.name.localeCompare(b.name));
+    window._mapSync = mapSync; // expose for sync function
     origenDatos = 'excel';
     initWeek(); renderMain();
   };
@@ -566,7 +572,8 @@ async function sincronizarObras() {
   // First delete existing obras for these technicians to avoid duplicates
   // Then insert all current active obras
   const payload = [];
-  tecData.forEach(t => {
+  const syncSource = window._mapSync ? Object.values(window._mapSync) : tecData;
+  syncSource.forEach(t => {
     t.obras.forEach(o => {
       payload.push({
         tecnico: t.name,
@@ -586,7 +593,8 @@ async function sincronizarObras() {
 
   try {
     // Step 1: Delete all existing obras for these technicians
-    const tecnicos = [...new Set(tecData.map(t => t.name))];
+    const syncSrc = window._mapSync ? Object.values(window._mapSync) : tecData;
+    const tecnicos = [...new Set(syncSrc.map(t => t.name))];
     for (const tec of tecnicos) {
       await fetch(SUPABASE_URL + '/rest/v1/obras?tecnico=eq.' + encodeURIComponent(tec), {
         method: 'DELETE',
@@ -596,23 +604,35 @@ async function sincronizarObras() {
         }
       });
     }
-    // Step 2: Insert all obras fresh
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      ok = payload.length;
-      status.innerHTML = '<span style="color:#0f6e56;">✅ ' + ok + ' obras sincronizadas correctamente</span>';
+    // Step 2: Insert all obras in batches of 100
+    const batchSize = 100;
+    let inserted = 0;
+    let errorTxt = '';
+    for (let i = 0; i < payload.length; i += batchSize) {
+      const batch = payload.slice(i, i + batchSize);
+      status.innerHTML = '<span style="color:#4a4a8a;">⏳ Subiendo obras ' + (i+1) + '-' + Math.min(i+batchSize, payload.length) + ' de ' + payload.length + '...</span>';
+      const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(batch)
+      });
+      if (res.ok) {
+        inserted += batch.length;
+      } else {
+        errorTxt = await res.text();
+        break;
+      }
+    }
+    if (errorTxt) {
+      status.innerHTML = '<span style="color:#a32d2d;">❌ Error: ' + escH(errorTxt) + '</span>';
     } else {
-      const txt = await res.text();
-      status.innerHTML = '<span style="color:#a32d2d;">❌ Error: ' + escH(txt) + '</span>';
+      ok = inserted;
+      status.innerHTML = '<span style="color:#0f6e56;">✅ ' + ok + ' obras sincronizadas correctamente</span>';
     }
   } catch(e) {
     status.innerHTML = '<span style="color:#a32d2d;">❌ Error de conexión: ' + escH(e.message) + '</span>';
