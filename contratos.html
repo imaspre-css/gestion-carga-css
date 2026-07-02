@@ -54,7 +54,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .pill-blue { background: #eeeefa; color: #4a4a8a; }
 
 /* Estado selector */
-.estado-select { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; border: 1.5px solid; cursor: pointer; font-weight: 500; appearance: none; -webkit-appearance: none; padding-right: 20px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+.estado-select { font-size: 0.68rem; padding: 2px 18px 2px 6px; border-radius: 20px; border: 1.5px solid; cursor: pointer; font-weight: 500; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 5px center; max-width: 160px; }
 .estado-ACTIVA { background: #e1f5ee; color: #0f6e56; border-color: #9fe1cb; }
 .estado-SUSTITUCION { background: #e6f1fb; color: #185fa5; border-color: #b5d4f4; }
 .estado-PDTE { background: #faeeda; color: #854f0b; border-color: #fac775; }
@@ -256,7 +256,7 @@ function renderContratos() {
       if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
 
       obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
-        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th style="width:44px;"></th>' : '')
+        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
           const estados = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
@@ -271,11 +271,7 @@ function renderContratos() {
             + '<td style="font-size:0.78rem;">' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
-            + '<td>' + (isStaffer
-              ? '<select class="estado-select ' + getEstadoClass(o.estado) + '" onchange="cambiarEstado(\'' + o.id + '\',this)" data-id="' + o.id + '">' + estadoOpts + '</select>'
-              : '<span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span>')
-            + '</td>'
-            + (puedeEditar ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '<td></td>')
+            + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
