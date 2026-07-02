@@ -255,8 +255,8 @@ function renderContratos() {
       if (filtroT) obrasFiltered = obrasFiltered.filter(o => (o.territorio||'').toUpperCase() === filtroT);
       if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
 
-      obrasHTML = '<div class="obras-wrap open"><table class="obras-table"><thead><tr>'
-        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '<th></th>')
+      obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
+        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th style="width:44px;"></th>' : '')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
           const estados = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
