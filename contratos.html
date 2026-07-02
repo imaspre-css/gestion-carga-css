@@ -13,7 +13,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
 .nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
 .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 1.5rem; }
 .stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; }
 .stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
 .stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -176,13 +176,38 @@ function showToast(msg) {
 
 function renderStats() {
   const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))];
+  const enCurso = obras.filter(o => ['ACTIVA','PDTE. INICIO','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
+  const enPausa = obras.filter(o => ['PDTE. DESIG. CSS','SIN ACTIVIDAD','SUSPENDIDA'].includes(o.estado));
+  const finalizadas = obras.filter(o => o.estado === 'FINALIZADA');
   const activas = obras.filter(o => o.estado === 'ACTIVA').length;
+  const pdteInicio = obras.filter(o => o.estado === 'PDTE. INICIO').length;
+  const enProceso = obras.filter(o => o.estado === 'EN PROCESO DE FINALIZACIÓN').length;
   const suspendidas = obras.filter(o => o.estado === 'SUSPENDIDA').length;
+  const sinActividad = obras.filter(o => o.estado === 'SIN ACTIVIDAD').length;
+  const pdteDesig = obras.filter(o => o.estado === 'PDTE. DESIG. CSS').length;
+
   document.getElementById('statsGrid').innerHTML =
     '<div class="stat-box"><div class="stat-num">' + contratos.length + '</div><div class="stat-label">Contratos</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + obras.length + '</div><div class="stat-label">Obras totales</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + activas + '</div><div class="stat-label">Obras activas</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + suspendidas + '</div><div class="stat-label">Suspendidas</div></div>';
+    '<div class="stat-box" style="border-color:#9fe1cb;">'
+      + '<div class="stat-num" style="color:#0f6e56;">' + enCurso.length + '</div>'
+      + '<div class="stat-label">Obras en curso</div>'
+      + '<div style="font-size:0.68rem;color:#888;margin-top:6px;line-height:1.7;">'
+      + '↳ Activas: ' + activas + '<br>'
+      + '↳ Pdte. inicio: ' + pdteInicio + '<br>'
+      + '↳ En proceso: ' + enProceso
+      + '</div></div>' +
+    '<div class="stat-box" style="border-color:#fac775;">'
+      + '<div class="stat-num" style="color:#854f0b;">' + enPausa.length + '</div>'
+      + '<div class="stat-label">Obras en pausa</div>'
+      + '<div style="font-size:0.68rem;color:#888;margin-top:6px;line-height:1.7;">'
+      + '↳ Suspendidas: ' + suspendidas + '<br>'
+      + '↳ Sin actividad: ' + sinActividad + '<br>'
+      + '↳ Pdte. desig.: ' + pdteDesig
+      + '</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + (enCurso.length + enPausa.length) + '</div><div class="stat-label">Obras totales</div></div>' +
+    '<div class="stat-box" style="border-color:#f7c1c1;">'
+      + '<div class="stat-num" style="color:#a32d2d;">' + finalizadas.length + '</div>'
+      + '<div class="stat-label">Obras finalizadas</div></div>';
 }
 
 function populateFilters() {
