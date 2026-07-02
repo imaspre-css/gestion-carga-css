@@ -274,6 +274,8 @@ function renderContratos() {
             + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
             + '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>'
             + '</tr>';
+        }).join('')
+        + '</tbody></table></div>';
     }
 
     return '<div class="contrato-card" id="cont_' + cont.cod.replace(/[^a-zA-Z0-9]/g,'_') + '">'
