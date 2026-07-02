@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Acceso — Gestión de Carga CSS</title>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -105,16 +105,20 @@ const MSAL_CONFIG = {
 };
 
 const SCOPES = ['User.Read', 'Mail.Send'];
-const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-
-// Handle redirect response on page load
-msalInstance.handleRedirectPromise().then(response => {
-  if (response) processMsalResponse(response);
-}).catch(err => {
-  console.error('MSAL redirect error:', err);
-});
+var msalInstance = null;
+try {
+  msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+  msalInstance.handleRedirectPromise().then(response => {
+    if (response) processMsalResponse(response);
+  }).catch(err => {
+    console.error('MSAL redirect error:', err);
+  });
+} catch(e) {
+  console.warn('MSAL no disponible:', e.message);
+}
 
 async function loginMicrosoft() {
+  if (!msalInstance) { showNotice('Microsoft login no disponible. Usa el PIN temporal.', 'error'); return; }
   const btn = document.getElementById('btnMicrosoft');
   btn.disabled = true;
   btn.textContent = 'Conectando...';
