@@ -724,8 +724,8 @@ async function cargarDesdeSupabase() {
   if (zone) { zone.style.opacity = '0.6'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">⏳</span><p style="font-size:0.82rem;color:#666;">Cargando...</p>'; }
 
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=500', {
-      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=5000', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
     });
     const rows = await res.json();
     if (!Array.isArray(rows) || !rows.length) {
