@@ -272,9 +272,8 @@ function renderContratos() {
             + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
             + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
+            + '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>'
             + '</tr>';
-        }).join('')
-        + '</tbody></table></div>';
     }
 
     return '<div class="contrato-card" id="cont_' + cont.cod.replace(/[^a-zA-Z0-9]/g,'_') + '">'
