@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Acceso — Gestión de Carga CSS</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -11,21 +12,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .logo { background: #1a1a2e; color: #fff; width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 1.25rem; }
 h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
 .subtitle { font-size: 0.82rem; color: #888; margin-bottom: 2rem; }
-.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
-.role-btn { border: 1.5px solid #e0e0d8; border-radius: 10px; padding: 1rem 0.75rem; cursor: pointer; transition: all 0.15s; background: #fff; }
+.btn-microsoft { width: 100%; padding: 0.75rem; background: #0078d4; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s; margin-bottom: 1rem; }
+.btn-microsoft:hover { background: #106ebe; }
+.btn-microsoft:disabled { background: #aaa; cursor: not-allowed; }
+.divider { display: flex; align-items: center; gap: 10px; margin: 1rem 0; color: #ccc; font-size: 0.78rem; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 0.5px; background: #e0e0d8; }
+.pin-section { text-align: left; }
+.role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.role-btn { border: 1.5px solid #e0e0d8; border-radius: 10px; padding: 0.75rem 0.5rem; cursor: pointer; transition: all 0.15s; background: #fff; text-align: center; }
 .role-btn:hover { border-color: #4a4a8a; background: #f8f8fe; }
 .role-btn.selected { border-color: #4a4a8a; background: #eeeefa; }
-.role-icon { font-size: 1.5rem; display: block; margin-bottom: 6px; }
-.role-name { font-size: 0.85rem; font-weight: 500; }
-.role-desc { font-size: 0.7rem; color: #888; margin-top: 2px; }
-.pin-wrap { margin-bottom: 1.25rem; }
-.pin-label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 8px; text-align: left; }
-.pin-input { width: 100%; padding: 0.65rem 0.9rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 1.1rem; letter-spacing: 0.3em; text-align: center; color: #1a1a2e; }
-.pin-input:focus { outline: none; border-color: #4a4a8a; box-shadow: 0 0 0 2px rgba(74,74,138,0.1); }
-.btn-acceder { width: 100%; padding: 0.75rem; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.15s; }
-.btn-acceder:hover { background: #2a2a4e; }
+.role-icon { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+.role-name { font-size: 0.78rem; font-weight: 500; }
+.role-desc { font-size: 0.65rem; color: #888; margin-top: 1px; }
+.pin-wrap { margin-bottom: 1rem; }
+.pin-label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 6px; }
+.pin-input { width: 100%; padding: 0.65rem 0.9rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 1.1rem; letter-spacing: 0.3em; text-align: center; }
+.pin-input:focus { outline: none; border-color: #4a4a8a; }
+.tecnico-select { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1rem; }
+.btn-acceder { width: 100%; padding: 0.75rem; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; }
 .btn-acceder:disabled { background: #aaa; cursor: not-allowed; }
 .error { color: #a32d2d; font-size: 0.8rem; margin-top: 0.5rem; display: none; }
+.notice { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; display: none; }
 </style>
 </head>
 <body>
@@ -34,56 +42,157 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
   <h1>Gestión de Carga CSS</h1>
   <p class="subtitle">Ingeniería y Prevención de Riesgos S.L.</p>
 
-  <div class="role-grid" style="grid-template-columns:1fr 1fr 1fr;">
-    <div class="role-btn" onclick="selectRole('staffer')" id="btn_staffer">
-      <span class="role-icon">🎯</span>
-      <div class="role-name">Staffer</div>
-      <div class="role-desc">Gestión completa</div>
-    </div>
-    <div class="role-btn" onclick="selectRole('delegado')" id="btn_delegado">
-      <span class="role-icon">📋</span>
-      <div class="role-name">Delegado</div>
-      <div class="role-desc">Solicitudes y consulta</div>
-    </div>
-    <div class="role-btn" onclick="selectRole('tecnico')" id="btn_tecnico">
-      <span class="role-icon">👷</span>
-      <div class="role-name">Técnico</div>
-      <div class="role-desc">Mis obras</div>
-    </div>
-  </div>
+  <div id="noticeMsg" class="notice"></div>
 
-  <div class="pin-wrap" id="tecnicoSelectWrap" style="display:none;">
-    <label class="pin-label">Selecciona tu nombre</label>
-    <select id="tecnicoSelect" class="pin-input" style="letter-spacing:normal;font-size:0.9rem;text-align:left;" onchange="checkReady()">
-      <option value="">Cargando técnicos...</option>
-    </select>
-  </div>
+  <!-- Microsoft login -->
+  <button class="btn-microsoft" onclick="loginMicrosoft()" id="btnMicrosoft">
+    <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
+      <rect x="0" y="0" width="10" height="10" fill="#f25022"/>
+      <rect x="11" y="0" width="10" height="10" fill="#7fba00"/>
+      <rect x="0" y="11" width="10" height="10" fill="#00a4ef"/>
+      <rect x="11" y="11" width="10" height="10" fill="#ffb900"/>
+    </svg>
+    Entrar con Microsoft 365
+  </button>
 
-  <div class="pin-wrap">
-    <label class="pin-label">PIN de acceso</label>
-    <input type="password" class="pin-input" id="pinInput" placeholder="••••" maxlength="4" oninput="onPinInput()" onkeydown="if(event.key==='Enter')acceder()">
-  </div>
+  <div class="divider">o acceso temporal por PIN</div>
 
-  <button class="btn-acceder" id="btnAcceder" onclick="acceder()" disabled>Acceder</button>
-  <div class="error" id="errorMsg">PIN incorrecto. Inténtalo de nuevo.</div>
+  <!-- PIN login -->
+  <div class="pin-section">
+    <div class="role-grid">
+      <div class="role-btn" onclick="selectRole('staffer')" id="btn_staffer">
+        <span class="role-icon">🎯</span>
+        <div class="role-name">Staffer</div>
+        <div class="role-desc">Gestión completa</div>
+      </div>
+      <div class="role-btn" onclick="selectRole('delegado')" id="btn_delegado">
+        <span class="role-icon">📋</span>
+        <div class="role-name">Delegado</div>
+        <div class="role-desc">Solicitudes</div>
+      </div>
+      <div class="role-btn" onclick="selectRole('tecnico')" id="btn_tecnico">
+        <span class="role-icon">👷</span>
+        <div class="role-name">Técnico</div>
+        <div class="role-desc">Mis obras</div>
+      </div>
+    </div>
+
+    <div id="tecnicoSelectWrap" style="display:none;">
+      <select id="tecnicoSelect" class="tecnico-select" onchange="checkReady()">
+        <option value="">Selecciona tu nombre...</option>
+      </select>
+    </div>
+
+    <div class="pin-wrap">
+      <label class="pin-label">PIN de acceso</label>
+      <input type="password" class="pin-input" id="pinInput" placeholder="••••" maxlength="4" oninput="onPinInput()" onkeydown="if(event.key==='Enter')accederPin()">
+    </div>
+
+    <button class="btn-acceder" id="btnAcceder" onclick="accederPin()" disabled>Acceder</button>
+    <div class="error" id="errorMsg">PIN incorrecto. Inténtalo de nuevo.</div>
+  </div>
 </div>
 
 <script>
+// ── MSAL CONFIGURATION ────────────────────────────────────────
+const MSAL_CONFIG = {
+  auth: {
+    clientId: '57ab0a98-8087-4167-816a-8252d8311e85',
+    authority: 'https://login.microsoftonline.com/e55abdc2-666a-4057-a6e9-681e2220c6b4',
+    redirectUri: window.location.origin + window.location.pathname
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+};
+
+const SCOPES = ['User.Read', 'Mail.Send'];
+const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+
+// Handle redirect response on page load
+msalInstance.handleRedirectPromise().then(response => {
+  if (response) processMsalResponse(response);
+}).catch(err => {
+  console.error('MSAL redirect error:', err);
+});
+
+async function loginMicrosoft() {
+  const btn = document.getElementById('btnMicrosoft');
+  btn.disabled = true;
+  btn.textContent = 'Conectando...';
+  try {
+    const response = await msalInstance.loginPopup({ scopes: SCOPES });
+    processMsalResponse(response);
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="0" y="0" width="10" height="10" fill="#f25022"/><rect x="11" y="0" width="10" height="10" fill="#7fba00"/><rect x="0" y="11" width="10" height="10" fill="#00a4ef"/><rect x="11" y="11" width="10" height="10" fill="#ffb900"/></svg> Entrar con Microsoft 365';
+    if (e.errorCode !== 'user_cancelled') {
+      showNotice('Error al conectar con Microsoft. Usa el PIN temporal.', 'error');
+    }
+  }
+}
+
+async function processMsalResponse(response) {
+  const email = response.account.username.toLowerCase();
+  const nombre = response.account.name;
+
+  // Store token for Graph API (email sending)
+  localStorage.setItem('css_ms_token', response.accessToken);
+  localStorage.setItem('css_ms_email', email);
+  localStorage.setItem('css_ms_nombre', nombre);
+
+  // Check role from usuarios table
+  const rol = await getRolFromSupabase(email);
+
+  if (!rol) {
+    showNotice('Tu cuenta no tiene acceso configurado. Contacta con el administrador.', 'error');
+    return;
+  }
+
+  localStorage.setItem('css_rol', rol.rol);
+  if (rol.rol === 'tecnico') {
+    localStorage.setItem('css_tecnico', nombre);
+    window.location.href = 'mis-obras.html';
+  } else {
+    const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+    window.location.href = redirect;
+  }
+}
+
+async function getRolFromSupabase(email) {
+  try {
+    const res = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/usuarios?email=eq.' + encodeURIComponent(email) + '&select=*', {
+      headers: {
+        apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s',
+        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s'
+      }
+    });
+    const rows = await res.json();
+    return rows && rows.length > 0 ? rows[0] : null;
+  } catch(e) { return null; }
+}
+
+function showNotice(msg, type) {
+  const n = document.getElementById('noticeMsg');
+  n.textContent = msg;
+  n.style.display = 'block';
+  if (type === 'error') { n.style.background = '#fcebeb'; n.style.color = '#a32d2d'; n.style.borderColor = '#f7c1c1'; }
+}
+
+// ── PIN LOGIN ────────────────────────────────────────────────
 var PINS = { staffer: '1627', delegado: '1997', tecnico: '0000' };
 var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+var rolSeleccionado = null;
 
 async function loadTecnicos() {
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
     const rows = await res.json();
     const tecnicos = [...new Set(rows.map(r => r.tecnico).filter(Boolean))].sort();
     const sel = document.getElementById('tecnicoSelect');
-    sel.innerHTML = '<option value="">Selecciona...</option>' + tecnicos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+    sel.innerHTML = '<option value="">Selecciona tu nombre...</option>' + tecnicos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
   } catch(e) {}
 }
 loadTecnicos();
-var rolSeleccionado = null;
 
 function selectRole(rol) {
   rolSeleccionado = rol;
@@ -109,7 +218,7 @@ function checkReady() {
   }
 }
 
-function acceder() {
+function accederPin() {
   const pin = document.getElementById('pinInput').value;
   if (!rolSeleccionado || !pin) return;
   if (pin === PINS[rolSeleccionado]) {
