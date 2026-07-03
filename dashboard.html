@@ -196,25 +196,24 @@ function calcCargaReal(r) {
 }
 
 function renderStats(resp) {
-  const f = getFilters();
-  const tecnicos = [...new Set(obras.map(o => o.tecnico))];
-  const conResp = [...new Set(resp.map(r => r.tecnico))];
-  const sinResp = tecnicos.filter(t => !conResp.includes(t));
-  const sobrecargas = conResp.filter(t => {
-    const total = resp.filter(r => r.tecnico === t).reduce((s, r) => s + calcCargaReal(r), 0);
-    return total > 90;
-  });
-
-  document.getElementById('statsGrid').innerHTML =
-    '<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + obras.length + '</div><div class="stat-label">Obras activas</div></div>' +
-    '<div class="stat-box' + (sobrecargas.length ? ' stat-warn' : '') + '"><div class="stat-num">' + sobrecargas.length + '</div><div class="stat-label">Sobrecargas &gt;90%</div></div>' +
-    '<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>';
-
-  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
-  document.getElementById('semanaLabel').textContent = semana ? 'Semana del ' + semana : 'Sin datos de encuesta aún';
+const f = getFilters();
+const enCurso = obras.filter(o => ['ACTIVA','PDTE. INICIO','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
+const tecnicos = [...new Set(obras.map(o => o.tecnico))];
+const conResp = [...new Set(resp.map(r => r.tecnico))];
+const sinResp = tecnicos.filter(t => !conResp.includes(t));
+const sobrecargas = conResp.filter(t => {
+const total = resp.filter(r => r.tecnico === t).reduce((s, r) => s + calcCargaReal(r), 0);
+return total > 90;
+});
+document.getElementById('statsGrid').innerHTML =
+'<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
+'<div class="stat-box"><div class="stat-num">' + enCurso.length + '</div><div class="stat-label">Obras en curso</div></div>' +
+'<div class="stat-box' + (sobrecargas.length ? ' stat-warn' : '') + '"><div class="stat-num">' + sobrecargas.length + '</div><div class="stat-label">Sobrecargas &gt;90%</div></div>' +
+'<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>';
+const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+document.getElementById('semanaLabel').textContent = semana ? 'Semana del ' + semana : 'Sin datos de encuesta aún';
 }
-
+  
 function renderTechList(resp) {
   const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
   const f = getFilters();
