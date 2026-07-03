@@ -95,7 +95,7 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
     <a href="contratos.html">Contratos</a>
     <a href="nueva-solicitud.html">+ Nueva solicitud</a>
     <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+    <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
 </div>
 
@@ -148,6 +148,10 @@ var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
 var solicitudes = [], obras = [], tecnicoSeleccionado = null, solicitudActual = null;
+var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
+var misContratos = [];
+try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
+var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
 
 async function fetchAll() {
   const [s, o] = await Promise.all([
@@ -160,6 +164,10 @@ async function fetchAll() {
   ]);
   solicitudes = Array.isArray(s) ? s : [];
   obras = Array.isArray(o) ? o : [];
+  if (filtrarPorContrato) {
+  solicitudes = solicitudes.filter(s => misContratos.includes(s.cod_contrato));
+  obras = obras.filter(o => misContratos.includes(o.cod_contrato));
+}
 }
 
 function renderStats() {
