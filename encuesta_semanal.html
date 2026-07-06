@@ -101,7 +101,7 @@ input[type="file"] { display: none; }
     <a href="dashboard.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Dashboard</a>
     <a href="tecnicos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Técnicos</a>
     <a href="contratos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Contratos</a>
-    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
+    <a href="#" onclick="var r=localStorage.getItem('enc_resp_v3');localStorage.clear();if(r)localStorage.setItem('enc_resp_v3',r);window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
   </div>
 </div>
 <div class="container">
@@ -160,7 +160,6 @@ input[type="file"] { display: none; }
       </div>
       <div class="actions-bar">
         <button class="btn btn-primary" onclick="generarEmails()">📧 Generar emails con formularios</button>
-        <button class="btn btn-success" onclick="sincronizarObras()" id="btnSync">☁️ Sincronizar obras con Supabase</button>
         <button class="btn" onclick="goBack()">← Volver</button>
       </div>
       <div id="syncStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
@@ -392,8 +391,6 @@ function renderMain() {
   }).join('');
   document.getElementById('selAll').checked=true;
   updateSelCount(); renderRespuestas();
-  const btnSync=document.getElementById('btnSync');
-  if(btnSync) btnSync.style.display=origenDatos==='excel'?'':'none';
 }
 
 function updateDot(i) {
@@ -557,94 +554,6 @@ function switchTab(name) {
   });
   if(name==='respuestas') renderRespuestas();
 }
-
-// ── SYNC OBRAS TO SUPABASE ────────────────────────────────────
-async function sincronizarObras() {
-  if (!tecData.length) { alert('Carga primero el Excel.'); return; }
-  const btn = document.getElementById('btnSync');
-  const status = document.getElementById('syncStatus');
-  btn.disabled = true;
-  btn.textContent = '⏳ Sincronizando...';
-  status.innerHTML = '';
-
-  let ok = 0, err = 0;
-
-  // First delete existing obras for these technicians to avoid duplicates
-  // Then insert all current active obras
-  const payload = [];
-  const syncSource = window._mapSync ? Object.values(window._mapSync) : tecData;
-  const totalObrasSync = syncSource.reduce((s,t) => s+t.obras.length, 0);
-  console.log('Total obras para sync:', totalObrasSync, '| Técnicos:', syncSource.length);
-  syncSource.forEach(t => {
-    t.obras.forEach(o => {
-      payload.push({
-        tecnico: t.name,
-        email: t.email || '',
-        cliente: o.cliente || '',
-        cod_contrato: o.cod_contrato || '',
-        cod_obra: o.num,
-        descripcion: o.desc || '',
-        territorio: o.territorio || '',
-        estado: o.estado || 'ACTIVA',
-        carga_teorica_semanal: o.carga_teorica ? parseFloat(o.carga_teorica) * 100 : null,
-        fecha_inicio: o.fecha_inicio ? (o.fecha_inicio instanceof Date ? o.fecha_inicio.toISOString().split('T')[0] : String(o.fecha_inicio).split('T')[0]) : null,
-        fecha_fin: o.fecha_fin ? (o.fecha_fin instanceof Date ? o.fecha_fin.toISOString().split('T')[0] : String(o.fecha_fin).split('T')[0]) : null
-      });
-    });
-  });
-
-  try {
-    // Step 1: Delete all existing obras for these technicians
-    const syncSrc = window._mapSync ? Object.values(window._mapSync) : tecData;
-    const tecnicos = [...new Set(syncSrc.map(t => t.name))];
-    for (const tec of tecnicos) {
-      await fetch(SUPABASE_URL + '/rest/v1/obras?tecnico=eq.' + encodeURIComponent(tec), {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY
-        }
-      });
-    }
-    // Step 2: Insert all obras in batches of 100
-    const batchSize = 100;
-    let inserted = 0;
-    let errorTxt = '';
-    for (let i = 0; i < payload.length; i += batchSize) {
-      const batch = payload.slice(i, i + batchSize);
-      status.innerHTML = '<span style="color:#4a4a8a;">⏳ Subiendo obras ' + (i+1) + '-' + Math.min(i+batchSize, payload.length) + ' de ' + payload.length + '...</span>';
-      const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(batch)
-      });
-      if (res.ok) {
-        inserted += batch.length;
-      } else {
-        errorTxt = await res.text();
-        break;
-      }
-    }
-    if (errorTxt) {
-      status.innerHTML = '<span style="color:#a32d2d;">❌ Error: ' + escH(errorTxt) + '</span>';
-    } else {
-      ok = inserted;
-      status.innerHTML = '<span style="color:#0f6e56;">✅ ' + ok + ' obras sincronizadas correctamente</span>';
-    }
-  } catch(e) {
-    status.innerHTML = '<span style="color:#a32d2d;">❌ Error de conexión: ' + escH(e.message) + '</span>';
-  }
-
-  btn.disabled = false;
-  btn.textContent = '☁️ Sincronizar obras con Supabase';
-  updateStats();
-}
-
 
 // ── MICROSOFT GRAPH — ENVÍO DIRECTO ──────────────────────────
 const MS_CLIENT_ID = 'placeholder'; // Se configura al registrar app en Azure
