@@ -67,9 +67,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 <body>
 <script>
 (function() {
-  var rol = localStorage.getItem('css_rol');
-  var tecnico = localStorage.getItem('css_tecnico');
-  if (rol !== 'tecnico' || !tecnico) { window.location.href = 'login.html?redirect=mis-obras.html'; }
+var rol = localStorage.getItem('css_rol');
+var tecnico = localStorage.getItem('css_tecnico');
+var email = localStorage.getItem('css_ms_email');
+if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.html?redirect=mis-obras.html'; }
 })();
 </script>
 <div class="tooltip" id="tooltip"></div>
@@ -79,7 +80,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     <h1 id="headerNombre">Mis obras</h1>
     <div class="header-sub" id="headerEmail"></div>
   </div>
-  <div class="nav"><a href="#" class="logout" onclick="localStorage.removeItem('css_rol');localStorage.removeItem('css_tecnico');window.location.href='login.html'">Salir</a></div>
+  <div class="nav"><a href="#" class="logout" onclick="localStorage.clear();window.location.href='login.html'">Salir</a></div>
 </div>
 
 <div class="container">
@@ -102,6 +103,7 @@ var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
 var tecnicoNombre = localStorage.getItem('css_tecnico');
+var tecnicoEmail = (localStorage.getItem('css_ms_email') || '').toLowerCase();
 var obras = [];
 
 function getColor(pct) {
@@ -221,21 +223,24 @@ function showTip(e, text) {
 function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
 
 async function init() {
-  document.getElementById('headerNombre').textContent = tecnicoNombre;
-  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&tecnico=eq.' + encodeURIComponent(tecnicoNombre) + '&order=fecha_fin', {
-    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-  });
-  const all = await res.json();
-  obras = (Array.isArray(all) ? all : []).filter(o => {
-    const e = (o.estado||'').toUpperCase();
-    return e === 'ACTIVA' || e.includes('SUSTIT');
-  });
-  if (obras[0]?.email) document.getElementById('headerEmail').textContent = obras[0].email;
-
-  document.getElementById('loadingDiv').style.display = 'none';
-  document.getElementById('mainContent').style.display = 'block';
-  renderStats();
-  renderObras();
+const filtro = tecnicoEmail
+? 'email=eq.' + encodeURIComponent(tecnicoEmail)
+: 'tecnico=eq.' + encodeURIComponent(tecnicoNombre);
+const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&' + filtro + '&order=fecha_fin', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+});
+const all = await res.json();
+obras = (Array.isArray(all) ? all : []).filter(o => {
+const e = (o.estado||'').toUpperCase();
+return e === 'ACTIVA' || e.includes('SUSTIT');
+});
+if (!tecnicoNombre && obras[0]?.tecnico) tecnicoNombre = obras[0].tecnico;
+document.getElementById('headerNombre').textContent = tecnicoNombre || 'Mis obras';
+document.getElementById('headerEmail').textContent = tecnicoEmail || (obras[0]?.email || '');
+document.getElementById('loadingDiv').style.display = 'none';
+document.getElementById('mainContent').style.display = 'block';
+renderStats();
+renderObras();
 }
 
 init();
