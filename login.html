@@ -229,6 +229,9 @@ function accederPin() {
   if (pin === PINS[rolSeleccionado]) {
     localStorage.setItem('css_rol', rolSeleccionado);
     if (rolSeleccionado === 'tecnico') {
+      localStorage.removeItem('css_ms_token');
+      localStorage.removeItem('css_ms_email');
+      localStorage.removeItem('css_ms_nombre');
       const tecnico = document.getElementById('tecnicoSelect').value;
       localStorage.setItem('css_tecnico', tecnico);
       window.location.href = 'mis-obras.html';
