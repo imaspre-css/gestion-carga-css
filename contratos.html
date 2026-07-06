@@ -75,6 +75,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .modal-head h3 { font-size: 1rem; font-weight: 500; }
 .modal-body { padding: 1.5rem; }
 .close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
+
+/* Pool de técnicos */
+.pool-list { border: 0.5px solid #d0d0c8; border-radius: 8px; max-height: 220px; overflow-y: auto; background: #fafaf8; }
+.pool-item { display: flex; align-items: center; gap: 8px; padding: 0.45rem 0.75rem; border-bottom: 0.5px solid #f0f0e8; font-size: 0.82rem; cursor: pointer; }
+.pool-item:last-child { border-bottom: none; }
+.pool-item:hover { background: #f2f2ea; }
+.pool-item input { cursor: pointer; }
+.pool-item .pool-email { font-size: 0.72rem; color: #aaa; margin-left: auto; }
 </style>
 </head>
 <body>
@@ -115,6 +123,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
       <div class="card-header">
         <div class="card-title">Contratos activos</div>
         <div class="filters">
+          <button class="btn btn-sm btn-primary" id="btnNuevoContrato" style="display:none;" onclick="abrirNuevoContrato()">+ Nuevo contrato</button>
           <select id="filtroTerritorio" onchange="renderContratos()">
             <option value="">Todos los territorios</option>
           </select>
@@ -142,6 +151,8 @@ var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
 var obras = [];
+var contratosDB = [];
+var tecnicosDB = [];
 var isStaffer = localStorage.getItem('css_rol') === 'staffer';
 var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
 var puedeEditar = isStaffer || isDelegadoRol;
@@ -177,8 +188,11 @@ function showToast(msg) {
   setTimeout(() => t.style.display = 'none', 2500);
 }
 
+function escH(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function renderStats() {
-  const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))];
+  const codsObras = new Set(obras.map(o => o.cod_contrato).filter(Boolean));
+  contratosDB.forEach(c => codsObras.add(c.cod_contrato));
   const enCurso = obras.filter(o => ['ACTIVA','PDTE. INICIO','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
   const enPausa = obras.filter(o => ['PDTE. DESIG. CSS','SIN ACTIVIDAD','SUSPENDIDA'].includes(o.estado));
   const finalizadas = obras.filter(o => o.estado === 'FINALIZADA');
@@ -190,7 +204,7 @@ function renderStats() {
   const pdteDesig = obras.filter(o => o.estado === 'PDTE. DESIG. CSS').length;
 
   document.getElementById('statsGrid').innerHTML =
-    '<div class="stat-box"><div class="stat-num">' + contratos.length + '</div><div class="stat-label">Contratos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + codsObras.size + '</div><div class="stat-label">Contratos</div></div>' +
     '<div class="stat-box" style="border-color:#9fe1cb;">'
       + '<div class="stat-num" style="color:#0f6e56;">' + enCurso.length + '</div>'
       + '<div class="stat-label">Obras en curso</div>'
@@ -225,17 +239,23 @@ function renderContratos() {
   const filtroE = document.getElementById('filtroEstado').value.toUpperCase();
   const buscar = document.getElementById('buscarContrato').value.toLowerCase();
 
-  // Group obras by contrato
+  // Seed with contratos from the contratos table (so newly created ones without obras appear)
   const contratoMap = {};
+  contratosDB.forEach(c => {
+    if (filtrarPorContrato && !misContratos.includes(c.cod_contrato)) return;
+    contratoMap[c.cod_contrato] = { cod: c.cod_contrato, cliente: c.cliente||'', descripcion: c.descripcion||'', obras: [] };
+  });
+  // Group obras by contrato
   obras.forEach(o => {
     const cod = o.cod_contrato || '(sin contrato)';
-    if (!contratoMap[cod]) contratoMap[cod] = { cod, cliente: o.cliente||'', obras: [] };
+    if (!contratoMap[cod]) contratoMap[cod] = { cod, cliente: o.cliente||'', descripcion: '', obras: [] };
+    if (!contratoMap[cod].cliente && o.cliente) contratoMap[cod].cliente = o.cliente;
     contratoMap[cod].obras.push(o);
   });
 
   let contratos = Object.values(contratoMap).sort((a,b) => a.cod.localeCompare(b.cod));
 
-  // Filter
+  // Filter (contracts without obras only match territory/estado filters when empty)
   if (filtroT) contratos = contratos.filter(c => c.obras.some(o => (o.territorio||'').toUpperCase() === filtroT));
   if (filtroE) contratos = contratos.filter(c => c.obras.some(o => (o.estado||'').toUpperCase() === filtroE));
   if (buscar) contratos = contratos.filter(c => c.cod.toLowerCase().includes(buscar) || c.cliente.toLowerCase().includes(buscar));
@@ -258,35 +278,35 @@ function renderContratos() {
       if (filtroT) obrasFiltered = obrasFiltered.filter(o => (o.territorio||'').toUpperCase() === filtroT);
       if (filtroE) obrasFiltered = obrasFiltered.filter(o => (o.estado||'').toUpperCase() === filtroE);
 
+      if (!obrasFiltered.length) {
+        obrasHTML = '<div class="obras-wrap open"><div class="empty" style="padding:1.5rem;">Este contrato aún no tiene obras. Se crearán al asignar sus solicitudes.</div></div>';
+      } else {
       obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
         + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
-          const estados = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
-          const estadoOpts = estados.map(e =>
-            '<option value="' + e + '"' + (o.estado === e ? ' selected' : '') + '>' + e + '</option>'
-          ).join('');
           return '<tr>'
             + '<td><span class="pill pill-blue">' + (o.cod_obra||'—') + '</span></td>'
-            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (o.descripcion||'') + '">' + (o.descripcion||'—') + '</td>'
+            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(o.descripcion) + '">' + (o.descripcion||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.tecnico||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.territorio||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
             + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
-            + '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>'
+            + (puedeEditar ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '')
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
+      }
     }
 
     return '<div class="contrato-card" id="cont_' + cont.cod.replace(/[^a-zA-Z0-9]/g,'_') + '">'
       + '<div class="contrato-header" onclick="toggleContrato(\'' + cont.cod.replace(/'/g,"\\'") + '\')">'
-      + '<span class="contrato-cod">' + cont.cod + '</span>'
+      + '<span class="contrato-cod">' + escH(cont.cod) + '</span>'
       + '<div style="flex:1;min-width:0;">'
-      + '<div class="contrato-nombre">' + (cont.cliente||'—') + '</div>'
-      + '<div class="contrato-meta">' + tecnicos.length + ' técnico' + (tecnicos.length!==1?'s':'') + ' · ' + cont.obras.length + ' obras</div>'
+      + '<div class="contrato-nombre">' + (escH(cont.cliente)||'—') + '</div>'
+      + '<div class="contrato-meta">' + tecnicos.length + ' técnico' + (tecnicos.length!==1?'s':'') + ' · ' + cont.obras.length + ' obras' + (cont.descripcion ? ' · ' + escH(cont.descripcion) : '') + '</div>'
       + '</div>'
       + '<div class="contrato-stats">'
       + '<div class="contrato-stat"><div class="contrato-stat-num">' + activas + '</div><div class="contrato-stat-label">Activas</div></div>'
@@ -336,12 +356,22 @@ async function cambiarEstado(id, selectEl) {
 }
 
 async function init() {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000&order=cod_contrato', {
-    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
-  });
-  obras = await res.json();
-  if (!Array.isArray(obras)) obras = [];
+  const [ro, rc, rt] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000&order=cod_contrato', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
+    }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,email,activo&order=nombre', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    }).then(r => r.json())
+  ]);
+  obras = Array.isArray(ro) ? ro : [];
+  contratosDB = Array.isArray(rc) ? rc : [];
+  tecnicosDB = (Array.isArray(rt) ? rt : []).filter(t => t.activo !== false);
   if (filtrarPorContrato) obras = obras.filter(o => misContratos.includes(o.cod_contrato));
+  if (puedeEditar) document.getElementById('btnNuevoContrato').style.display = '';
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   renderStats();
@@ -353,6 +383,111 @@ var propuestas = [];
 var isDelegado = localStorage.getItem('css_rol') === 'delegado';
 
 init().then(() => loadPropuestas());
+
+// ── NUEVO CONTRATO ─────────────────────────────────────────────
+function abrirNuevoContrato() {
+  document.getElementById('ncCod').value = '';
+  document.getElementById('ncCliente').value = '';
+  document.getElementById('ncDescripcion').value = '';
+  document.getElementById('ncBuscarTec').value = '';
+  document.getElementById('ncStatus').innerHTML = '';
+  renderPoolList('');
+  document.getElementById('modalNuevoContrato').classList.add('open');
+}
+
+function closeNuevoContratoModal() {
+  document.getElementById('modalNuevoContrato').classList.remove('open');
+}
+
+function renderPoolList(filtro) {
+  const f = (filtro||'').toLowerCase();
+  // Preserve current selections
+  const seleccionados = getPoolSeleccionados();
+  const lista = tecnicosDB.filter(t => !f || (t.nombre||'').toLowerCase().includes(f) || (t.email||'').toLowerCase().includes(f));
+  document.getElementById('ncPoolList').innerHTML = lista.length
+    ? lista.map(t =>
+      '<label class="pool-item">'
+      + '<input type="checkbox" class="pool-chk" value="' + escH(t.email) + '"' + (seleccionados.includes(t.email) ? ' checked' : '') + '>'
+      + '<span>' + escH(t.nombre) + '</span>'
+      + '<span class="pool-email">' + escH(t.email) + '</span>'
+      + '</label>').join('')
+    : '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">Sin resultados</div>';
+  actualizarContadorPool();
+}
+
+function getPoolSeleccionados() {
+  return [...document.querySelectorAll('.pool-chk:checked')].map(c => c.value);
+}
+
+function actualizarContadorPool() {
+  const n = getPoolSeleccionados().length;
+  document.getElementById('ncPoolCount').textContent = n + ' técnico' + (n!==1?'s':'') + ' preseleccionado' + (n!==1?'s':'');
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.classList && e.target.classList.contains('pool-chk')) actualizarContadorPool();
+});
+
+async function guardarNuevoContrato() {
+  const cod = document.getElementById('ncCod').value.trim();
+  const cliente = document.getElementById('ncCliente').value.trim();
+  const descripcion = document.getElementById('ncDescripcion').value.trim();
+  const pool = getPoolSeleccionados();
+  const status = document.getElementById('ncStatus');
+
+  if (!cod) { status.innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">El código de contrato es obligatorio.</div>'; return; }
+  if (contratosDB.some(c => c.cod_contrato === cod)) {
+    status.innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">Ya existe un contrato con el código "' + escH(cod) + '".</div>';
+    return;
+  }
+
+  const btn = document.getElementById('ncGuardarBtn');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+  const payload = {
+    cod_contrato: cod,
+    cliente: cliente || null,
+    descripcion: descripcion || null,
+    tecnicos_preseleccionados: pool.length ? pool : null
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/contratos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    btn.disabled = false; btn.textContent = 'Crear contrato';
+    status.innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al crear el contrato.</div>';
+    return;
+  }
+
+  // Si lo crea un delegado: auto-asignarle el contrato (BD + sesión)
+  if (isDelegadoRol) {
+    const emailDelegado = (localStorage.getItem('css_ms_email') || '').toLowerCase();
+    if (!misContratos.includes(cod)) misContratos.push(cod);
+    localStorage.setItem('css_contratos', JSON.stringify(misContratos));
+    filtrarPorContrato = misContratos.length > 0;
+    if (emailDelegado) {
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/usuarios?email=eq.' + encodeURIComponent(emailDelegado), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+          body: JSON.stringify({ contratos: misContratos })
+        });
+      } catch(e) {}
+    }
+  }
+
+  contratosDB.push(payload);
+  openContratos.add(cod);
+  closeNuevoContratoModal();
+  showToast('Contrato ' + cod + ' creado');
+  renderStats();
+  renderContratos();
+  btn.disabled = false; btn.textContent = 'Crear contrato';
+}
 
 // ── PROPUESTAS DE CAMBIO ───────────────────────────────────────
 async function loadPropuestas() {
@@ -375,13 +510,13 @@ function renderPropuestas() {
     const obra = obras.find(o => o.id === p.obra_id);
     const obraTxt = obra ? (obra.cod_obra + ' — ' + (obra.descripcion||'').substring(0,50)) : 'Obra no encontrada';
     return '<div style="border:0.5px solid #fac775;background:#fdf8ef;border-radius:8px;padding:0.85rem;margin-bottom:8px;">'
-      + '<div style="font-size:0.82rem;font-weight:500;margin-bottom:4px;">' + p.tecnico + ' propone cambiar la fecha de fin</div>'
-      + '<div style="font-size:0.78rem;color:#666;margin-bottom:4px;">' + obraTxt + '</div>'
+      + '<div style="font-size:0.82rem;font-weight:500;margin-bottom:4px;">' + escH(p.tecnico) + ' propone cambiar la fecha de fin</div>'
+      + '<div style="font-size:0.78rem;color:#666;margin-bottom:4px;">' + escH(obraTxt) + '</div>'
       + '<div style="font-size:0.78rem;color:#888;margin-bottom:6px;">'
       + 'Actual: <strong>' + (p.valor_actual ? new Date(p.valor_actual).toLocaleDateString('es-ES') : 'sin fecha') + '</strong>'
       + ' → Propuesta: <strong style="color:#185fa5;">' + new Date(p.valor_propuesto).toLocaleDateString('es-ES') + '</strong>'
       + '</div>'
-      + (p.motivo ? '<div style="font-size:0.78rem;color:#666;font-style:italic;margin-bottom:8px;">"' + p.motivo + '"</div>' : '')
+      + (p.motivo ? '<div style="font-size:0.78rem;color:#666;font-style:italic;margin-bottom:8px;">"' + escH(p.motivo) + '"</div>' : '')
       + '<div style="display:flex;gap:6px;">'
       + '<button class="btn btn-sm btn-primary" onclick="resolverPropuesta(\'' + p.id + '\',true)">✅ Aprobar</button>'
       + '<button class="btn btn-sm" onclick="resolverPropuesta(\'' + p.id + '\',false)">✕ Rechazar</button>'
@@ -484,6 +619,10 @@ document.getElementById('modalEditarObra').addEventListener('click', e => {
   if (e.target === document.getElementById('modalEditarObra')) closeEditModal();
 });
 
+document.getElementById('modalNuevoContrato').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalNuevoContrato')) closeNuevoContratoModal();
+});
+
 </script>
 
 <!-- Modal editar obra -->
@@ -540,6 +679,44 @@ document.getElementById('modalEditarObra').addEventListener('click', e => {
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
         <button class="btn" onclick="closeEditModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarObra()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nuevo contrato -->
+<div class="modal-bg" id="modalNuevoContrato">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h3>Nuevo contrato</h3>
+      <button class="close-btn" onclick="closeNuevoContratoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ncStatus"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Código de contrato *</label>
+          <input type="text" id="ncCod" placeholder="ej. 2710-RENFE" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
+          <input type="text" id="ncCliente" placeholder="ej. RENFE" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
+          <input type="text" id="ncDescripcion" placeholder="Descripción breve del contrato" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Técnicos preseleccionados <span style="color:#aaa;">(orientativo — podrán asignarse otros)</span></label>
+        <input type="text" id="ncBuscarTec" placeholder="Buscar técnico..." oninput="renderPoolList(this.value)" style="width:100%;padding:0.45rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.82rem;margin-bottom:6px;">
+        <div class="pool-list" id="ncPoolList"></div>
+        <div id="ncPoolCount" style="font-size:0.72rem;color:#888;margin-top:4px;">0 técnicos preseleccionados</div>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.75rem;color:#888;background:#f5f5f0;border-radius:8px;padding:0.6rem 0.8rem;">El baremo (solo para obras CSS) se configura después desde este mismo listado. Las obras del contrato se crearán al asignar sus solicitudes.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+        <button class="btn" onclick="closeNuevoContratoModal()">Cancelar</button>
+        <button class="btn btn-primary" id="ncGuardarBtn" onclick="guardarNuevoContrato()">Crear contrato</button>
       </div>
     </div>
   </div>
