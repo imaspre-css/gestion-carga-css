@@ -372,7 +372,7 @@ async function calcularImpacto() {
       fetch(SUPABASE_URL + '/rest/v1/contratos?select=cod_contrato', { headers: HB }).then(r => r.json()),
       fetch(SUPABASE_URL + '/rest/v1/usuarios?select=email', { headers: HB }).then(r => r.json())
     ]);
-    const kObras = new Set((Array.isArray(obrasBD) ? obrasBD : []).map(o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].map(norm).join('||')));
+    const kObras = new Set((Array.isArray(obrasBD) ? obrasBD : []).map(o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].map(v => v == null ? '' : String(v)).join('||')));
     const kTec = new Set((Array.isArray(tecBD) ? tecBD : []).map(t => normEmail(t.email)));
     const kCon = new Set((Array.isArray(conBD) ? conBD : []).map(c => norm(c.cod_contrato)));
     const kUsr = new Set((Array.isArray(usrBD) ? usrBD : []).map(u => normEmail(u.email)));
