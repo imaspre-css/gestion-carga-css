@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carga masiva — CSS</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+.container { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.upload-zone { border: 1.5px dashed #c8c8c0; border-radius: 10px; padding: 2.5rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafaf8; }
+.upload-zone:hover, .upload-zone.dragover { border-color: #4a4a8a; background: #f0f0fa; }
+.upload-zone .icon { font-size: 2.2rem; display: block; margin-bottom: 0.75rem; }
+.upload-zone p { color: #666; font-size: 0.9rem; }
+.upload-zone small { color: #aaa; font-size: 0.75rem; margin-top: 0.4rem; display: block; }
+input[type="file"] { display: none; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; } .btn-primary:hover { background: #2a2a4e; }
+.btn-success { background: #0f6e56; color: #fff; border-color: #0f6e56; } .btn-success:hover { background: #085041; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+.stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; text-align: center; }
+.stat-num { font-size: 1.6rem; font-weight: 500; color: #1a1a2e; }
+.stat-label { font-size: 0.7rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.notice { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 0.75rem; line-height: 1.5; }
+.notice-info { background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; }
+.notice-success { background: #e1f5ee; color: #0f6e56; border: 0.5px solid #9fe1cb; }
+.notice-warn { background: #faeeda; color: #854f0b; border: 0.5px solid #fac775; }
+.notice-error { background: #fcebeb; color: #a32d2d; border: 0.5px solid #f7c1c1; }
+.err-list { font-size: 0.78rem; max-height: 220px; overflow-y: auto; background: #fafaf8; border: 0.5px solid #e8e8e0; border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 0.75rem; }
+.err-list div { padding: 2px 0; border-bottom: 0.5px solid #f0f0e8; }
+.err-list div:last-child { border-bottom: none; }
+.impact-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.impact-table th { background: #f5f5f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 500; color: #888; border-bottom: 0.5px solid #e0e0d8; font-size: 0.7rem; text-transform: uppercase; }
+.impact-table td { padding: 0.55rem 0.75rem; border-bottom: 0.5px solid #f0f0e8; }
+.impact-table tr:last-child td { border-bottom: none; }
+.pill { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.pill-green { background: #e1f5ee; color: #0f6e56; }
+.pill-blue { background: #eeeefa; color: #4a4a8a; }
+.pill-grey { background: #f5f5f0; color: #888; }
+.step { display: none; } .step.active { display: block; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<script>
+(function() {
+  var rol = localStorage.getItem('css_rol');
+  if (!rol) { window.location.href = 'login.html?redirect=carga-masiva.html'; return; }
+  if (rol !== 'staffer') { window.location.href = 'index.html'; }
+})();
+</script>
+
+<div class="header">
+<h1>📦 Carga masiva de datos</h1>
+<div class="nav">
+<a href="index.html">Inicio</a>
+<a href="solicitudes.html">Solicitudes</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="tecnicos.html">Técnicos</a>
+<a href="contratos.html">Contratos</a>
+<a href="encuesta_semanal.html">Encuesta</a>
+<a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+</div>
+</div>
+
+<div class="container">
+
+<!-- PASO 1: SUBIDA -->
+<div class="step active" id="step-upload">
+<div class="card">
+<div class="card-title">📂 Subir plantilla de carga masiva</div>
+<div class="upload-zone" id="dropzone" onclick="document.getElementById('fi').click()">
+<span class="icon">📊</span>
+<p>Arrastra la plantilla Excel o haz clic para seleccionarla</p>
+<small>Hojas esperadas: OBRAS, TECNICOS, CONTRATOS, USUARIOS · Los datos existentes se actualizan, nunca se borran</small>
+</div>
+<input type="file" id="fi" accept=".xlsx,.xls">
+</div>
+<div class="notice notice-info">El cargador hace <strong>upsert</strong>: las filas nuevas se insertan y las existentes se actualizan según su clave (obras: cod_obra + contrato + descripción + técnico · técnicos y usuarios: email · contratos: cod_contrato). Ninguna fila se elimina de la base de datos. Para dar de baja una obra, márcala como FINALIZADA en el Excel.</div>
+</div>
+
+<!-- PASO 2: VALIDACIÓN Y VISTA PREVIA -->
+<div class="step" id="step-preview">
+<div class="stats-grid" id="statsGrid"></div>
+<div class="card">
+<div class="card-title">🔍 Resultado de la validación</div>
+<div id="validationResult"></div>
+</div>
+<div class="card">
+<div class="card-title">📋 Impacto estimado de la carga</div>
+<div id="impactResult"><div style="text-align:center;padding:1rem;"><span class="spinner"></span> Comparando con la base de datos...</div></div>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<button class="btn btn-success" id="btnCargar" onclick="ejecutarCarga()" disabled>⬆️ Ejecutar carga</button>
+<button class="btn" onclick="location.reload()">← Empezar de nuevo</button>
+</div>
+<div id="cargaStatus" style="margin-top:0.75rem;font-size:0.85rem;"></div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
+const PRODUCTOS_VALIDOS = ['CSS','AUTOPROTECCION','CONSULTORIA','CAE'];
+const ROLES_VALIDOS = ['staffer','delegado','tecnico','representante'];
+const HB = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+const HBW = { ...HB, 'Content-Type': 'application/json' };
+
+let datos = { obras: [], tecnicos: [], contratos: [], usuarios: [] };
+let errores = [], avisos = [];
+
+// ── UTILIDADES ──
+const norm = v => v == null ? '' : String(v).trim();
+const normEmail = v => norm(v).toLowerCase();
+const esEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const siNo = v => { const s = norm(v).toUpperCase(); return s === 'SI' || s === 'SÍ' || s === 'TRUE' ? true : (s === 'NO' || s === 'FALSE' ? false : null); };
+const escH = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function fmtFecha(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return v.toISOString().split('T')[0];
+  const s = norm(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  return null;
+}
+
+function normalizarEstado(e) {
+  const eNorm = norm(e).toUpperCase().normalize('NFC');
+  if (!eNorm) return '';
+  const hit = ESTADOS_VALIDOS.find(s => s.toUpperCase() === eNorm);
+  if (hit) return hit;
+  if (eNorm.includes('CSS')) return 'PDTE. DESIG. CSS';
+  if (eNorm.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
+  if (eNorm.includes('SUSPEND') || eNorm.includes('PARALIZ')) return 'SUSPENDIDA';
+  if (eNorm.includes('PROCESO') && eNorm.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
+  if (eNorm.includes('FINAL')) return 'FINALIZADA';
+  if (eNorm.includes('PENDIENTE') || eNorm.includes('PDTE')) return 'PDTE. INICIO';
+  if (eNorm.includes('ACTIV')) return 'ACTIVA';
+  return e; // no reconocido → se marcará como error
+}
+
+// ── SUBIDA ──
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fi');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); procesarFichero(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => procesarFichero(e.target.files[0]));
+
+function leerHoja(wb, nombre) {
+  const key = wb.SheetNames.find(s => s.trim().toUpperCase() === nombre);
+  if (!key) return null;
+  return XLSX.utils.sheet_to_json(wb.Sheets[key], { defval: null });
+}
+
+function procesarFichero(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+    errores = []; avisos = [];
+    parsearObras(leerHoja(wb, 'OBRAS'));
+    parsearTecnicos(leerHoja(wb, 'TECNICOS'));
+    parsearContratos(leerHoja(wb, 'CONTRATOS'));
+    parsearUsuarios(leerHoja(wb, 'USUARIOS'));
+    validarCruces();
+    mostrarPreview();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── PARSEO POR HOJA (fila = índice + 2 por la cabecera) ──
+function parsearObras(rows) {
+  datos.obras = [];
+  if (!rows) { avisos.push('Hoja OBRAS no encontrada — se omite.'); return; }
+  const clavesVistas = new Set();
+  rows.forEach((r, i) => {
+    const fila = i + 2;
+    const tecnico = norm(r.tecnico), cod_obra = norm(r.cod_obra), cod_contrato = norm(r.cod_contrato);
+    if (!tecnico && !cod_obra) return; // fila vacía
+    if (!tecnico) { errores.push('OBRAS fila ' + fila + ': falta el técnico.'); return; }
+    if (!cod_obra || cod_obra.length < 2) { errores.push('OBRAS fila ' + fila + ': falta cod_obra.'); return; }
+    if (!cod_contrato) { errores.push('OBRAS fila ' + fila + ': falta cod_contrato.'); return; }
+    const estado = normalizarEstado(r.estado);
+    if (!ESTADOS_VALIDOS.includes(estado)) { errores.push('OBRAS fila ' + fila + ': estado no reconocido "' + escH(norm(r.estado)) + '".'); return; }
+    let producto = norm(r.producto).toUpperCase() || 'CSS';
+    if (!PRODUCTOS_VALIDOS.includes(producto)) { errores.push('OBRAS fila ' + fila + ': producto no válido "' + escH(norm(r.producto)) + '".'); return; }
+    const email = normEmail(r.email);
+    if (email && !esEmail(email)) avisos.push('OBRAS fila ' + fila + ': email con formato dudoso "' + escH(email) + '".');
+    const descripcion = norm(r.descripcion);
+    const clave = [cod_obra, cod_contrato, descripcion, tecnico].join('||');
+    if (clavesVistas.has(clave)) { avisos.push('OBRAS fila ' + fila + ': duplicada dentro del fichero (se usa la primera aparición).'); return; }
+    clavesVistas.add(clave);
+    const carga = r.carga_teorica_semanal != null && r.carga_teorica_semanal !== '' ? parseFloat(r.carga_teorica_semanal) : null;
+    datos.obras.push({
+      cod_empleado: norm(r.cod_empleado) || null,
+      tecnico, email: email || '',
+      cliente: norm(r.cliente) || '',
+      cod_contrato, cod_obra, producto,
+      descripcion,
+      municipio: norm(r.municipio) || null,
+      estado,
+      fecha_inicio: fmtFecha(r.fecha_inicio),
+      plazo_meses: r.plazo_meses != null && r.plazo_meses !== '' ? parseInt(r.plazo_meses) : null,
+      fecha_fin: fmtFecha(r.fecha_fin),
+      carga_teorica_semanal: carga != null && !isNaN(carga) ? Math.round(carga * 100 * 100) / 100 : null
+    });
+  });
+}
+
+function parsearTecnicos(rows) {
+  datos.tecnicos = [];
+  if (!rows) { avisos.push('Hoja TECNICOS no encontrada — se omite.'); return; }
+  const emailsVistos = new Set();
+  rows.forEach((r, i) => {
+    const fila = i + 2;
+    const nombre = norm(r.nombre);
+    if (!nombre) return;
+    const email = normEmail(r.email);
+    if (!email) { errores.push('TECNICOS fila ' + fila + ' (' + escH(nombre) + '): falta el email (es la clave de actualización).'); return; }
+    if (!esEmail(email)) { errores.push('TECNICOS fila ' + fila + ': email no válido "' + escH(email) + '".'); return; }
+    if (emailsVistos.has(email)) { errores.push('TECNICOS fila ' + fila + ': email duplicado "' + escH(email) + '".'); return; }
+    emailsVistos.add(email);
+    const resp = normEmail(r.responsable_email);
+    if (resp && !esEmail(resp)) avisos.push('TECNICOS fila ' + fila + ': responsable_email con formato dudoso.');
+    datos.tecnicos.push({
+      cod_empleado: norm(r.cod_empleado) || null,
+      nombre, email,
+      telefono: norm(r.telefono) || null,
+      territorio: norm(r.territorio) || null,
+      delegacion: norm(r.delegacion) || null,
+      responsable_email: resp || null,
+      titulacion: norm(r.titulacion) || null,
+      colegiado: siNo(r.colegiado) ?? false,
+      fecha_alta: fmtFecha(r.fecha_alta),
+      activo: siNo(r.activo) ?? true,
+      notas: norm(r.notas) || null
+    });
+  });
+}
+
+function parsearContratos(rows) {
+  datos.contratos = [];
+  if (!rows) { avisos.push('Hoja CONTRATOS no encontrada — se omite.'); return; }
+  rows.forEach((r, i) => {
+    const cod = norm(r.cod_contrato);
+    if (!cod) return;
+    const num = k => r[k] != null && r[k] !== '' ? parseFloat(r[k]) : null;
+    datos.contratos.push({
+      cod_contrato: cod,
+      cliente: norm(r.cliente) || null,
+      descripcion: norm(r.descripcion) || null,
+      t_desplazamiento: num('t_desplazamiento'), t_visita: num('t_visita'),
+      t_acta: num('t_acta'), t_informe: num('t_informe'), t_reunion: num('t_reunion'),
+      visitas_mes: r.visitas_mes != null && r.visitas_mes !== '' ? parseInt(r.visitas_mes) : null,
+      jornada_horas_mes: num('jornada_horas_mes')
+    });
+  });
+}
+
+function parsearUsuarios(rows) {
+  datos.usuarios = [];
+  if (!rows) { avisos.push('Hoja USUARIOS no encontrada — se omite.'); return; }
+  const emailsVistos = new Set();
+  rows.forEach((r, i) => {
+    const fila = i + 2;
+    const nombre = norm(r.nombre), email = normEmail(r.email);
+    if (!nombre && !email) return;
+    if (!email || !esEmail(email)) { errores.push('USUARIOS fila ' + fila + ': email obligatorio y válido.'); return; }
+    if (emailsVistos.has(email)) { errores.push('USUARIOS fila ' + fila + ': email duplicado.'); return; }
+    emailsVistos.add(email);
+    const rol = norm(r.rol).toLowerCase();
+    if (!ROLES_VALIDOS.includes(rol)) { errores.push('USUARIOS fila ' + fila + ': rol no válido "' + escH(norm(r.rol)) + '".'); return; }
+    const contratos = norm(r.contratos) ? norm(r.contratos).split(';').map(s => s.trim()).filter(Boolean) : null;
+    datos.usuarios.push({
+      cod_empleado: norm(r.cod_empleado) || null,
+      nombre, email, rol, contratos,
+      delegacion: norm(r.delegacion) || null,
+      representante_email: normEmail(r.representante_email) || null,
+      activo: siNo(r.activo) ?? true
+    });
+  });
+}
+
+// ── VALIDACIONES CRUZADAS ──
+function validarCruces() {
+  const contratosExcel = new Set(datos.contratos.map(c => c.cod_contrato));
+  const tecEmails = new Map(datos.tecnicos.map(t => [t.nombre, t.email]));
+  const tecCods = new Map(datos.tecnicos.filter(t => t.cod_empleado).map(t => [t.nombre, t.cod_empleado]));
+
+  const contratosObras = new Set(datos.obras.map(o => o.cod_contrato));
+  contratosObras.forEach(c => {
+    if (datos.contratos.length && !contratosExcel.has(c)) avisos.push('El contrato "' + escH(c) + '" aparece en OBRAS pero no en la hoja CONTRATOS.');
+  });
+
+  // Propagar email y cod_empleado desde TECNICOS a las obras que no lo traigan
+  let propagadosEmail = 0, propagadosCod = 0;
+  datos.obras.forEach(o => {
+    if (!o.email && tecEmails.has(o.tecnico)) { o.email = tecEmails.get(o.tecnico); propagadosEmail++; }
+    if (!o.cod_empleado && tecCods.has(o.tecnico)) { o.cod_empleado = tecCods.get(o.tecnico); propagadosCod++; }
+    if (!o.email) avisos.push('Obra ' + escH(o.cod_obra) + ' (' + escH(o.tecnico) + '): sin email de técnico.');
+  });
+  if (propagadosEmail) avisos.push(propagadosEmail + ' obras heredaron el email desde la hoja TECNICOS.');
+  if (propagadosCod) avisos.push(propagadosCod + ' obras heredaron el cod_empleado desde la hoja TECNICOS.');
+
+  // Técnicos en OBRAS que no están en TECNICOS
+  if (datos.tecnicos.length) {
+    const nombresTec = new Set(datos.tecnicos.map(t => t.nombre));
+    const faltan = [...new Set(datos.obras.map(o => o.tecnico))].filter(n => !nombresTec.has(n));
+    faltan.forEach(n => avisos.push('El técnico "' + escH(n) + '" tiene obras pero no está en la hoja TECNICOS.'));
+  }
+
+  // Contratos de usuarios que no existen
+  const todosContratos = new Set([...contratosExcel, ...contratosObras]);
+  datos.usuarios.forEach(u => {
+    (u.contratos || []).forEach(c => {
+      if (!todosContratos.has(c)) avisos.push('Usuario ' + escH(u.email) + ': el contrato "' + escH(c) + '" no aparece en el fichero (verifica que exista en la BD).');
+    });
+  });
+}
+
+// ── VISTA PREVIA ──
+async function mostrarPreview() {
+  document.getElementById('step-upload').classList.remove('active');
+  document.getElementById('step-preview').classList.add('active');
+
+  document.getElementById('statsGrid').innerHTML =
+    '<div class="stat-box"><div class="stat-num">' + datos.obras.length + '</div><div class="stat-label">Obras</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + datos.tecnicos.length + '</div><div class="stat-label">Técnicos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + datos.contratos.length + '</div><div class="stat-label">Contratos</div></div>' +
+    '<div class="stat-box"><div class="stat-num">' + datos.usuarios.length + '</div><div class="stat-label">Usuarios</div></div>';
+
+  let html = '';
+  if (errores.length) {
+    html += '<div class="notice notice-error"><strong>' + errores.length + ' errores</strong> — corrige el Excel y vuelve a subirlo. La carga está bloqueada.</div>';
+    html += '<div class="err-list">' + errores.map(e => '<div>❌ ' + e + '</div>').join('') + '</div>';
+  } else {
+    html += '<div class="notice notice-success">✅ Sin errores bloqueantes.</div>';
+  }
+  if (avisos.length) {
+    html += '<div class="notice notice-warn"><strong>' + avisos.length + ' avisos</strong> — no bloquean la carga, pero revísalos.</div>';
+    html += '<div class="err-list">' + avisos.map(a => '<div>⚠️ ' + a + '</div>').join('') + '</div>';
+  }
+  document.getElementById('validationResult').innerHTML = html;
+
+  await calcularImpacto();
+  document.getElementById('btnCargar').disabled = errores.length > 0;
+}
+
+async function calcularImpacto() {
+  try {
+    const [obrasBD, tecBD, conBD, usrBD] = await Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_obra,cod_contrato,descripcion,tecnico&limit=5000', { headers: { ...HB, Range: '0-4999' } }).then(r => r.json()),
+      fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=email', { headers: HB }).then(r => r.json()),
+      fetch(SUPABASE_URL + '/rest/v1/contratos?select=cod_contrato', { headers: HB }).then(r => r.json()),
+      fetch(SUPABASE_URL + '/rest/v1/usuarios?select=email', { headers: HB }).then(r => r.json())
+    ]);
+    const kObras = new Set((Array.isArray(obrasBD) ? obrasBD : []).map(o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].map(norm).join('||')));
+    const kTec = new Set((Array.isArray(tecBD) ? tecBD : []).map(t => normEmail(t.email)));
+    const kCon = new Set((Array.isArray(conBD) ? conBD : []).map(c => norm(c.cod_contrato)));
+    const kUsr = new Set((Array.isArray(usrBD) ? usrBD : []).map(u => normEmail(u.email)));
+
+    const cnt = (arr, keyFn, set) => {
+      let nuevos = 0, act = 0;
+      arr.forEach(x => set.has(keyFn(x)) ? act++ : nuevos++);
+      return { nuevos, act };
+    };
+    const iO = cnt(datos.obras, o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].join('||'), kObras);
+    const iT = cnt(datos.tecnicos, t => t.email, kTec);
+    const iC = cnt(datos.contratos, c => c.cod_contrato, kCon);
+    const iU = cnt(datos.usuarios, u => u.email, kUsr);
+
+    const fila = (nombre, i, total) => '<tr><td style="font-weight:500;">' + nombre + '</td>' +
+      '<td><span class="pill pill-green">+' + i.nuevos + ' nuevas</span></td>' +
+      '<td><span class="pill pill-blue">↻ ' + i.act + ' actualizadas</span></td>' +
+      '<td><span class="pill pill-grey">' + total + ' total</span></td></tr>';
+
+    document.getElementById('impactResult').innerHTML =
+      '<table class="impact-table"><thead><tr><th>Tabla</th><th>Insertar</th><th>Actualizar</th><th>En fichero</th></tr></thead><tbody>' +
+      fila('Obras', iO, datos.obras.length) +
+      fila('Técnicos', iT, datos.tecnicos.length) +
+      fila('Contratos', iC, datos.contratos.length) +
+      fila('Usuarios', iU, datos.usuarios.length) +
+      '</tbody></table>' +
+      '<div style="font-size:0.75rem;color:#888;margin-top:0.6rem;">Las filas que existen en la base de datos pero no en el fichero se conservan sin cambios.</div>';
+  } catch (e) {
+    document.getElementById('impactResult').innerHTML = '<div class="notice notice-warn">No se pudo calcular el impacto (' + escH(e.message) + '). Puedes cargar igualmente.</div>';
+  }
+}
+
+// ── CARGA (UPSERT POR LOTES) ──
+async function upsertLotes(tabla, filas, onConflict, statusEl, etiqueta) {
+  const batchSize = 100;
+  for (let i = 0; i < filas.length; i += batchSize) {
+    const batch = filas.slice(i, i + batchSize);
+    statusEl.innerHTML = '<span class="spinner"></span> ' + etiqueta + ': ' + Math.min(i + batchSize, filas.length) + ' / ' + filas.length + '...';
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + tabla + '?on_conflict=' + encodeURIComponent(onConflict), {
+      method: 'POST',
+      headers: { ...HBW, Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(batch)
+    });
+    if (!res.ok) throw new Error(etiqueta + ' — ' + await res.text());
+  }
+}
+
+async function ejecutarCarga() {
+  const btn = document.getElementById('btnCargar');
+  const status = document.getElementById('cargaStatus');
+  if (!confirm('¿Ejecutar la carga en Supabase? Las filas existentes se actualizarán con los valores del Excel.')) return;
+  btn.disabled = true;
+  try {
+    // Orden: contratos → técnicos → usuarios → obras
+    if (datos.contratos.length) await upsertLotes('contratos', datos.contratos, 'cod_contrato', status, 'Contratos');
+    if (datos.tecnicos.length) await upsertLotes('tecnicos', datos.tecnicos, 'email', status, 'Técnicos');
+    if (datos.usuarios.length) await upsertLotes('usuarios', datos.usuarios, 'email', status, 'Usuarios');
+    if (datos.obras.length) await upsertLotes('obras', datos.obras, 'cod_obra,cod_contrato,descripcion,tecnico', status, 'Obras');
+    status.innerHTML = '<div class="notice notice-success">✅ Carga completada: ' +
+      datos.obras.length + ' obras, ' + datos.tecnicos.length + ' técnicos, ' +
+      datos.contratos.length + ' contratos y ' + datos.usuarios.length + ' usuarios procesados.</div>';
+  } catch (e) {
+    status.innerHTML = '<div class="notice notice-error">❌ Error durante la carga: ' + escH(e.message) + '<br>Las tablas ya procesadas quedaron cargadas; corrige el problema y vuelve a subir el fichero (el upsert es seguro de repetir).</div>';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
