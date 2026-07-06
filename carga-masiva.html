@@ -204,7 +204,7 @@ function parsearObras(rows) {
     if (!PRODUCTOS_VALIDOS.includes(producto)) { errores.push('OBRAS fila ' + fila + ': producto no válido "' + escH(norm(r.producto)) + '".'); return; }
     const email = normEmail(r.email);
     if (email && !esEmail(email)) avisos.push('OBRAS fila ' + fila + ': email con formato dudoso "' + escH(email) + '".');
-    const descripcion = norm(r.descripcion);
+    const descripcion = norm(r.descripcion).substring(0, 120);
     const clave = [cod_obra, cod_contrato, descripcion, tecnico].join('||');
     if (clavesVistas.has(clave)) { avisos.push('OBRAS fila ' + fila + ': duplicada dentro del fichero (se usa la primera aparición).'); return; }
     clavesVistas.add(clave);
