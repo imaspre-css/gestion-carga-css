@@ -47,7 +47,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .obra-cod { font-size: 0.72rem; font-weight: 500; color: #4a4a8a; background: #eeeefa; padding: 2px 8px; border-radius: 20px; }
 .estado-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
 .estado-ACTIVA { background: #e1f5ee; color: #0f6e56; }
-.estado-SUSTITUCION { background: #e6f1fb; color: #185fa5; }
+.estado-PDTE-INICIO { background: #e6f1fb; color: #185fa5; }
+.estado-PDTE-DESIG { background: #f0e9fb; color: #6a3fa5; }
+.estado-SIN-ACTIVIDAD { background: #f5f5f0; color: #777; }
+.estado-SUSPENDIDA { background: #faeeda; color: #854f0b; }
+.estado-PROC-FINAL { background: #fdf3d7; color: #8a6d00; }
+.estado-FINALIZADA { background: #ececec; color: #999; }
 .obra-desc { font-size: 0.85rem; color: #333; margin-bottom: 6px; }
 .obra-fechas { font-size: 0.75rem; color: #888; }
 
@@ -91,7 +96,7 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 
 
     <div class="card">
-      <div class="card-title">Mis obras activas</div>
+      <div class="card-title">Mis obras</div>
       <div id="obrasWrap"></div>
     </div>
 
@@ -151,12 +156,10 @@ function calcCargaPorSemana(year) {
 }
 
 function renderStats() {
-  const proxFin = obras.filter(o => o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length;
-  const visitasSemana = obras.length;
-
-  document.getElementById('statsRow').innerHTML =
-    '<div class="mini-stat"><div class="mini-stat-num">' + obras.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
-    + '<div class="mini-stat"><div class="mini-stat-num">' + proxFin + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>';
+const proxFin = obras.filter(o => o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length;
+document.getElementById('statsRow').innerHTML =
+'<div class="mini-stat"><div class="mini-stat-num">' + obras.length + '</div><div class="mini-stat-label">Obras asignadas</div></div>'
++ '<div class="mini-stat"><div class="mini-stat-num">' + proxFin + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>';
 }
 
 function renderCalendario() {
@@ -196,7 +199,15 @@ function renderObras() {
     return;
   }
   document.getElementById('obrasWrap').innerHTML = obras.map(o => {
-    const estadoClass = (o.estado||'').toUpperCase().includes('SUSTIT') ? 'estado-SUSTITUCION' : 'estado-ACTIVA';
+    const est = (o.estado||'').toUpperCase();
+    const estadoClass =
+    est === 'ACTIVA' ? 'estado-ACTIVA' :
+    est === 'PDTE. INICIO' ? 'estado-PDTE-INICIO' :
+    est === 'PDTE. DESIG. CSS' ? 'estado-PDTE-DESIG' :
+    est === 'SIN ACTIVIDAD' ? 'estado-SIN-ACTIVIDAD' :
+    est === 'SUSPENDIDA' ? 'estado-SUSPENDIDA' :
+    est.includes('FINALIZACIÓN') ? 'estado-PROC-FINAL' :
+    est === 'FINALIZADA' ? 'estado-FINALIZADA' : 'estado-ACTIVA';
     return '<div class="obra-card">'
       + '<div class="obra-meta">'
       + (o.cliente ? '<span class="cliente-tag">' + o.cliente + '</span>' : '')
@@ -230,10 +241,7 @@ const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&' + filtro + '&o
 headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
 });
 const all = await res.json();
-obras = (Array.isArray(all) ? all : []).filter(o => {
-const e = (o.estado||'').toUpperCase();
-return e === 'ACTIVA' || e.includes('SUSTIT');
-});
+obras = Array.isArray(all) ? all : [];
 if (!tecnicoNombre && obras[0]?.tecnico) tecnicoNombre = obras[0].tecnico;
 document.getElementById('headerNombre').textContent = tecnicoNombre || 'Mis obras';
 document.getElementById('headerEmail').textContent = tecnicoEmail || (obras[0]?.email || '');
