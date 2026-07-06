@@ -312,6 +312,7 @@ function renderContratos() {
       + '<div class="contrato-stat"><div class="contrato-stat-num">' + activas + '</div><div class="contrato-stat-label">Activas</div></div>'
       + '<div class="contrato-stat"><div class="contrato-stat-num">' + cargaTotal + '%</div><div class="contrato-stat-label">Carga total</div></div>'
       + '</div>'
+      + (puedeEditar ? '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirEditarContratoBtn(event)" title="Editar contrato">✏️</button>' : '')
       + '<span class="chevron' + (isOpen?' open':'') + '">▼</span>'
       + '</div>'
       + (isOpen ? obrasHTML : '<div class="obras-wrap"></div>')
@@ -399,12 +400,14 @@ function closeNuevoContratoModal() {
   document.getElementById('modalNuevoContrato').classList.remove('open');
 }
 
-function renderPoolList(filtro) {
+function renderPoolInto(listId, countId, filtro, preseleccion) {
   const f = (filtro||'').toLowerCase();
-  // Preserve current selections
-  const seleccionados = getPoolSeleccionados();
+  const listEl = document.getElementById(listId);
+  const seleccionados = (preseleccion !== null && preseleccion !== undefined)
+    ? preseleccion
+    : [...listEl.querySelectorAll('.pool-chk:checked')].map(c => c.value);
   const lista = tecnicosDB.filter(t => !f || (t.nombre||'').toLowerCase().includes(f) || (t.email||'').toLowerCase().includes(f));
-  document.getElementById('ncPoolList').innerHTML = lista.length
+  listEl.innerHTML = lista.length
     ? lista.map(t =>
       '<label class="pool-item">'
       + '<input type="checkbox" class="pool-chk" value="' + escH(t.email) + '"' + (seleccionados.includes(t.email) ? ' checked' : '') + '>'
@@ -412,27 +415,34 @@ function renderPoolList(filtro) {
       + '<span class="pool-email">' + escH(t.email) + '</span>'
       + '</label>').join('')
     : '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">Sin resultados</div>';
-  actualizarContadorPool();
+  actualizarContadorPool(listId, countId);
 }
 
-function getPoolSeleccionados() {
-  return [...document.querySelectorAll('.pool-chk:checked')].map(c => c.value);
+function renderPoolList(filtro) { renderPoolInto('ncPoolList', 'ncPoolCount', filtro, null); }
+function renderPoolListEdit(filtro) { renderPoolInto('ecPoolList', 'ecPoolCount', filtro, null); }
+
+function getPoolSeleccionados(listId) {
+  return [...document.getElementById(listId).querySelectorAll('.pool-chk:checked')].map(c => c.value);
 }
 
-function actualizarContadorPool() {
-  const n = getPoolSeleccionados().length;
-  document.getElementById('ncPoolCount').textContent = n + ' técnico' + (n!==1?'s':'') + ' preseleccionado' + (n!==1?'s':'');
+function actualizarContadorPool(listId, countId) {
+  const n = getPoolSeleccionados(listId).length;
+  document.getElementById(countId).textContent = n + ' técnico' + (n!==1?'s':'') + ' preseleccionado' + (n!==1?'s':'');
 }
 
 document.addEventListener('change', function(e) {
-  if (e.target.classList && e.target.classList.contains('pool-chk')) actualizarContadorPool();
+  if (e.target.classList && e.target.classList.contains('pool-chk')) {
+    const list = e.target.closest('.pool-list');
+    if (list && list.id === 'ncPoolList') actualizarContadorPool('ncPoolList', 'ncPoolCount');
+    if (list && list.id === 'ecPoolList') actualizarContadorPool('ecPoolList', 'ecPoolCount');
+  }
 });
 
 async function guardarNuevoContrato() {
   const cod = document.getElementById('ncCod').value.trim();
   const cliente = document.getElementById('ncCliente').value.trim();
   const descripcion = document.getElementById('ncDescripcion').value.trim();
-  const pool = getPoolSeleccionados();
+  const pool = getPoolSeleccionados('ncPoolList');
   const status = document.getElementById('ncStatus');
 
   if (!cod) { status.innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">El código de contrato es obligatorio.</div>'; return; }
@@ -487,6 +497,62 @@ async function guardarNuevoContrato() {
   renderStats();
   renderContratos();
   btn.disabled = false; btn.textContent = 'Crear contrato';
+}
+
+// ── EDITAR CONTRATO ────────────────────────────────────────────
+function abrirEditarContratoBtn(event) {
+  event.stopPropagation();
+  abrirEditarContrato(event.currentTarget.dataset.cod);
+}
+
+function abrirEditarContrato(cod) {
+  const c = contratosDB.find(x => x.cod_contrato === cod) || {};
+  const obraRef = obras.find(o => o.cod_contrato === cod);
+  document.getElementById('ecCod').value = cod;
+  document.getElementById('ecCliente').value = c.cliente || (obraRef ? obraRef.cliente : '') || '';
+  document.getElementById('ecDescripcion').value = c.descripcion || '';
+  document.getElementById('ecBuscarTec').value = '';
+  document.getElementById('ecStatus').innerHTML = '';
+  renderPoolInto('ecPoolList', 'ecPoolCount', '', c.tecnicos_preseleccionados || []);
+  document.getElementById('modalEditarContrato').classList.add('open');
+}
+
+function closeEditarContratoModal() {
+  document.getElementById('modalEditarContrato').classList.remove('open');
+}
+
+async function guardarEditarContrato() {
+  const cod = document.getElementById('ecCod').value;
+  const cliente = document.getElementById('ecCliente').value.trim();
+  const descripcion = document.getElementById('ecDescripcion').value.trim();
+  const pool = getPoolSeleccionados('ecPoolList');
+  const btn = document.getElementById('ecGuardarBtn');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+  const payload = {
+    cod_contrato: cod,
+    cliente: cliente || null,
+    descripcion: descripcion || null,
+    tecnicos_preseleccionados: pool.length ? pool : null
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?on_conflict=cod_contrato', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    const idx = contratosDB.findIndex(x => x.cod_contrato === cod);
+    if (idx >= 0) contratosDB[idx] = Object.assign({}, contratosDB[idx], payload);
+    else contratosDB.push(payload);
+    closeEditarContratoModal();
+    showToast('Contrato ' + cod + ' actualizado');
+    renderContratos();
+  } else {
+    document.getElementById('ecStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar.</div>';
+  }
+  btn.disabled = false; btn.textContent = 'Guardar cambios';
 }
 
 // ── PROPUESTAS DE CAMBIO ───────────────────────────────────────
@@ -623,6 +689,10 @@ document.getElementById('modalNuevoContrato').addEventListener('click', e => {
   if (e.target === document.getElementById('modalNuevoContrato')) closeNuevoContratoModal();
 });
 
+document.getElementById('modalEditarContrato').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalEditarContrato')) closeEditarContratoModal();
+});
+
 </script>
 
 <!-- Modal editar obra -->
@@ -717,6 +787,44 @@ document.getElementById('modalNuevoContrato').addEventListener('click', e => {
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
         <button class="btn" onclick="closeNuevoContratoModal()">Cancelar</button>
         <button class="btn btn-primary" id="ncGuardarBtn" onclick="guardarNuevoContrato()">Crear contrato</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar contrato -->
+<div class="modal-bg" id="modalEditarContrato">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h3>Editar contrato</h3>
+      <button class="close-btn" onclick="closeEditarContratoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ecStatus"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Código de contrato</label>
+          <input type="text" id="ecCod" readonly style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #e0e0d8;border-radius:8px;font-size:0.875rem;background:#f5f5f0;color:#888;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
+          <input type="text" id="ecCliente" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
+          <input type="text" id="ecDescripcion" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Técnicos preseleccionados <span style="color:#aaa;">(orientativo — podrán asignarse otros)</span></label>
+        <input type="text" id="ecBuscarTec" placeholder="Buscar técnico..." oninput="renderPoolListEdit(this.value)" style="width:100%;padding:0.45rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.82rem;margin-bottom:6px;">
+        <div class="pool-list" id="ecPoolList"></div>
+        <div id="ecPoolCount" style="font-size:0.72rem;color:#888;margin-top:4px;">0 técnicos preseleccionados</div>
+      </div>
+      <div style="margin-top:0.75rem;font-size:0.72rem;color:#aaa;">El código de contrato no es editable: es el identificador que vincula las obras.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+        <button class="btn" onclick="closeEditarContratoModal()">Cancelar</button>
+        <button class="btn btn-primary" id="ecGuardarBtn" onclick="guardarEditarContrato()">Guardar cambios</button>
       </div>
     </div>
   </div>
