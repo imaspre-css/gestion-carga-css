@@ -44,7 +44,6 @@ input:checked + .slider:before { transform: translateX(16px); }
 .notice-warn { background: #faeeda; color: #854f0b; border: 0.5px solid #fac775; }
 .notice-success { background: #e1f5ee; color: #0f6e56; border: 0.5px solid #9fe1cb; }
 .notice-info { background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; }
-
 /* Wizard */
 .wizard { display: flex; flex-direction: column; height: 100%; }
 .wizard-progress { display: flex; gap: 4px; margin-bottom: 1.25rem; }
@@ -80,8 +79,8 @@ input:checked + .slider:before { transform: translateX(16px); }
 <body>
 <script>
 (function() {
-  var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
+var rol = localStorage.getItem('css_rol');
+if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
 })();
 </script>
 <script>
@@ -89,119 +88,134 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
 </script>
 
 <div class="header">
-  <a href="solicitudes.html">← Solicitudes</a>
-  <h1>Nueva solicitud de coordinación CSS</h1>
-  <div class="nav">
-    <a href="index.html">Inicio</a>
-    <a href="solicitudes.html">Solicitudes</a>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="tecnicos.html">Técnicos</a>
-    <a href="contratos.html">Contratos</a>
-    <a href="nueva-solicitud.html" class="active">+ Nueva solicitud</a>
-    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
-  </div>
+<a href="solicitudes.html">← Solicitudes</a>
+<h1>Nueva solicitud de obra</h1>
+<div class="nav">
+<a href="index.html">Inicio</a>
+<a href="solicitudes.html">Solicitudes</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="tecnicos.html">Técnicos</a>
+<a href="contratos.html">Contratos</a>
+<a href="nueva-solicitud.html" class="active">+ Nueva solicitud</a>
+<a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
+<a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+</div>
 </div>
 
 <div class="container">
-  <!-- LEFT: Obra form -->
-  <div>
-    <div class="card" style="margin-bottom:1.25rem;">
-      <div class="card-title">📋 Datos de la obra</div>
-      <div class="field">
-        <label>Contrato / Cliente *</label>
-        <select id="fContrato" onchange="onContratoChange()">
-          <option value="">Selecciona un contrato...</option>
-        </select>
-      </div>
-      <div id="contratoStatus"></div>
-      <div class="field">
-        <label>Denominación de la obra *</label>
-        <input type="text" id="fDenominacion" placeholder="Descripción de los trabajos">
-      </div>
-      <div class="field">
-        <label>Tu email (delegado) *</label>
-        <input type="email" id="fEmailDelegado" placeholder="delegado@imaspre.net">
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Municipio</label>
-          <input type="text" id="fMunicipio" placeholder="Madrid">
-        </div>
-        <div class="field">
-          <label>Territorio</label>
-          <select id="fTerritorio">
-            <option value="">Selecciona...</option>
-            <option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Fecha de inicio</label>
-          <input type="date" id="fInicio">
-        </div>
-        <div class="field">
-          <label>Plazo (meses)</label>
-          <input type="number" id="fPlazo" placeholder="12" min="1">
-        </div>
-      </div>
-    </div>
 
-    <div class="card" style="margin-bottom:1.25rem;">
-      <div class="card-title">⚙️ Parámetros de la obra</div>
-      <div class="field-row3">
-        <div class="field">
-          <label>Visitas / semana</label>
-          <input type="number" id="fVisitas" value="1" min="0" max="7" oninput="calcularCarga()">
-        </div>
-        <div class="field">
-          <label>Nº CSS</label>
-          <input type="number" id="fNumCSS" value="1" min="1" oninput="calcularCarga()">
-        </div>
-        <div class="field">
-          <label>Prioridad</label>
-          <select id="fPrioridad">
-            <option value="MEDIA">Media</option>
-            <option value="ALTA">Alta</option>
-            <option value="URGENTE">Urgente</option>
-          </select>
-        </div>
-      </div>
-      <div style="margin-top:0.5rem;">
-        <div class="toggle-row"><label>Nocturnidad</label><label class="toggle"><input type="checkbox" id="fNocturnidad" onchange="calcularCarga()"><span class="slider"></span></label></div>
-        <div class="toggle-row"><label>MultiCSS</label><label class="toggle"><input type="checkbox" id="fMultiCSS" onchange="calcularCarga()"><span class="slider"></span></label></div>
-        <div class="toggle-row"><label>Titulación requerida</label><label class="toggle"><input type="checkbox" id="fTitulacion"><span class="slider"></span></label></div>
-        <div class="toggle-row"><label>Colegiación requerida</label><label class="toggle"><input type="checkbox" id="fColegiacion"><span class="slider"></span></label></div>
-      </div>
-      <div class="field" style="margin-top:0.75rem;">
-        <label>Experiencia mínima (años)</label>
-        <input type="number" id="fExperiencia" value="0" min="0">
-      </div>
-      <div class="field">
-        <label>Observaciones</label>
-        <textarea id="fObservaciones" placeholder="Información adicional relevante..."></textarea>
-      </div>
-    </div>
+<!-- LEFT: Obra form -->
+<div>
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">📋 Datos de la obra</div>
+<div class="field">
+<label>Producto *</label>
+<select id="fProducto" onchange="onProductoChange()">
+<option value="CSS" selected>CSS — Coordinación de Seguridad y Salud</option>
+<option value="AUTOPROTECCION">Autoprotección</option>
+<option value="CONSULTORIA">Consultoría</option>
+<option value="CAE">CAE — Coordinación de Actividades Empresariales</option>
+</select>
+</div>
+<div class="field">
+<label>Contrato / Cliente *</label>
+<select id="fContrato" onchange="onContratoChange()">
+<option value="">Selecciona un contrato...</option>
+</select>
+</div>
+<div id="contratoStatus"></div>
+<div class="field">
+<label>Denominación de la obra *</label>
+<input type="text" id="fDenominacion" placeholder="Descripción de los trabajos">
+</div>
+<div class="field">
+<label>Tu email (delegado) *</label>
+<input type="email" id="fEmailDelegado" placeholder="delegado@imaspre.net">
+</div>
+<div class="field-row">
+<div class="field">
+<label>Municipio</label>
+<input type="text" id="fMunicipio" placeholder="Madrid">
+</div>
+<div class="field">
+<label>Territorio</label>
+<select id="fTerritorio">
+<option value="">Selecciona...</option>
+<option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
+</select>
+</div>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Fecha de inicio</label>
+<input type="date" id="fInicio">
+</div>
+<div class="field">
+<label>Plazo (meses)</label>
+<input type="number" id="fPlazo" placeholder="12" min="1">
+</div>
+</div>
+</div>
 
-    <div class="card" style="margin-bottom:1.25rem;">
-      <div class="card-title">📊 Carga teórica estimada</div>
-      <div id="cargaBox"><div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div></div>
-    </div>
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">⚙️ Parámetros de la obra</div>
+<div id="paramsCSS">
+<div class="field-row">
+<div class="field">
+<label>Visitas / semana</label>
+<input type="number" id="fVisitas" value="1" min="0" max="7" oninput="calcularCarga()">
+</div>
+<div class="field">
+<label>Nº CSS</label>
+<input type="number" id="fNumCSS" value="1" min="1" oninput="calcularCarga()">
+</div>
+</div>
+<div class="toggle-row"><label>Nocturnidad</label><label class="toggle"><input type="checkbox" id="fNocturnidad" onchange="calcularCarga()"><span class="slider"></span></label></div>
+<div class="toggle-row"><label>MultiCSS</label><label class="toggle"><input type="checkbox" id="fMultiCSS" onchange="calcularCarga()"><span class="slider"></span></label></div>
+</div>
+<div class="field" style="margin-top:0.5rem;">
+<label>Prioridad</label>
+<select id="fPrioridad">
+<option value="MEDIA">Media</option>
+<option value="ALTA">Alta</option>
+<option value="URGENTE">Urgente</option>
+</select>
+</div>
+<div class="toggle-row"><label>Titulación requerida</label><label class="toggle"><input type="checkbox" id="fTitulacion"><span class="slider"></span></label></div>
+<div class="toggle-row"><label>Colegiación requerida</label><label class="toggle"><input type="checkbox" id="fColegiacion"><span class="slider"></span></label></div>
+<div class="field" style="margin-top:0.75rem;">
+<label>Experiencia mínima (años)</label>
+<input type="number" id="fExperiencia" value="0" min="0">
+</div>
+<div class="field">
+<label>Observaciones</label>
+<textarea id="fObservaciones" placeholder="Información adicional relevante..."></textarea>
+</div>
+</div>
 
-    <button class="btn btn-primary btn-full" id="btnEnviar" onclick="enviarSolicitud()" disabled>📤 Enviar solicitud al staffer</button>
-    <div id="envioStatus" style="margin-top:0.75rem;"></div>
-  </div>
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">📊 Carga teórica estimada</div>
+<div id="cargaBox"><div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div></div>
+<div class="field" id="cargaManualWrap" style="display:none;margin-top:0.5rem;">
+<label>Carga teórica semanal (%) — estimación manual</label>
+<input type="number" id="fCargaManual" min="0" max="100" step="1" placeholder="ej. 15">
+</div>
+</div>
 
-  <!-- RIGHT: Wizard -->
-  <div class="card">
-    <div class="card-title">⚙️ Configuración de baremo</div>
-    <div id="wizardWrap">
-      <div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">
-        Selecciona un contrato para empezar.<br>Si ya tiene baremo se cargará automáticamente.
-      </div>
-    </div>
-  </div>
+<button class="btn btn-primary btn-full" id="btnEnviar" onclick="enviarSolicitud()" disabled>📤 Enviar solicitud al staffer</button>
+<div id="envioStatus" style="margin-top:0.75rem;"></div>
+</div>
+
+<!-- RIGHT: Wizard -->
+<div class="card" id="wizardCard">
+<div class="card-title">⚙️ Configuración de baremo</div>
+<div id="wizardWrap">
+<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">
+Selecciona un contrato para empezar.<br>Si ya tiene baremo se cargará automáticamente.
+</div>
+</div>
+</div>
+
 </div>
 
 <script>
@@ -212,302 +226,313 @@ var baremoActual = null;
 var wizardPhase = 0;
 var wizardData = {};
 
+// ── PRODUCTO ──────────────────────────────────────────────────
+function onProductoChange() {
+const esCSS = document.getElementById('fProducto').value === 'CSS';
+document.getElementById('paramsCSS').style.display = esCSS ? '' : 'none';
+document.getElementById('cargaManualWrap').style.display = esCSS ? 'none' : '';
+document.getElementById('cargaBox').style.display = esCSS ? '' : 'none';
+document.getElementById('wizardCard').style.display = esCSS ? '' : 'none';
+if (esCSS) {
+document.getElementById('btnEnviar').disabled = !baremoActual;
+if (baremoActual) calcularCarga();
+} else {
+document.getElementById('btnEnviar').disabled = !document.getElementById('fContrato').value;
+}
+}
+
 // ── LOAD CONTRATOS ────────────────────────────────────────────
 async function loadContratos() {
-  const [rc, ro] = await Promise.all([
-    fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
-    fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_contrato,cliente&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
-  ]);
-  const contratos = Array.isArray(rc) ? rc : [];
-  const obras = Array.isArray(ro) ? ro : [];
-  const unique = [...new Map(obras.filter(o=>o.cod_contrato).map(o=>[o.cod_contrato,o])).values()];
-  const sinBaremo = unique.filter(o => !contratos.find(c => c.cod_contrato === o.cod_contrato));
-
-  const sel = document.getElementById('fContrato');
-  sel.innerHTML = '<option value="">Selecciona un contrato...</option>';
-  if (contratos.length) {
-    const og = document.createElement('optgroup'); og.label = 'Con baremo configurado';
-    contratos.forEach(c => { const op = document.createElement('option'); op.value = c.cod_contrato; op.textContent = c.cod_contrato + (c.cliente ? ' — ' + c.cliente : ''); og.appendChild(op); });
-    sel.appendChild(og);
-  }
-  if (sinBaremo.length) {
-    const og2 = document.createElement('optgroup'); og2.label = 'Sin baremo (requiere configuración)';
-    sinBaremo.forEach(o => { const op = document.createElement('option'); op.value = o.cod_contrato; op.textContent = o.cod_contrato + (o.cliente ? ' — ' + o.cliente : ''); og2.appendChild(op); });
-    sel.appendChild(og2);
-  }
-  const opNew = document.createElement('option'); opNew.value = '__nuevo__'; opNew.textContent = '+ Nuevo contrato...';
-  sel.appendChild(opNew);
+const [rc, ro] = await Promise.all([
+fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_contrato,cliente&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+]);
+const contratos = Array.isArray(rc) ? rc : [];
+const obras = Array.isArray(ro) ? ro : [];
+const unique = [...new Map(obras.filter(o=>o.cod_contrato).map(o=>[o.cod_contrato,o])).values()];
+const sinBaremo = unique.filter(o => !contratos.find(c => c.cod_contrato === o.cod_contrato));
+const sel = document.getElementById('fContrato');
+sel.innerHTML = '<option value="">Selecciona un contrato...</option>';
+if (contratos.length) {
+const og = document.createElement('optgroup'); og.label = 'Con baremo configurado';
+contratos.forEach(c => { const op = document.createElement('option'); op.value = c.cod_contrato; op.textContent = c.cod_contrato + (c.cliente ? ' — ' + c.cliente : ''); og.appendChild(op); });
+sel.appendChild(og);
+}
+if (sinBaremo.length) {
+const og2 = document.createElement('optgroup'); og2.label = 'Sin baremo (requiere configuración)';
+sinBaremo.forEach(o => { const op = document.createElement('option'); op.value = o.cod_contrato; op.textContent = o.cod_contrato + (o.cliente ? ' — ' + o.cliente : ''); og2.appendChild(op); });
+sel.appendChild(og2);
+}
+const opNew = document.createElement('option'); opNew.value = '__nuevo__'; opNew.textContent = '+ Nuevo contrato...';
+sel.appendChild(opNew);
 }
 
 async function onContratoChange() {
-  const val = document.getElementById('fContrato').value;
-  const status = document.getElementById('contratoStatus');
-  baremoActual = null;
-  document.getElementById('btnEnviar').disabled = true;
-  document.getElementById('cargaBox').innerHTML = '<div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div>';
-  if (!val) { status.innerHTML = ''; document.getElementById('wizardWrap').innerHTML = '<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para empezar.</div>'; return; }
-
-  const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(val) + '&select=*', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
-  const rows = await res.json();
-
-  if (rows && rows.length > 0) {
-    baremoActual = rows[0];
-    status.innerHTML = '<div class="notice notice-success">✅ Baremo cargado — ' + val + '</div>';
-    mostrarBaremoConfirmado(baremoActual);
-    calcularCarga();
-    document.getElementById('btnEnviar').disabled = false;
-  } else if (val !== '__nuevo__') {
-    status.innerHTML = '<div class="notice notice-warn">⚠️ Este contrato no tiene baremo configurado</div>';
-    iniciarWizard(val);
-  } else {
-    status.innerHTML = '';
-    iniciarWizard('');
-  }
+const val = document.getElementById('fContrato').value;
+const status = document.getElementById('contratoStatus');
+baremoActual = null;
+document.getElementById('btnEnviar').disabled = true;
+document.getElementById('cargaBox').innerHTML = '<div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div>';
+if (!val) { status.innerHTML = ''; document.getElementById('wizardWrap').innerHTML = '<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para empezar.</div>'; onProductoChange(); return; }
+const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(val) + '&select=*', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+const rows = await res.json();
+if (rows && rows.length > 0) {
+baremoActual = rows[0];
+status.innerHTML = '<div class="notice notice-success">✅ Baremo cargado — ' + val + '</div>';
+mostrarBaremoConfirmado(baremoActual);
+calcularCarga();
+document.getElementById('btnEnviar').disabled = false;
+} else if (val !== '__nuevo__') {
+status.innerHTML = '<div class="notice notice-warn">⚠️ Este contrato no tiene baremo configurado</div>';
+iniciarWizard(val);
+} else {
+status.innerHTML = '';
+iniciarWizard('');
+}
+onProductoChange();
 }
 
 // ── WIZARD ────────────────────────────────────────────────────
 function iniciarWizard(cod) {
-  wizardPhase = 1;
-  wizardData = { cod_contrato: cod };
-  renderWizard();
+wizardPhase = 1;
+wizardData = { cod_contrato: cod };
+renderWizard();
 }
 
 function renderWizard() {
-  const wrap = document.getElementById('wizardWrap');
-  const phases = ['Datos base', 'Tipos de obra', 'Confirmar baremo'];
-
-  const progress = phases.map((p, i) =>
-    '<div class="wp-step ' + (i+1 < wizardPhase ? 'done' : i+1 === wizardPhase ? 'active' : '') + '"></div>'
-  ).join('');
-
-  let content = '';
-  if (wizardPhase === 1) content = renderPhase1();
-  else if (wizardPhase === 2) content = renderPhase2();
-  else if (wizardPhase === 3) content = renderPhase3();
-
-  wrap.innerHTML = '<div class="wizard">'
-    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;">' + progress
-    + '<span style="font-size:0.75rem;color:#888;margin-left:4px;">Fase ' + wizardPhase + ' de 3</span></div>'
-    + content
-    + '</div>';
+const wrap = document.getElementById('wizardWrap');
+const phases = ['Datos base', 'Tipos de obra', 'Confirmar baremo'];
+const progress = phases.map((p, i) =>
+'<div class="wp-step ' + (i+1 < wizardPhase ? 'done' : i+1 === wizardPhase ? 'active' : '') + '"></div>'
+).join('');
+let content = '';
+if (wizardPhase === 1) content = renderPhase1();
+else if (wizardPhase === 2) content = renderPhase2();
+else if (wizardPhase === 3) content = renderPhase3();
+wrap.innerHTML = '<div class="wizard">'
++ '<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;">' + progress
++ '<span style="font-size:0.75rem;color:#888;margin-left:4px;">Fase ' + wizardPhase + ' de 3</span></div>'
++ content
++ '</div>';
 }
 
 function renderPhase1() {
-  return '<div class="wizard-phase active">'
-    + '<div class="phase-title">Fase 1 — Datos base del contrato</div>'
-    + '<div class="phase-desc">Introduce los tiempos unitarios de referencia para este contrato. Son los tiempos estándar por tarea en obra activa.</div>'
-    + '<div class="wfield-row">'
-    + '<div class="wfield"><label>Código contrato</label><input id="w_cod" value="' + (wizardData.cod_contrato||'') + '" placeholder="ej. 2647-ADIF"></div>'
-    + '<div class="wfield"><label>Cliente</label><input id="w_cliente" value="' + (wizardData.cliente||'') + '" placeholder="ej. ADIF"></div>'
-    + '</div>'
-    + '<div class="wfield-row">'
-    + '<div class="wfield"><label>Desplazamiento one way (h)</label><input type="number" id="w_desp" value="' + (wizardData.t_desplazamiento||1) + '" step="0.25" min="0"></div>'
-    + '<div class="wfield"><label>Duración visita (h)</label><input type="number" id="w_visita" value="' + (wizardData.t_visita||1) + '" step="0.25" min="0"></div>'
-    + '</div>'
-    + '<div class="wfield-row">'
-    + '<div class="wfield"><label>Redacción acta (h)</label><input type="number" id="w_acta" value="' + (wizardData.t_acta||0.75) + '" step="0.25" min="0"></div>'
-    + '<div class="wfield"><label>Informe mensual (h)</label><input type="number" id="w_informe" value="' + (wizardData.t_informe||0.75) + '" step="0.25" min="0"></div>'
-    + '</div>'
-    + '<div class="wfield-row">'
-    + '<div class="wfield"><label>Reunión mensual (h)</label><input type="number" id="w_reunion" value="' + (wizardData.t_reunion||3) + '" step="0.25" min="0"></div>'
-    + '<div class="wfield"><label>Jornada mensual (h)</label><input type="number" id="w_jornada" value="' + (wizardData.jornada_horas_mes||120) + '" step="5" min="1"></div>'
-    + '</div>'
-    + '<div class="wizard-nav">'
-    + '<span></span>'
-    + '<button class="btn btn-primary" onclick="guardarFase1()">Siguiente →</button>'
-    + '</div></div>';
+return '<div class="wizard-phase active">'
++ '<div class="phase-title">Fase 1 — Datos base del contrato</div>'
++ '<div class="phase-desc">Introduce los tiempos unitarios de referencia para este contrato. Son los tiempos estándar por tarea en obra activa.</div>'
++ '<div class="wfield-row">'
++ '<div class="wfield"><label>Código contrato</label><input id="w_cod" value="' + (wizardData.cod_contrato||'') + '" placeholder="ej. 2647-ADIF"></div>'
++ '<div class="wfield"><label>Cliente</label><input id="w_cliente" value="' + (wizardData.cliente||'') + '" placeholder="ej. ADIF"></div>'
++ '</div>'
++ '<div class="wfield-row">'
++ '<div class="wfield"><label>Desplazamiento one way (h)</label><input type="number" id="w_desp" value="' + (wizardData.t_desplazamiento||1) + '" step="0.25" min="0"></div>'
++ '<div class="wfield"><label>Duración visita (h)</label><input type="number" id="w_visita" value="' + (wizardData.t_visita||1) + '" step="0.25" min="0"></div>'
++ '</div>'
++ '<div class="wfield-row">'
++ '<div class="wfield"><label>Redacción acta (h)</label><input type="number" id="w_acta" value="' + (wizardData.t_acta||0.75) + '" step="0.25" min="0"></div>'
++ '<div class="wfield"><label>Informe mensual (h)</label><input type="number" id="w_informe" value="' + (wizardData.t_informe||0.75) + '" step="0.25" min="0"></div>'
++ '</div>'
++ '<div class="wfield-row">'
++ '<div class="wfield"><label>Reunión mensual (h)</label><input type="number" id="w_reunion" value="' + (wizardData.t_reunion||3) + '" step="0.25" min="0"></div>'
++ '<div class="wfield"><label>Jornada mensual (h)</label><input type="number" id="w_jornada" value="' + (wizardData.jornada_horas_mes||120) + '" step="5" min="1"></div>'
++ '</div>'
++ '<div class="wizard-nav">'
++ '<span></span>'
++ '<button class="btn btn-primary" onclick="guardarFase1()">Siguiente →</button>'
++ '</div></div>';
 }
 
 function guardarFase1() {
-  wizardData.cod_contrato = document.getElementById('w_cod').value.trim();
-  wizardData.cliente = document.getElementById('w_cliente').value.trim();
-  wizardData.t_desplazamiento = parseFloat(document.getElementById('w_desp').value)||1;
-  wizardData.t_visita = parseFloat(document.getElementById('w_visita').value)||1;
-  wizardData.t_acta = parseFloat(document.getElementById('w_acta').value)||0.75;
-  wizardData.t_informe = parseFloat(document.getElementById('w_informe').value)||0.75;
-  wizardData.t_reunion = parseFloat(document.getElementById('w_reunion').value)||3;
-  wizardData.jornada_horas_mes = parseFloat(document.getElementById('w_jornada').value)||120;
-  if (!wizardData.cod_contrato) { alert('Introduce el código del contrato.'); return; }
-  wizardPhase = 2;
-  renderWizard();
+wizardData.cod_contrato = document.getElementById('w_cod').value.trim();
+wizardData.cliente = document.getElementById('w_cliente').value.trim();
+wizardData.t_desplazamiento = parseFloat(document.getElementById('w_desp').value)||1;
+wizardData.t_visita = parseFloat(document.getElementById('w_visita').value)||1;
+wizardData.t_acta = parseFloat(document.getElementById('w_acta').value)||0.75;
+wizardData.t_informe = parseFloat(document.getElementById('w_informe').value)||0.75;
+wizardData.t_reunion = parseFloat(document.getElementById('w_reunion').value)||3;
+wizardData.jornada_horas_mes = parseFloat(document.getElementById('w_jornada').value)||120;
+if (!wizardData.cod_contrato) { alert('Introduce el código del contrato.'); return; }
+wizardPhase = 2;
+renderWizard();
 }
 
 function renderPhase2() {
-  const tipos = [
-    { id: 'lejana', title: '🚗 Obra lejana', desc: 'Mayor tiempo de desplazamiento' },
-    { id: 'nocturna', title: '🌙 Obra nocturna', desc: 'Desplazamiento ×1.5' },
-    { id: 'discontinua', title: '📅 Obra discontinua', desc: 'Menos visitas mensuales' },
-    { id: 'multicss', title: '👥 MultiCSS', desc: 'Varios coordinadores comparten informe y reunión' },
-    { id: 'sin_comenzar', title: '⏳ Sin comenzar', desc: 'Obra adjudicada pero no iniciada' },
-  ];
-  const selected = wizardData.tipos || [];
-  return '<div class="wizard-phase active">'
-    + '<div class="phase-title">Fase 2 — Tipos de obra especiales</div>'
-    + '<div class="phase-desc">Selecciona los tipos de obra especiales que existen en este contrato. Para cada tipo podrás ajustar los parámetros.</div>'
-    + '<div class="tipo-grid">'
-    + tipos.map(t => '<div class="tipo-card ' + (selected.includes(t.id)?'selected':'') + '" onclick="toggleTipo(\'' + t.id + '\')" id="tipo_' + t.id + '">'
-      + '<div class="tipo-card-title">' + t.title + '</div>'
-      + '<div class="tipo-card-desc">' + t.desc + '</div>'
-      + '</div>').join('')
-    + '</div>'
-    + '<div class="wizard-nav">'
-    + '<button class="btn" onclick="wizardPhase=1;renderWizard()">← Atrás</button>'
-    + '<button class="btn btn-primary" onclick="guardarFase2()">Siguiente →</button>'
-    + '</div></div>';
+const tipos = [
+{ id: 'lejana', title: '🚗 Obra lejana', desc: 'Mayor tiempo de desplazamiento' },
+{ id: 'nocturna', title: '🌙 Obra nocturna', desc: 'Desplazamiento ×1.5' },
+{ id: 'discontinua', title: '📅 Obra discontinua', desc: 'Menos visitas mensuales' },
+{ id: 'multicss', title: '👥 MultiCSS', desc: 'Varios coordinadores comparten informe y reunión' },
+{ id: 'sin_comenzar', title: '⏳ Sin comenzar', desc: 'Obra adjudicada pero no iniciada' },
+];
+const selected = wizardData.tipos || [];
+return '<div class="wizard-phase active">'
++ '<div class="phase-title">Fase 2 — Tipos de obra especiales</div>'
++ '<div class="phase-desc">Selecciona los tipos de obra especiales que existen en este contrato. Para cada tipo podrás ajustar los parámetros.</div>'
++ '<div class="tipo-grid">'
++ tipos.map(t => '<div class="tipo-card ' + (selected.includes(t.id)?'selected':'') + '" onclick="toggleTipo(\'' + t.id + '\')" id="tipo_' + t.id + '">'
++ '<div class="tipo-card-title">' + t.title + '</div>'
++ '<div class="tipo-card-desc">' + t.desc + '</div>'
++ '</div>').join('')
++ '</div>'
++ '<div class="wizard-nav">'
++ '<button class="btn" onclick="wizardPhase=1;renderWizard()">← Atrás</button>'
++ '<button class="btn btn-primary" onclick="guardarFase2()">Siguiente →</button>'
++ '</div></div>';
 }
 
 function toggleTipo(id) {
-  if (!wizardData.tipos) wizardData.tipos = [];
-  const idx = wizardData.tipos.indexOf(id);
-  if (idx >= 0) wizardData.tipos.splice(idx, 1);
-  else wizardData.tipos.push(id);
-  document.getElementById('tipo_' + id).classList.toggle('selected');
+if (!wizardData.tipos) wizardData.tipos = [];
+const idx = wizardData.tipos.indexOf(id);
+if (idx >= 0) wizardData.tipos.splice(idx, 1);
+else wizardData.tipos.push(id);
+document.getElementById('tipo_' + id).classList.toggle('selected');
 }
 
 function guardarFase2() {
-  wizardPhase = 3;
-  renderWizard();
+wizardPhase = 3;
+renderWizard();
 }
 
 function renderPhase3() {
-  const b = wizardData;
-  const hBase = ((b.t_desplazamiento*2) + b.t_visita + b.t_acta) * 4 + b.t_informe + b.t_reunion;
-  const pct = Math.round((hBase / b.jornada_horas_mes) * 100);
-
-  return '<div class="wizard-phase active">'
-    + '<div class="phase-title">Fase 3 — Confirmar baremo</div>'
-    + '<div class="phase-desc">Revisa los parámetros antes de guardar. Podrás modificarlos en cualquier momento.</div>'
-    + '<div class="baremo-preview"><table>'
-    + '<tr><td style="color:#888;">Contrato</td><td>' + b.cod_contrato + (b.cliente ? ' — ' + b.cliente : '') + '</td></tr>'
-    + '<tr><td style="color:#888;">Desplazamiento (one way)</td><td>' + b.t_desplazamiento + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Visita a obra</td><td>' + b.t_visita + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Redacción acta</td><td>' + b.t_acta + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Jornada mensual</td><td>' + b.jornada_horas_mes + 'h</td></tr>'
-    + '</table></div>'
-    + '<div style="background:#eeeefa;border-radius:8px;padding:0.75rem;text-align:center;margin-top:0.75rem;">'
-    + '<div style="font-size:1.5rem;font-weight:500;color:#1a1a2e;">' + pct + '%</div>'
-    + '<div style="font-size:0.72rem;color:#4a4a8a;">Carga estándar (1 visita/semana, sin nocturnidad)</div>'
-    + '</div>'
-    + (wizardData.tipos && wizardData.tipos.length ? '<div style="margin-top:0.75rem;font-size:0.78rem;color:#888;">Tipos especiales: ' + wizardData.tipos.join(', ') + '</div>' : '')
-    + '<div class="wizard-nav">'
-    + '<button class="btn" onclick="wizardPhase=2;renderWizard()">← Atrás</button>'
-    + '<button class="btn btn-primary" onclick="guardarBaremo()">✅ Guardar baremo</button>'
-    + '</div></div>';
+const b = wizardData;
+const hBase = ((b.t_desplazamiento*2) + b.t_visita + b.t_acta) * 4 + b.t_informe + b.t_reunion;
+const pct = Math.round((hBase / b.jornada_horas_mes) * 100);
+return '<div class="wizard-phase active">'
++ '<div class="phase-title">Fase 3 — Confirmar baremo</div>'
++ '<div class="phase-desc">Revisa los parámetros antes de guardar. Podrás modificarlos en cualquier momento.</div>'
++ '<div class="baremo-preview"><table>'
++ '<tr><td style="color:#888;">Contrato</td><td>' + b.cod_contrato + (b.cliente ? ' — ' + b.cliente : '') + '</td></tr>'
++ '<tr><td style="color:#888;">Desplazamiento (one way)</td><td>' + b.t_desplazamiento + 'h</td></tr>'
++ '<tr><td style="color:#888;">Visita a obra</td><td>' + b.t_visita + 'h</td></tr>'
++ '<tr><td style="color:#888;">Redacción acta</td><td>' + b.t_acta + 'h</td></tr>'
++ '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
++ '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
++ '<tr><td style="color:#888;">Jornada mensual</td><td>' + b.jornada_horas_mes + 'h</td></tr>'
++ '</table></div>'
++ '<div style="background:#eeeefa;border-radius:8px;padding:0.75rem;text-align:center;margin-top:0.75rem;">'
++ '<div style="font-size:1.5rem;font-weight:500;color:#1a1a2e;">' + pct + '%</div>'
++ '<div style="font-size:0.72rem;color:#4a4a8a;">Carga estándar (1 visita/semana, sin nocturnidad)</div>'
++ '</div>'
++ (wizardData.tipos && wizardData.tipos.length ? '<div style="margin-top:0.75rem;font-size:0.78rem;color:#888;">Tipos especiales: ' + wizardData.tipos.join(', ') + '</div>' : '')
++ '<div class="wizard-nav">'
++ '<button class="btn" onclick="wizardPhase=2;renderWizard()">← Atrás</button>'
++ '<button class="btn btn-primary" onclick="guardarBaremo()">✅ Guardar baremo</button>'
++ '</div></div>';
 }
 
 async function guardarBaremo() {
-  const b = wizardData;
-  const payload = {
-    cod_contrato: b.cod_contrato,
-    cliente: b.cliente || '',
-    t_desplazamiento: b.t_desplazamiento,
-    t_visita: b.t_visita,
-    t_acta: b.t_acta,
-    t_informe: b.t_informe,
-    t_reunion: b.t_reunion,
-    visitas_mes: 4,
-    jornada_horas_mes: b.jornada_horas_mes
-  };
-
-  const res = await fetch(SUPABASE_URL + '/rest/v1/contratos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(payload)
-  });
-
-  if (res.ok) {
-    baremoActual = payload;
-    document.getElementById('contratoStatus').innerHTML = '<div class="notice notice-success">✅ Baremo guardado correctamente</div>';
-    mostrarBaremoConfirmado(baremoActual);
-    calcularCarga();
-    document.getElementById('btnEnviar').disabled = false;
-    await loadContratos();
-  } else {
-    alert('Error al guardar el baremo. Inténtalo de nuevo.');
-  }
+const b = wizardData;
+const payload = {
+cod_contrato: b.cod_contrato,
+cliente: b.cliente || '',
+t_desplazamiento: b.t_desplazamiento,
+t_visita: b.t_visita,
+t_acta: b.t_acta,
+t_informe: b.t_informe,
+t_reunion: b.t_reunion,
+visitas_mes: 4,
+jornada_horas_mes: b.jornada_horas_mes
+};
+const res = await fetch(SUPABASE_URL + '/rest/v1/contratos', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'resolution=merge-duplicates,return=minimal' },
+body: JSON.stringify(payload)
+});
+if (res.ok) {
+baremoActual = payload;
+document.getElementById('contratoStatus').innerHTML = '<div class="notice notice-success">✅ Baremo guardado correctamente</div>';
+mostrarBaremoConfirmado(baremoActual);
+calcularCarga();
+document.getElementById('btnEnviar').disabled = false;
+await loadContratos();
+} else {
+alert('Error al guardar el baremo. Inténtalo de nuevo.');
+}
 }
 
 function mostrarBaremoConfirmado(b) {
-  document.getElementById('wizardWrap').innerHTML =
-    '<div class="notice notice-success" style="margin-bottom:0.75rem;">✅ Baremo configurado</div>'
-    + '<div class="baremo-preview"><table>'
-    + '<tr><td style="color:#888;">Desplazamiento</td><td>' + b.t_desplazamiento + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Visita</td><td>' + b.t_visita + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Acta</td><td>' + b.t_acta + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
-    + '<tr><td style="color:#888;">Jornada</td><td>' + b.jornada_horas_mes + 'h/mes</td></tr>'
-    + '</table></div>'
-    + '<button class="btn" style="margin-top:0.75rem;width:100%;justify-content:center;" onclick="iniciarWizard(\'' + (b.cod_contrato||'') + '\')">✏️ Modificar baremo</button>';
+document.getElementById('wizardWrap').innerHTML =
+'<div class="notice notice-success" style="margin-bottom:0.75rem;">✅ Baremo configurado</div>'
++ '<div class="baremo-preview"><table>'
++ '<tr><td style="color:#888;">Desplazamiento</td><td>' + b.t_desplazamiento + 'h</td></tr>'
++ '<tr><td style="color:#888;">Visita</td><td>' + b.t_visita + 'h</td></tr>'
++ '<tr><td style="color:#888;">Acta</td><td>' + b.t_acta + 'h</td></tr>'
++ '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
++ '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
++ '<tr><td style="color:#888;">Jornada</td><td>' + b.jornada_horas_mes + 'h/mes</td></tr>'
++ '</table></div>'
++ '<button class="btn" style="margin-top:0.75rem;width:100%;justify-content:center;" onclick="iniciarWizard(\'' + (b.cod_contrato||'') + '\')">✏️ Modificar baremo</button>';
 }
 
 // ── CARGA TEÓRICA ─────────────────────────────────────────────
 function calcularCarga() {
-  if (!baremoActual) return;
-  const b = baremoActual;
-  const visitas_semana = parseFloat(document.getElementById('fVisitas').value)||1;
-  const visitas_mes = visitas_semana * 4;
-  const num_css = parseInt(document.getElementById('fNumCSS').value)||1;
-  const nocturnidad = document.getElementById('fNocturnidad').checked;
-  const multi_css = document.getElementById('fMultiCSS').checked;
-  const t_desp = nocturnidad ? b.t_desplazamiento * 1.5 : b.t_desplazamiento;
-  let horas = ((t_desp*2) + b.t_visita + b.t_acta) * visitas_mes + b.t_informe + b.t_reunion;
-  if (multi_css && num_css > 1) horas = horas / num_css;
-  const pct = Math.round((horas / b.jornada_horas_mes) * 100);
-  const color = pct > 90 ? '#a32d2d' : pct > 70 ? '#854f0b' : '#0f6e56';
-  document.getElementById('cargaBox').innerHTML =
-    '<div class="carga-box">'
-    + '<div class="carga-num" style="color:' + color + ';">' + pct + '%</div>'
-    + '<div class="carga-label">Carga teórica semanal estimada</div>'
-    + '<div class="carga-detalle">' + horas.toFixed(1) + 'h/mes · ' + visitas_mes + ' visitas/mes'
-    + (nocturnidad ? ' · nocturnidad +50%' : '')
-    + (multi_css && num_css > 1 ? ' · MultiCSS ÷' + num_css : '')
-    + '</div></div>';
-  if (baremoActual) baremoActual._carga_calculada = pct;
+if (!baremoActual) return;
+const b = baremoActual;
+const visitas_semana = parseFloat(document.getElementById('fVisitas').value)||1;
+const visitas_mes = visitas_semana * 4;
+const num_css = parseInt(document.getElementById('fNumCSS').value)||1;
+const nocturnidad = document.getElementById('fNocturnidad').checked;
+const multi_css = document.getElementById('fMultiCSS').checked;
+const t_desp = nocturnidad ? b.t_desplazamiento * 1.5 : b.t_desplazamiento;
+let horas = ((t_desp*2) + b.t_visita + b.t_acta) * visitas_mes + b.t_informe + b.t_reunion;
+if (multi_css && num_css > 1) horas = horas / num_css;
+const pct = Math.round((horas / b.jornada_horas_mes) * 100);
+const color = pct > 90 ? '#a32d2d' : pct > 70 ? '#854f0b' : '#0f6e56';
+document.getElementById('cargaBox').innerHTML =
+'<div class="carga-box">'
++ '<div class="carga-num" style="color:' + color + ';">' + pct + '%</div>'
++ '<div class="carga-label">Carga teórica semanal estimada</div>'
++ '<div class="carga-detalle">' + horas.toFixed(1) + 'h/mes · ' + visitas_mes + ' visitas/mes'
++ (nocturnidad ? ' · nocturnidad +50%' : '')
++ (multi_css && num_css > 1 ? ' · MultiCSS ÷' + num_css : '')
++ '</div></div>';
+if (baremoActual) baremoActual._carga_calculada = pct;
 }
 
 // ── ENVIAR ────────────────────────────────────────────────────
 async function enviarSolicitud() {
-  const contrato = document.getElementById('fContrato').value;
-  const denominacion = document.getElementById('fDenominacion').value.trim();
-  if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
-  const btn = document.getElementById('btnEnviar');
-  btn.disabled = true; btn.textContent = '⏳ Enviando...';
-  const payload = {
-    delegado: document.getElementById('fEmailDelegado').value.trim(),
-    cod_contrato: contrato,
-    cliente: document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'',
-    denominacion,
-    municipio: document.getElementById('fMunicipio').value,
-    territorio: document.getElementById('fTerritorio').value,
-    fecha_inicio: document.getElementById('fInicio').value||null,
-    plazo_meses: parseInt(document.getElementById('fPlazo').value)||null,
-    visitas_semana: parseInt(document.getElementById('fVisitas').value)||1,
-    num_css: parseInt(document.getElementById('fNumCSS').value)||1,
-    nocturnidad: document.getElementById('fNocturnidad').checked,
-    multi_css: document.getElementById('fMultiCSS').checked,
-    titulacion_requerida: document.getElementById('fTitulacion').checked,
-    colegiacion_requerida: document.getElementById('fColegiacion').checked,
-    experiencia_anios: parseInt(document.getElementById('fExperiencia').value)||0,
-    prioridad: document.getElementById('fPrioridad').value,
-    observaciones: document.getElementById('fObservaciones').value,
-    carga_teorica_calculada: baremoActual?._carga_calculada||null,
-    estado: 'PENDIENTE'
-  };
-  const res = await fetch(SUPABASE_URL + '/rest/v1/solicitudes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
-    body: JSON.stringify(payload)
-  });
-  if (res.ok) {
-    document.getElementById('envioStatus').innerHTML = '<div class="notice notice-success">✅ Solicitud enviada. El staffer la verá en su lista.</div>';
-    btn.textContent = '✅ Solicitud enviada';
-  } else {
-    btn.disabled = false; btn.textContent = '📤 Enviar solicitud al staffer';
-    document.getElementById('envioStatus').innerHTML = '<div class="notice" style="background:#fcebeb;color:#a32d2d;border:0.5px solid #f7c1c1;">❌ Error al enviar.</div>';
-  }
+const contrato = document.getElementById('fContrato').value;
+const denominacion = document.getElementById('fDenominacion').value.trim();
+if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
+const btn = document.getElementById('btnEnviar');
+btn.disabled = true; btn.textContent = '⏳ Enviando...';
+const producto = document.getElementById('fProducto').value;
+const payload = {
+delegado: document.getElementById('fEmailDelegado').value.trim(),
+producto: producto,
+cod_contrato: contrato,
+cliente: document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'',
+denominacion,
+municipio: document.getElementById('fMunicipio').value,
+territorio: document.getElementById('fTerritorio').value,
+fecha_inicio: document.getElementById('fInicio').value||null,
+plazo_meses: parseInt(document.getElementById('fPlazo').value)||null,
+visitas_semana: parseInt(document.getElementById('fVisitas').value)||1,
+num_css: parseInt(document.getElementById('fNumCSS').value)||1,
+nocturnidad: document.getElementById('fNocturnidad').checked,
+multi_css: document.getElementById('fMultiCSS').checked,
+titulacion_requerida: document.getElementById('fTitulacion').checked,
+colegiacion_requerida: document.getElementById('fColegiacion').checked,
+experiencia_anios: parseInt(document.getElementById('fExperiencia').value)||0,
+prioridad: document.getElementById('fPrioridad').value,
+observaciones: document.getElementById('fObservaciones').value,
+carga_teorica_calculada: producto === 'CSS'
+? (baremoActual?._carga_calculada||null)
+: (parseFloat(document.getElementById('fCargaManual').value)||null),
+estado: 'PENDIENTE'
+};
+const res = await fetch(SUPABASE_URL + '/rest/v1/solicitudes', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+body: JSON.stringify(payload)
+});
+if (res.ok) {
+document.getElementById('envioStatus').innerHTML = '<div class="notice notice-success">✅ Solicitud enviada. El staffer la verá en su lista.</div>';
+btn.textContent = '✅ Solicitud enviada';
+} else {
+btn.disabled = false; btn.textContent = '📤 Enviar solicitud al staffer';
+document.getElementById('envioStatus').innerHTML = '<div class="notice" style="background:#fcebeb;color:#a32d2d;border:0.5px solid #f7c1c1;">❌ Error al enviar.</div>';
+}
 }
 
 loadContratos();
