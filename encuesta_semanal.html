@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Encuesta Semanal — Gestión</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
@@ -15,11 +14,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .step { display: none; } .step.active { display: block; }
 .card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
 .card-title { font-size: 0.78rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
-.upload-zone { border: 1.5px dashed #c8c8c0; border-radius: 10px; padding: 3rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafaf8; }
-.upload-zone:hover, .upload-zone.dragover { border-color: #4a4a8a; background: #f0f0fa; }
-.upload-zone .icon { font-size: 2.5rem; color: #bbb; display: block; margin-bottom: 1rem; }
-.upload-zone p { color: #666; font-size: 0.9rem; } .upload-zone small { color: #aaa; font-size: 0.75rem; margin-top: 0.4rem; display: block; }
-input[type="file"] { display: none; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
 .btn:hover { background: #f5f5f0; } .btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; } .btn-primary:hover { background: #2a2a4e; }
 .btn-success { background: #0f6e56; color: #fff; border-color: #0f6e56; } .btn-success:hover { background: #085041; }
@@ -30,8 +24,7 @@ input[type="file"] { display: none; }
 .stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; } .stat-label { font-size: 0.72rem; color: #aaa; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .week-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .week-row label { font-size: 0.82rem; color: #666; }
-.week-row input[type="date"], .week-row input[type="email"] { padding: 0.45rem 0.7rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.85rem; }
-.week-row input[type="email"] { width: 280px; }
+.week-row input[type="date"] { padding: 0.45rem 0.7rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.85rem; }
 .select-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem; font-size: 0.82rem; color: #666; }
 .select-bar input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
 .tech-list { display: flex; flex-direction: column; gap: 8px; }
@@ -42,8 +35,6 @@ input[type="file"] { display: none; }
 .tech-info { flex: 1; min-width: 120px; }
 .tech-name { font-size: 0.88rem; font-weight: 500; }
 .tech-meta { font-size: 0.73rem; color: #aaa; margin-top: 1px; }
-.tech-email-input { padding: 0.32rem 0.6rem; border: 0.5px solid #d0d0c8; border-radius: 6px; font-size: 0.78rem; width: 210px; color: #1a1a1a; }
-.tech-email-input:focus { outline: none; border-color: #4a4a8a; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dot-ok { background: #1d9e75; } .dot-warn { background: #ef9f27; }
 .tab-bar { display: flex; gap: 2px; border-bottom: 0.5px solid #e0e0d8; margin-bottom: 1.5rem; }
@@ -78,480 +69,382 @@ input[type="file"] { display: none; }
 .ep-row span:first-child { color: #aaa; min-width: 52px; }
 .ep-body { padding: 1.1rem; font-size: 0.82rem; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
 .actions-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 0.5rem; }
-@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } .tech-email-input { width: 150px; } }
+.loading-zone { text-align: center; padding: 3rem 1.5rem; }
+.spinner { width: 28px; height: 28px; border: 3px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; margin-bottom: 0.75rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
 <script>
 (function() {
-  var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=encuesta_semanal.html'; return; }
-  if (rol !== 'staffer') { window.location.href = 'index.html'; }
+var rol = localStorage.getItem('css_rol');
+if (!rol) { window.location.href = 'login.html?redirect=encuesta_semanal.html'; return; }
+if (rol !== 'staffer') { window.location.href = 'index.html'; }
 })();
 </script>
 
 <div class="header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
-  <div>
-    <h1>📋 Encuesta Semanal de Obras</h1>
-    <p>Panel de gestión · Coordinación</p>
-  </div>
-  <div class="nav" style="display:flex;gap:4px;">
-    <a href="index.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Inicio</a>
-    <a href="solicitudes.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Solicitudes</a>
-    <a href="dashboard.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Dashboard</a>
-    <a href="tecnicos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Técnicos</a>
-    <a href="contratos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Contratos</a>
-    <a href="#" onclick="var r=localStorage.getItem('enc_resp_v3');localStorage.clear();if(r)localStorage.setItem('enc_resp_v3',r);window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
-  </div>
+<div>
+<h1>📋 Encuesta Semanal de Obras</h1>
+<p>Panel de gestión · Coordinación</p>
 </div>
+<div class="nav" style="display:flex;gap:4px;">
+<a href="index.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Inicio</a>
+<a href="solicitudes.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Solicitudes</a>
+<a href="dashboard.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Dashboard</a>
+<a href="tecnicos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Técnicos</a>
+<a href="contratos.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Contratos</a>
+<a href="carga-masiva.html" style="color:#9090b0;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Carga masiva</a>
+<a href="#" onclick="var r=localStorage.getItem('enc_resp_v3');localStorage.clear();if(r)localStorage.setItem('enc_resp_v3',r);window.location.href='login.html'" style="color:#ff8888;font-size:13px;padding:4px 12px;border-radius:20px;text-decoration:none;">Salir</a>
+</div>
+</div>
+
 <div class="container">
 
-  <div class="step active" id="step-upload">
-    <div class="card">
-      <div class="card-title">📂 Cargar obras</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem;">
-        <div>
-          <div style="font-size:0.78rem;color:#666;margin-bottom:8px;font-weight:500;">Opción A — Desde Excel</div>
-          <div class="upload-zone" id="dropzone" onclick="document.getElementById('fi').click()" style="padding:1.5rem;">
-            <span class="icon" style="font-size:1.75rem;">📊</span>
-            <p style="font-size:0.82rem;">Arrastra tu Excel o haz clic</p>
-            <small>Para cargas masivas o cambios de estado</small>
-          </div>
-          <input type="file" id="fi" accept=".xlsx,.xls">
-        </div>
-        <div>
-          <div style="font-size:0.78rem;color:#666;margin-bottom:8px;font-weight:500;">Opción B — Desde Supabase</div>
-          <div style="border:1.5px dashed #4a4a8a;border-radius:10px;padding:1.5rem;text-align:center;background:#f8f8fe;cursor:pointer;transition:all 0.2s;" onclick="cargarDesdeSupabase()">
-            <span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">☁️</span>
-            <p style="font-size:0.82rem;color:#666;">Cargar obras activas desde Supabase</p>
-            <small style="color:#aaa;font-size:0.75rem;margin-top:4px;display:block;">Sin necesidad de Excel · Incluye obras de nuevas solicitudes</small>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="notice notice-info">Se cargan las obras con estado <strong>ACTIVA</strong> o sin fecha de fin pasada. Finalizadas y paralizadas se excluyen automáticamente.</div>
-  </div>
+<!-- PASO 1: CARGA AUTOMÁTICA DESDE SUPABASE -->
+<div class="step active" id="step-upload">
+<div class="card">
+<div class="card-title">☁️ Cargando obras desde Supabase</div>
+<div class="loading-zone" id="loadZone">
+<span class="spinner"></span>
+<p style="font-size:0.85rem;color:#666;">Obteniendo obras encuestables...</p>
+<small style="color:#aaa;font-size:0.75rem;margin-top:4px;display:block;">Estados incluidos: PDTE. INICIO · ACTIVA · EN PROCESO DE FINALIZACIÓN</small>
+</div>
+</div>
+<div class="notice notice-info">Los datos provienen de Supabase, la fuente única de la plataforma. Para crear o actualizar obras usa el módulo <strong>Carga masiva</strong>.</div>
+</div>
 
-  <div class="step" id="step-main">
-    <div class="stats-grid" id="statsGrid"></div>
-    <div class="tab-bar">
-      <div class="tab active" onclick="switchTab('envio')">📤 Envío</div>
+<!-- PASO 2: PANEL PRINCIPAL -->
+<div class="step" id="step-main">
+<div class="stats-grid" id="statsGrid"></div>
+<div class="tab-bar">
+<div class="tab active" onclick="switchTab('envio')">📤 Envío</div>
+<div class="tab" onclick="switchTab('importar')">📥 Importar respuesta</div>
+<div class="tab" onclick="switchTab('respuestas')">📊 Respuestas</div>
+</div>
 
-    </div>
-    <div id="tab-envio">
-      <div class="card">
-        <div class="card-title">⚙️ Configuración de la semana</div>
-        <div class="week-row">
-          <label>Semana del</label><input type="date" id="weekStart">
-          <label>al</label><input type="date" id="weekEnd">
-        </div>
+<div id="tab-envio">
+<div class="card">
+<div class="card-title">⚙️ Configuración de la semana</div>
+<div class="week-row">
+<label>Semana del</label><input type="date" id="weekStart">
+<label>al</label><input type="date" id="weekEnd">
+</div>
+</div>
+<div class="card">
+<div class="card-title">👥 Técnicos con obras encuestables</div>
+<div class="select-bar">
+<input type="checkbox" id="selAll" onchange="toggleAll(this)">
+<label for="selAll">Seleccionar todos</label>
+<span style="margin-left:auto;font-size:0.75rem;color:#bbb;" id="selCount">—</span>
+</div>
+<div class="tech-list" id="techList"></div>
+</div>
+<div class="actions-bar">
+<button class="btn btn-primary" onclick="generarEmails()">📧 Generar emails con formularios</button>
+<button class="btn" onclick="recargar()">🔄 Recargar desde Supabase</button>
+</div>
+<div id="syncStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+</div>
 
-        
-      </div>
-      <div class="card">
-        <div class="card-title">👥 Técnicos con obras activas</div>
-        <div class="select-bar">
-          <input type="checkbox" id="selAll" onchange="toggleAll(this)">
-          <label for="selAll">Seleccionar todos</label>
-          <span style="margin-left:auto;font-size:0.75rem;color:#bbb;" id="selCount">—</span>
-        </div>
-        <div class="tech-list" id="techList"></div>
-      </div>
-      <div class="actions-bar">
-        <button class="btn btn-primary" onclick="generarEmails()">📧 Generar emails con formularios</button>
-        <button class="btn" onclick="goBack()">← Volver</button>
-      </div>
-      <div id="syncStatus" style="margin-top:0.75rem;font-size:0.82rem;"></div>
-    </div>
+<div id="tab-importar" style="display:none;">
+<div class="card">
+<div class="card-title">📥 Importar respuesta de email</div>
+<div class="notice notice-info">Cuando recibas el email de respuesta de un técnico, copia el contenido completo del mensaje y pégalo aquí.</div>
+<div class="import-zone">
+<textarea id="importTxt" placeholder="Pega aquí el contenido completo del email recibido..."></textarea>
+</div>
+<div id="importPreview"></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<button class="btn btn-primary" onclick="parsearEmail()">🔍 Procesar email</button>
+<button class="btn" onclick="document.getElementById('importTxt').value='';document.getElementById('importPreview').innerHTML=''">🗑 Limpiar</button>
+</div>
+</div>
+</div>
 
-    <div id="tab-importar" style="display:none;">
-      <div class="card">
-        <div class="card-title">📥 Importar respuesta de email</div>
-        <div class="notice notice-info">Cuando recibas el email de respuesta de un técnico, copia el contenido completo del mensaje y pégalo aquí.</div>
-        <div class="import-zone">
-          <textarea id="importTxt" placeholder="Pega aquí el contenido completo del email recibido..."></textarea>
-        </div>
-        <div id="importPreview"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="parsearEmail()">🔍 Procesar email</button>
-          <button class="btn" onclick="document.getElementById('importTxt').value='';document.getElementById('importPreview').innerHTML=''">🗑 Limpiar</button>
-        </div>
-      </div>
-    </div>
+<div id="tab-respuestas" style="display:none;">
+<div class="card">
+<div class="card-title">📊 Respuestas registradas</div>
+<div id="respContainer"></div>
+<div style="margin-top:1rem;display:flex;gap:10px;flex-wrap:wrap;">
+<button class="btn btn-success" onclick="exportCSV()">⬇️ Exportar CSV</button>
+<button class="btn btn-danger" onclick="limpiar()">🗑 Borrar todo</button>
+</div>
+</div>
+</div>
+</div>
 
-    <div id="tab-respuestas" style="display:none;">
-      <div class="card">
-        <div class="card-title">📊 Respuestas registradas</div>
-        <div id="respContainer"></div>
-        <div style="margin-top:1rem;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-success" onclick="exportCSV()">⬇️ Exportar CSV</button>
-          <button class="btn btn-danger" onclick="limpiar()">🗑 Borrar todo</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="modal-bg" id="modalEmails">
-  <div class="modal">
-    <div class="modal-head"><h3>Emails generados</h3><button class="close-btn" onclick="closeModal('modalEmails')">✕</button></div>
-    <div class="modal-body" id="modalEmailsBody"></div>
-  </div>
+<div class="modal">
+<div class="modal-head"><h3>Emails generados</h3><button class="close-btn" onclick="closeModal('modalEmails')">✕</button></div>
+<div class="modal-body" id="modalEmailsBody"></div>
+</div>
 </div>
 
 <script>
 let tecData = [];
-let origenDatos = 'excel';
 let responses = JSON.parse(localStorage.getItem('enc_resp_v3') || '[]');
-
-// Form template stored as pure base64 - zero escaping issues
-const TAREAS = ['Revisión PSS','Anotaciones','Reuniones','Anexos','Informes mensuales','Visitas','Actas visita'];
-const FORM_B64 = 'PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVzIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+RW5jdWVzdGEgU2VtYW5hbCBkZSBPYnJhczwvdGl0bGU+CjxzdHlsZT4KKiB7IGJveC1zaXppbmc6IGJvcmRlci1ib3g7IG1hcmdpbjogMDsgcGFkZGluZzogMDsgfQpib2R5IHsgZm9udC1mYW1pbHk6IC1hcHBsZS1zeXN0ZW0sIEJsaW5rTWFjU3lzdGVtRm9udCwgIlNlZ29lIFVJIiwgc2Fucy1zZXJpZjsgYmFja2dyb3VuZDogI2YwZjJmNTsgY29sb3I6ICMxYTFhMWE7IG1pbi1oZWlnaHQ6IDEwMHZoOyB9CgouaGVhZGVyIHsgYmFja2dyb3VuZDogIzFhMWEyZTsgY29sb3I6ICNmZmY7IHBhZGRpbmc6IDEuMXJlbSAxLjVyZW07IH0KLmhlYWRlciBoMSB7IGZvbnQtc2l6ZTogMXJlbTsgZm9udC13ZWlnaHQ6IDUwMDsgbGV0dGVyLXNwYWNpbmc6IC0wLjAxZW07IH0KLmhlYWRlciBwIHsgZm9udC1zaXplOiAwLjc1cmVtOyBjb2xvcjogIzg4ODhhYTsgbWFyZ2luLXRvcDogM3B4OyB9CgouY29udGFpbmVyIHsgbWF4LXdpZHRoOiA1ODBweDsgbWFyZ2luOiAwIGF1dG87IHBhZGRpbmc6IDEuMjVyZW0gMXJlbSAzcmVtOyB9CgoudGVjaC1iYXIgeyBiYWNrZ3JvdW5kOiAjZmZmOyBib3JkZXItcmFkaXVzOiAxMHB4OyBwYWRkaW5nOiAwLjlyZW0gMS4xcmVtOyBtYXJnaW4tYm90dG9tOiAxcmVtOyBib3JkZXI6IDAuNXB4IHNvbGlkICNlMGUwZDg7IH0KLnRlY2gtYmFyIC5uYW1lIHsgZm9udC1zaXplOiAxcmVtOyBmb250LXdlaWdodDogNjAwOyBjb2xvcjogIzFhMWEyZTsgfQoudGVjaC1iYXIgLndlZWsgeyBmb250LXNpemU6IDAuNzhyZW07IGNvbG9yOiAjODg4OyBtYXJnaW4tdG9wOiAycHg7IH0KCi5vYnJhLWNhcmQgeyBiYWNrZ3JvdW5kOiAjZmZmOyBib3JkZXItcmFkaXVzOiAxMHB4OyBtYXJnaW4tYm90dG9tOiAwLjg1cmVtOyBib3JkZXI6IDAuNXB4IHNvbGlkICNlMGUwZDg7IG92ZXJmbG93OiBoaWRkZW47IH0KCi5vYnJhLWhlYWQgeyBwYWRkaW5nOiAwLjc1cmVtIDFyZW07IGJvcmRlci1ib3R0b206IDAuNXB4IHNvbGlkICNmMGYwZTg7IH0KLm9icmEtbWV0YSB7IGRpc3BsYXk6IGZsZXg7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGdhcDogOHB4OyBtYXJnaW4tYm90dG9tOiA1cHg7IH0KLmNsaWVudGUtdGFnIHsgZm9udC1zaXplOiAwLjY4cmVtOyBmb250LXdlaWdodDogNjAwOyBjb2xvcjogI2ZmZjsgYmFja2dyb3VuZDogIzRhNGE4YTsgcGFkZGluZzogMnB4IDdweDsgYm9yZGVyLXJhZGl1czogMjBweDsgdGV4dC10cmFuc2Zvcm06IHVwcGVyY2FzZTsgbGV0dGVyLXNwYWNpbmc6IDAuMDRlbTsgfQoub2JyYS1jb2QgeyBmb250LXNpemU6IDAuNzJyZW07IGZvbnQtd2VpZ2h0OiA1MDA7IGNvbG9yOiAjNGE0YThhOyBiYWNrZ3JvdW5kOiAjZWVlZWZhOyBwYWRkaW5nOiAycHggOHB4OyBib3JkZXItcmFkaXVzOiAyMHB4OyB9Ci5vYnJhLWRlc2MgeyBmb250LXNpemU6IDAuODJyZW07IGNvbG9yOiAjNDQ0OyBsaW5lLWhlaWdodDogMS40OyB9CgoudGFyZWFzIHsgcGFkZGluZzogMC41cmVtIDFyZW0gMC43NXJlbTsgfQoudGFyZWEtcm93IHsgZGlzcGxheTogZmxleDsgYWxpZ24taXRlbXM6IGNlbnRlcjsgcGFkZGluZzogMC40NXJlbSAwOyBib3JkZXItYm90dG9tOiAwLjVweCBzb2xpZCAjZjVmNWYwOyB9Ci50YXJlYS1yb3c6bGFzdC1jaGlsZCB7IGJvcmRlci1ib3R0b206IG5vbmU7IH0KLnRhcmVhLWxhYmVsIHsgZm9udC1zaXplOiAwLjgzcmVtOyBjb2xvcjogIzMzMzsgZmxleDogMTsgd2hpdGUtc3BhY2U6IG5vd3JhcDsgfQouY291bnRlciB7IGRpc3BsYXk6IGZsZXg7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGdhcDogNXB4OyB9Ci5jb3VudGVyIGJ1dHRvbiB7IHdpZHRoOiAzMHB4OyBoZWlnaHQ6IDMwcHg7IGJvcmRlcjogMC41cHggc29saWQgI2QwZDBjODsgYm9yZGVyLXJhZGl1czogN3B4OyBiYWNrZ3JvdW5kOiAjZjVmNWYwOyBmb250LXNpemU6IDEuMXJlbTsgbGluZS1oZWlnaHQ6IDE7IGN1cnNvcjogcG9pbnRlcjsgY29sb3I6ICM0NDQ7IGRpc3BsYXk6IGZsZXg7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGp1c3RpZnktY29udGVudDogY2VudGVyOyB0cmFuc2l0aW9uOiBiYWNrZ3JvdW5kIDAuMTJzOyBmbGV4LXNocmluazogMDsgfQouY291bnRlciBidXR0b246aG92ZXIgeyBiYWNrZ3JvdW5kOiAjZTVlNWRjOyB9Ci5jb3VudGVyIGlucHV0IHsgd2lkdGg6IDQycHg7IGhlaWdodDogMzBweDsgYm9yZGVyOiAwLjVweCBzb2xpZCAjZDBkMGM4OyBib3JkZXItcmFkaXVzOiA3cHg7IGZvbnQtc2l6ZTogMC45NXJlbTsgZm9udC13ZWlnaHQ6IDYwMDsgdGV4dC1hbGlnbjogY2VudGVyOyBjb2xvcjogIzFhMWEyZTsgfQouY291bnRlciBpbnB1dDpmb2N1cyB7IG91dGxpbmU6IG5vbmU7IGJvcmRlci1jb2xvcjogIzRhNGE4YTsgfQoKLnN1Ym1pdC13cmFwIHsgbWFyZ2luLXRvcDogMS4yNXJlbTsgfQouYnRuLXNlbmQgeyB3aWR0aDogMTAwJTsgcGFkZGluZzogMC44NXJlbTsgYmFja2dyb3VuZDogIzFhMWEyZTsgY29sb3I6ICNmZmY7IGJvcmRlcjogbm9uZTsgYm9yZGVyLXJhZGl1czogMTBweDsgZm9udC1zaXplOiAwLjk1cmVtOyBmb250LXdlaWdodDogNTAwOyBjdXJzb3I6IHBvaW50ZXI7IHRyYW5zaXRpb246IGJhY2tncm91bmQgMC4xNXM7IH0KLmJ0bi1zZW5kOmhvdmVyIHsgYmFja2dyb3VuZDogIzJhMmE0ZTsgfQoubm90ZSB7IGZvbnQtc2l6ZTogMC43M3JlbTsgY29sb3I6ICNhYWE7IHRleHQtYWxpZ246IGNlbnRlcjsgbWFyZ2luLXRvcDogMC42cmVtOyBsaW5lLWhlaWdodDogMS41OyB9CgouZG9uZSB7IGRpc3BsYXk6IG5vbmU7IHRleHQtYWxpZ246IGNlbnRlcjsgcGFkZGluZzogNHJlbSAxLjVyZW0gMnJlbTsgfQouZG9uZS1pY29uIHsgZm9udC1zaXplOiAzcmVtOyBtYXJnaW4tYm90dG9tOiAxcmVtOyB9Ci5kb25lIGgyIHsgZm9udC1zaXplOiAxLjNyZW07IGZvbnQtd2VpZ2h0OiA2MDA7IGNvbG9yOiAjMWExYTJlOyBtYXJnaW4tYm90dG9tOiAwLjVyZW07IH0KLmRvbmUgcCB7IGZvbnQtc2l6ZTogMC44NzVyZW07IGNvbG9yOiAjNjY2OyBsaW5lLWhlaWdodDogMS42OyBtYXgtd2lkdGg6IDMyMHB4OyBtYXJnaW46IDAgYXV0bzsgfQoKLmVycm9yIHsgZGlzcGxheTogbm9uZTsgdGV4dC1hbGlnbjogY2VudGVyOyBwYWRkaW5nOiA0cmVtIDEuNXJlbTsgfQouZXJyb3IgcCB7IGZvbnQtc2l6ZTogMC44NzVyZW07IGNvbG9yOiAjODg4OyB9Cjwvc3R5bGU+CjwvaGVhZD4KPGJvZHk+CjxkaXYgY2xhc3M9ImhlYWRlciI+CiAgPGgxPkVuY3Vlc3RhIHNlbWFuYWwgZGUgb2JyYXM8L2gxPgogIDxwIGlkPSJoZWFkZXJTdWIiPkNhcmdhbmRvLi4uPC9wPgo8L2Rpdj4KPGRpdiBjbGFzcz0iY29udGFpbmVyIj4KICA8ZGl2IGlkPSJtYWluQ29udGVudCI+CiAgICA8ZGl2IGNsYXNzPSJ0ZWNoLWJhciI+CiAgICAgIDxkaXYgY2xhc3M9Im5hbWUiIGlkPSJ0ZWNoTmFtZSI+4oCUPC9kaXY+CiAgICAgIDxkaXYgY2xhc3M9IndlZWsiIGlkPSJ3ZWVrTGFiZWwiPuKAlDwvZGl2PgogICAgPC9kaXY+CiAgICA8ZGl2IGlkPSJvYnJhc0xpc3QiPjwvZGl2PgogICAgPGRpdiBjbGFzcz0ic3VibWl0LXdyYXAiPgogICAgICA8YnV0dG9uIGNsYXNzPSJidG4tc2VuZCIgb25jbGljaz0iZW52aWFyKCkiPkVudmlhciByZXNwdWVzdGFzPC9idXR0b24+CiAgICAgIDxwIGNsYXNzPSJub3RlIj5TZSBhYnJpcmEgdHUgZ2VzdG9yIGRlIGNvcnJlbyBjb24gbGFzIHJlc3B1ZXN0YXMgbGlzdGFzIHBhcmEgZW52aWFyLjwvcD4KICAgIDwvZGl2PgogIDwvZGl2PgogIDxkaXYgY2xhc3M9ImRvbmUiIGlkPSJkb25lU3RhdGUiPgogICAgPGRpdiBjbGFzcz0iZG9uZS1pY29uIj4mI3gyNzA1OzwvZGl2PgogICAgPGgyPkdyYWNpYXMgcG9yIHR1IHJlc3B1ZXN0YTwvaDI+CiAgICA8cD5TZSBoYSBhYmllcnRvIHR1IGNvcnJlbyBjb24gbG9zIGRhdG9zIGRlIGVzdGEgc2VtYW5hLiBSZWN1ZXJkYSBwdWxzYXIgRW52aWFyIHBhcmEgcXVlIGxsZWd1ZW4gYWwgcmVzcG9uc2FibGUuPC9wPgogIDwvZGl2PgogIDxkaXYgY2xhc3M9ImVycm9yIiBpZD0iZXJyb3JTdGF0ZSI+CiAgICA8cD5ObyBzZSBoYW4gcG9kaWRvIGNhcmdhciBsb3MgZGF0b3MgZGVsIGZvcm11bGFyaW8uIFVzYSBlbCBlbmxhY2Ugb3JpZ2luYWwgZGVsIGVtYWlsLjwvcD4KICA8L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+CnZhciBfX0VOQ1VFU1RBX0RBVEFfXzsKdmFyIFRBUkVBUyA9IFsiUmV2aXNpb24gUFNTIiwiQW5vdGFjaW9uZXMiLCJSZXVuaW9uZXMiLCJBbmV4b3MiLCJJbmZvcm1lcyBtZW5zdWFsZXMiLCJBY3RhcyB2aXNpdGEiXTsKCmZ1bmN0aW9uIGdldFBhcmFtcygpIHsKICBpZiAodHlwZW9mIF9fRU5DVUVTVEFfREFUQV9fICE9PSAidW5kZWZpbmVkIiAmJiBfX0VOQ1VFU1RBX0RBVEFfXykgcmV0dXJuIF9fRU5DVUVTVEFfREFUQV9fOwogIHRyeSB7IHZhciBoID0gd2luZG93LmxvY2F0aW9uLmhhc2guc2xpY2UoMSk7IGlmIChoKSByZXR1cm4gSlNPTi5wYXJzZShkZWNvZGVVUklDb21wb25lbnQoYXRvYihoKSkpOyB9IGNhdGNoKGUpIHt9CiAgcmV0dXJuIG51bGw7Cn0KCmZ1bmN0aW9uIGNudChpZCwgZCkgewogIHZhciBlbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlkKTsKICBlbC52YWx1ZSA9IE1hdGgubWF4KDAsIChwYXJzZUludChlbC52YWx1ZSl8fDApICsgZCk7Cn0KCmZ1bmN0aW9uIHJlbmRlckZvcm0oZGF0YSkgewogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJ0ZWNoTmFtZSIpLnRleHRDb250ZW50ID0gZGF0YS50ZWNuaWNvOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJ3ZWVrTGFiZWwiKS50ZXh0Q29udGVudCA9ICJTZW1hbmEgZGVsICIgKyBkYXRhLnNlbWFuYV9pbmljaW8gKyAiIGFsICIgKyBkYXRhLnNlbWFuYV9maW47CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImhlYWRlclN1YiIpLnRleHRDb250ZW50ID0gIlNlbWFuYSBkZWwgIiArIGRhdGEuc2VtYW5hX2luaWNpbyArICIgYWwgIiArIGRhdGEuc2VtYW5hX2ZpbjsKICB2YXIgaHRtbCA9ICIiOwogIGZvciAodmFyIGkgPSAwOyBpIDwgZGF0YS5vYnJhcy5sZW5ndGg7IGkrKykgewogICAgdmFyIG8gPSBkYXRhLm9icmFzW2ldOwogICAgaHRtbCArPSAiPGRpdiBjbGFzcz1cIm9icmEtY2FyZFwiPiI7CiAgICBodG1sICs9ICI8ZGl2IGNsYXNzPVwib2JyYS1oZWFkXCI+IjsKICAgIGh0bWwgKz0gIjxkaXYgY2xhc3M9XCJvYnJhLW1ldGFcIj4iOwogICAgaWYgKG8uY2xpZW50ZSkgaHRtbCArPSAiPHNwYW4gY2xhc3M9XCJjbGllbnRlLXRhZ1wiPiIgKyBvLmNsaWVudGUgKyAiPC9zcGFuPiI7CiAgICBodG1sICs9ICI8c3BhbiBjbGFzcz1cIm9icmEtY29kXCI+IiArIG8ubnVtICsgIjwvc3Bhbj4iOwogICAgaHRtbCArPSAiPC9kaXY+IjsKICAgIGh0bWwgKz0gIjxkaXYgY2xhc3M9XCJvYnJhLWRlc2NcIj4iICsgKG8uZGVzYyB8fCAiU2luIGRlc2NyaXBjaW9uIikgKyAiPC9kaXY+IjsKICAgIGh0bWwgKz0gIjwvZGl2PiI7CiAgICBodG1sICs9ICI8ZGl2IGNsYXNzPVwidGFyZWFzXCI+IjsKICAgIGZvciAodmFyIGogPSAwOyBqIDwgVEFSRUFTLmxlbmd0aDsgaisrKSB7CiAgICAgIGh0bWwgKz0gIjxkaXYgY2xhc3M9XCJ0YXJlYS1yb3dcIj4iOwogICAgICBodG1sICs9ICI8c3BhbiBjbGFzcz1cInRhcmVhLWxhYmVsXCI+IiArIFRBUkVBU1tqXSArICI8L3NwYW4+IjsKICAgICAgaHRtbCArPSAiPGRpdiBjbGFzcz1cImNvdW50ZXJcIj4iOwogICAgICBodG1sICs9ICI8YnV0dG9uIHR5cGU9XCJidXR0b25cIiBvbmNsaWNrPVwiY250KCd0XyIgKyBpICsgIl8iICsgaiArICInLC0xKVwiPiYjODcyMjs8L2J1dHRvbj4iOwogICAgICBodG1sICs9ICI8aW5wdXQgdHlwZT1cIm51bWJlclwiIGlkPVwidF8iICsgaSArICJfIiArIGogKyAiXCIgdmFsdWU9XCIwXCIgbWluPVwiMFwiPiI7CiAgICAgIGh0bWwgKz0gIjxidXR0b24gdHlwZT1cImJ1dHRvblwiIG9uY2xpY2s9XCJjbnQoJ3RfIiArIGkgKyAiXyIgKyBqICsgIicsMSlcIj4mIzQzOzwvYnV0dG9uPiI7CiAgICAgIGh0bWwgKz0gIjwvZGl2PjwvZGl2PiI7CiAgICB9CiAgICBodG1sICs9ICI8L2Rpdj48L2Rpdj4iOwogIH0KICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgib2JyYXNMaXN0IikuaW5uZXJIVE1MID0gaHRtbDsKfQoKZnVuY3Rpb24gZW52aWFyKCkgewogIHZhciBkYXRhID0gZ2V0UGFyYW1zKCk7CiAgaWYgKCFkYXRhKSByZXR1cm47CiAgdmFyIGxpbmVhcyA9IFtdLCByZXN1bWVuID0gW107CiAgZm9yICh2YXIgaSA9IDA7IGkgPCBkYXRhLm9icmFzLmxlbmd0aDsgaSsrKSB7CiAgICB2YXIgbyA9IGRhdGEub2JyYXNbaV0sIHZhbHMgPSBbXSwgcnYgPSBbXTsKICAgIGZvciAodmFyIGogPSAwOyBqIDwgVEFSRUFTLmxlbmd0aDsgaisrKSB7CiAgICAgIHZhciBlbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJ0XyIgKyBpICsgIl8iICsgaik7CiAgICAgIHZhciBuID0gZWwgPyBlbC52YWx1ZSA6ICIwIjsKICAgICAgdmFscy5wdXNoKG4pOyBydi5wdXNoKFRBUkVBU1tqXSArICI6ICIgKyBuKTsKICAgIH0KICAgIGxpbmVhcy5wdXNoKCJPQlJBOiIgKyBvLm51bSArICJ8IiArIChvLmRlc2N8fCIiKSArICJ8IiArIHZhbHMuam9pbigifCIpKTsKICAgIHJlc3VtZW4ucHVzaCgiKiAiICsgby5udW0gKyAoby5jbGllbnRlID8gIiAoIiArIG8uY2xpZW50ZSArICIpIiA6ICIiKSArICJcbiAgIiArIHJ2LmpvaW4oIiB8ICIpKTsKICB9CiAgdmFyIGJvZHkgPSAiSG9sYSxcblxuUmVzcHVlc3RhcyBhIGxhIGVuY3Vlc3RhIHNlbWFuYWwgKHNlbWFuYSBkZWwgIiArIGRhdGEuc2VtYW5hX2luaWNpbyArICIgYWwgIiArIGRhdGEuc2VtYW5hX2ZpbiArICIpOlxuXG4iCiAgICArIHJlc3VtZW4uam9pbigiXG5cbiIpICsgIlxuXG5UZWNuaWNvOiAiICsgZGF0YS50ZWNuaWNvICsgIlxuU2VtYW5hOiAiICsgZGF0YS5zZW1hbmFfaW5pY2lvCiAgICArICJcblxuLS0tREFUT1NfRU5DVUVTVEEtLS1cblRFQ05JQ086IiArIGRhdGEudGVjbmljbwogICAgKyAiXG5TRU1BTkE6IiArIGRhdGEuc2VtYW5hX2luaWNpbyArICJcblNFTUFOQV9GSU46IiArIGRhdGEuc2VtYW5hX2ZpbgogICAgKyAiXG4iICsgbGluZWFzLmpvaW4oIlxuIikgKyAiXG4tLS1GSU5fREFUT1MtLS0iOwogIHdpbmRvdy5sb2NhdGlvbi5ocmVmID0gIm1haWx0bzoiICsgZW5jb2RlVVJJQ29tcG9uZW50KGRhdGEuZW1haWxfZGVzdGlub3x8IiIpCiAgICArICI/c3ViamVjdD0iICsgZW5jb2RlVVJJQ29tcG9uZW50KCJSZXNwdWVzdGEgZW5jdWVzdGEgb2JyYXMgLSAiICsgZGF0YS50ZWNuaWNvICsgIiAtIHNlbWFuYSAiICsgZGF0YS5zZW1hbmFfaW5pY2lvKQogICAgKyAiJmJvZHk9IiArIGVuY29kZVVSSUNvbXBvbmVudChib2R5KTsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibWFpbkNvbnRlbnQiKS5zdHlsZS5kaXNwbGF5ID0gIm5vbmUiOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJkb25lU3RhdGUiKS5zdHlsZS5kaXNwbGF5ID0gImJsb2NrIjsKfQoKdmFyIGRhdGEgPSBnZXRQYXJhbXMoKTsKaWYgKGRhdGEgJiYgZGF0YS50ZWNuaWNvICYmIGRhdGEub2JyYXMgJiYgZGF0YS5vYnJhcy5sZW5ndGggPiAwKSB7IHJlbmRlckZvcm0oZGF0YSk7IH0KZWxzZSB7IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJtYWluQ29udGVudCIpLnN0eWxlLmRpc3BsYXk9Im5vbmUiOyBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiZXJyb3JTdGF0ZSIpLnN0eWxlLmRpc3BsYXk9ImJsb2NrIjsgfQo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+';
 
 const FORM_BASE_URL = 'https://imaspre-css.github.io/gestion-carga-css/encuesta.html';
 const SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
 function makeId(len) {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let id = '';
-  for (let i = 0; i < len; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
+const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+let id = '';
+for (let i = 0; i < len; i++) id += chars[Math.floor(Math.random() * chars.length)];
+return id;
 }
 
 async function buildDataURI(tech, ws, we, emailDest) {
-  const id = makeId(6);
-  const payload = {
-    id,
-    tecnico: tech.name,
-    email_destino: emailDest,
-    semana_inicio: ws,
-    semana_fin: we,
-    obras: tech.obras
-  };
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/sesiones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) return FORM_BASE_URL + '#' + id;
-  } catch(e) {}
-  // Fallback: encode in URL if Supabase fails
-  const hash = btoa(encodeURIComponent(JSON.stringify({tecnico: tech.name, semana_inicio: ws, semana_fin: we, email_destino: emailDest, obras: tech.obras})));
-  return FORM_BASE_URL + '#' + hash;
+const id = makeId(6);
+const payload = {
+id,
+tecnico: tech.name,
+email_destino: emailDest,
+semana_inicio: ws,
+semana_fin: we,
+obras: tech.obras
+};
+try {
+const res = await fetch(SUPABASE_URL + '/rest/v1/sesiones', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'apikey': SUPABASE_KEY,
+'Authorization': 'Bearer ' + SUPABASE_KEY,
+'Prefer': 'return=minimal'
+},
+body: JSON.stringify(payload)
+});
+if (res.ok) return FORM_BASE_URL + '#' + id;
+} catch(e) {}
+// Fallback: encode in URL if Supabase fails
+const hash = btoa(encodeURIComponent(JSON.stringify({tecnico: tech.name, semana_inicio: ws, semana_fin: we, email_destino: emailDest, obras: tech.obras})));
+return FORM_BASE_URL + '#' + hash;
 }
 
-// ── UPLOAD ────────────────────────────────────────────────────
-const dz = document.getElementById('dropzone');
-const fi = document.getElementById('fi');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); processFile(e.dataTransfer.files[0]); });
-fi.addEventListener('change', e => processFile(e.target.files[0]));
+// ── CARGAR DESDE SUPABASE (fuente única) ──────────────────────
+async function cargarDesdeSupabase() {
+const zone = document.getElementById('loadZone');
+zone.innerHTML = '<span class="spinner"></span><p style="font-size:0.85rem;color:#666;">Obteniendo obras encuestables...</p>';
+try {
+const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=5000', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
+});
+const rows = await res.json();
+if (!Array.isArray(rows) || !rows.length) {
+zone.innerHTML = '<p style="font-size:0.85rem;color:#a32d2d;">No se encontraron obras encuestables en Supabase.</p>'
++ '<button class="btn btn-primary" style="margin-top:1rem;" onclick="cargarDesdeSupabase()">Reintentar</button>';
+return;
+}
+const map = {};
+rows.forEach(o => {
+const tec = o.tecnico;
+if (!tec) return;
+if (!map[tec]) map[tec] = { name: tec, email: o.email||'', obras: [] };
+if (o.email && !map[tec].email) map[tec].email = o.email;
+if (!map[tec].obras.find(x => x.num === o.cod_obra)) {
+map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'' });
+}
+});
+tecData = Object.values(map).filter(t => t.obras.length > 0).sort((a,b) => a.name.localeCompare(b.name));
+initWeek();
+renderMain();
+} catch(e) {
+zone.innerHTML = '<p style="font-size:0.85rem;color:#a32d2d;">Error al cargar: ' + escH(e.message) + '</p>'
++ '<button class="btn btn-primary" style="margin-top:1rem;" onclick="cargarDesdeSupabase()">Reintentar</button>';
+}
+}
 
-function processFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-    const year = new Date().getFullYear();
-    const sn = wb.SheetNames.find(s => s === String(year))
-      || wb.SheetNames.find(s => s === String(year-1))
-      || wb.SheetNames[0];
-    const raw = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: null });
-
-    // Find header row
-    let hdrIdx = -1;
-    for (let i = 0; i < Math.min(raw.length, 10); i++) {
-      if (raw[i] && raw[i].some(v => ['TÉCNICO','TECNICO'].includes(String(v||'').trim().toUpperCase()))) {
-        hdrIdx = i; break;
-      }
-    }
-    if (hdrIdx < 0) { alert('No se encontró la fila de encabezados.'); return; }
-
-    const hdr = raw[hdrIdx].map(v => String(v||'').trim().toUpperCase());
-    const cT = hdr.findIndex(h => h==='TÉCNICO'||h==='TECNICO');
-    const cEM = hdr.findIndex(h => h==='EMAIL');
-    const cN = hdr.findIndex(h => h==='COD. OBRA'||h==='NºOBRA'||h==='Nº OBRA');
-    const cD = hdr.findIndex(h => h==='DESCRIPCIÓN OBRA'||h==='DESCRIPCION OBRA');
-    const cE = hdr.findIndex(h => h==='ESTADO');
-    const cF = hdr.findIndex(h => h==='FIN');
-    const cCL = hdr.findIndex(h => h==='CLIENTE');
-
-    const EXCLUIR = ['FINALIZADA','SUSPENDIDA','PARALIZADA','PENDIENTE','EN PROCESO','SIN ACTIVIDAD'];
-    const INCLUIR_ENCUESTA = ['ACTIVA','SUSTITUCIÓN'];
-    const map = {};
-
-    // First pass: collect all emails per technician
-    for (const row of raw.slice(hdrIdx + 1)) {
-      if (!row||!row[cT]) { countSinTec++; continue; }
-      const tec = String(row[cT]).trim();
-      if (tec.length < 3) { countSinTec++; continue; }
-      const email = cEM >= 0 ? String(row[cEM]||'').trim() : '';
-      if (!map[tec]) map[tec] = {name:tec, email:'', obras:[]};
-      if (email && !map[tec].email) map[tec].email = email;
-    }
-
-    // Second pass: collect active obras
-    console.log('Total filas Excel:', raw.slice(hdrIdx + 1).length);
-    let countFinalizada=0, countSinNum=0, countSinTec=0, countOk=0;
-    for (const row of raw.slice(hdrIdx + 1)) {
-      if (!row||!row[cT]) { countSinTec++; continue; }
-      const tec = String(row[cT]).trim();
-      if (tec.length < 3) { countSinTec++; continue; }
-      const est = cE >= 0 ? String(row[cE]||'').trim().toUpperCase() : '';
-      // All estados are synced to Supabase - state management is done in the platform
-      const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
-      function normalizarEstado(e) {
-        const clean = e.trim().toUpperCase()
-          .replace(/Ó/g,'Ó').replace(/ó/g,'ó')
-          .replace(/É/g,'É').replace(/é/g,'é')
-          .normalize('NFC');
-        const eNorm = clean;
-        if (ESTADOS_VALIDOS.map(s=>s.toUpperCase()).includes(eNorm)) {
-          return ESTADOS_VALIDOS.find(s=>s.toUpperCase()===eNorm) || e;
-        }
-        if (eNorm.includes('CSS')) return 'PDTE. DESIG. CSS';
-        if (eNorm.includes('PENDIENTE') || eNorm.includes('PDTE')) return 'PDTE. INICIO';
-        if (eNorm.includes('SIN ACTIVIDAD')) return 'SIN ACTIVIDAD';
-        if (eNorm.includes('SUSPEND') || eNorm.includes('PARALIZ')) return 'SUSPENDIDA';
-        if (eNorm.includes('PROCESO') && eNorm.includes('FINAL')) return 'EN PROCESO DE FINALIZACIÓN';
-        if (eNorm.includes('FINAL')) return 'FINALIZADA';
-        if (eNorm.includes('ACTIV')) return 'ACTIVA';
-        return e;
-      }
-      const estadoNorm = normalizarEstado(est);
-      const EXCLUIR_SYNC = ['FINALIZADA'];
-      if (EXCLUIR_SYNC.includes(estadoNorm)) { countFinalizada++; continue; }
-      const EN_ENCUESTA = ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'];
-      const paraEncuesta = EN_ENCUESTA.includes(estadoNorm);
-      const fin = cF >= 0 ? row[cF] : null;
-      const num = cN >= 0 ? String(row[cN]||'').trim() : '';
-      const desc = cD >= 0 ? String(row[cD]||'').trim() : '';
-      if (!num || num==='null' || num.length < 2) { countSinNum++; continue; }
-      if (!map[tec]) map[tec] = {name:tec, email:'', obras:[]};
-      if (!map[tec].obras.find(o => o.num===num)) {
-        const cliente = cCL >= 0 ? String(row[cCL]||'').trim() : '';
-        const cod_contrato = hdr.findIndex(h => h==='COD. CONTRATO') >= 0 ? String(row[hdr.findIndex(h => h==='COD. CONTRATO')]||'').trim() : '';
-        const territorio = hdr.findIndex(h => h==='TERRITORIO') >= 0 ? String(row[hdr.findIndex(h => h==='TERRITORIO')]||'').trim() : '';
-        const carga_teorica = hdr.findIndex(h => h==='CARGA TEÓRICA SEMANAL') >= 0 ? row[hdr.findIndex(h => h==='CARGA TEÓRICA SEMANAL')] : null;
-        const _fi = hdr.findIndex(h => h==='INICIO') >= 0 ? row[hdr.findIndex(h => h==='INICIO')] : null;
-        const _ff = cF >= 0 ? row[cF] : null;
-        const fecha_inicio = (_fi instanceof Date || (typeof _fi === 'string' && _fi.match(/^\d{4}/))) ? _fi : null;
-        const fecha_fin = (_ff instanceof Date || (typeof _ff === 'string' && _ff.match(/^\d{4}/))) ? _ff : null;
-        map[tec].obras.push({num, desc:desc.substring(0,120), cliente, cod_contrato, territorio, carga_teorica, fecha_inicio, fecha_fin, estado: estadoNorm, paraEncuesta});
-      }
-    }
-
-    console.log('Sin técnico:', countSinTec, '| Finalizada:', countFinalizada, '| Sin cod_obra:', countSinNum, '| OK:', Object.values(map).reduce((s,t)=>s+t.obras.length,0));
-    // Keep full map for sync, filter for encuesta display
-    const mapSync = map; // full data for Supabase sync
-    const mapEncuesta = {};
-    Object.entries(map).forEach(([k,v]) => {
-      const obras = v.obras.filter(o => o.paraEncuesta);
-      if (obras.length > 0) mapEncuesta[k] = {...v, obras};
-    });
-    tecData = Object.values(mapEncuesta).sort((a,b) => a.name.localeCompare(b.name));
-    window._mapSync = mapSync; // expose for sync function
-    origenDatos = 'excel';
-    initWeek(); renderMain();
-  };
-  reader.readAsArrayBuffer(file);
+function recargar() {
+document.getElementById('step-main').classList.remove('active');
+document.getElementById('step-upload').classList.add('active');
+cargarDesdeSupabase();
 }
 
 function initWeek() {
-  const t=new Date(), d=t.getDay();
-  const mon=new Date(t); mon.setDate(t.getDate()-(d===0?6:d-1));
-  const fri=new Date(mon); fri.setDate(mon.getDate()+4);
-  document.getElementById('weekStart').value=mon.toISOString().split('T')[0];
-  document.getElementById('weekEnd').value=fri.toISOString().split('T')[0];
+const t=new Date(), d=t.getDay();
+const mon=new Date(t); mon.setDate(t.getDate()-(d===0?6:d-1));
+const fri=new Date(mon); fri.setDate(mon.getDate()+4);
+document.getElementById('weekStart').value=mon.toISOString().split('T')[0];
+document.getElementById('weekEnd').value=fri.toISOString().split('T')[0];
 }
 
 function renderMain() {
-  document.getElementById('step-upload').classList.remove('active');
-  document.getElementById('step-main').classList.add('active');
-  updateStats();
-  document.getElementById('techList').innerHTML = tecData.map((t,i) => {
-    const ini=t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-    return '<div class="tech-row">'
-      +'<input type="checkbox" id="chk_'+i+'" checked onchange="updateSelCount()">'
-      +'<div class="avatar">'+ini+'</div>'
-      +'<div class="tech-info"><div class="tech-name">'+escH(t.name)+'</div>'
-      +'<div class="tech-meta">'+t.obras.length+' obra'+(t.obras.length!==1?'s':'')+' activa'+(t.obras.length!==1?'s':'')+'</div></div>'
-      +(t.email ? '<span style="font-size:0.75rem;color:#4a4a8a;background:#eeeefa;padding:2px 8px;border-radius:20px;">'+escH(t.email)+'</span>' : '<span style="font-size:0.73rem;color:#ef9f27;">sin email</span>')
-      +'<div class="status-dot '+(t.email?'dot-ok':'dot-warn')+'"></div>'
-      +'</div>';
-  }).join('');
-  document.getElementById('selAll').checked=true;
-  updateSelCount(); renderRespuestas();
-}
-
-function updateDot(i) {
-  const d=document.getElementById('dot_'+i), v=document.getElementById('em_'+i)?.value||'';
-  if(d) d.className='status-dot '+(v?'dot-ok':'dot-warn');
+document.getElementById('step-upload').classList.remove('active');
+document.getElementById('step-main').classList.add('active');
+updateStats();
+document.getElementById('techList').innerHTML = tecData.map((t,i) => {
+const ini=t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+return '<div class="tech-row">'
++'<input type="checkbox" id="chk_'+i+'" checked onchange="updateSelCount()">'
++'<div class="avatar">'+ini+'</div>'
++'<div class="tech-info"><div class="tech-name">'+escH(t.name)+'</div>'
++'<div class="tech-meta">'+t.obras.length+' obra'+(t.obras.length!==1?'s':'')+' encuestable'+(t.obras.length!==1?'s':'')+'</div></div>'
++(t.email ? '<span style="font-size:0.75rem;color:#4a4a8a;background:#eeeefa;padding:2px 8px;border-radius:20px;">'+escH(t.email)+'</span>' : '<span style="font-size:0.73rem;color:#ef9f27;">sin email</span>')
++'<div class="status-dot '+(t.email?'dot-ok':'dot-warn')+'"></div>'
++'</div>';
+}).join('');
+document.getElementById('selAll').checked=true;
+updateSelCount(); renderRespuestas();
 }
 
 function updateStats() {
-  const tot=tecData.reduce((s,t)=>s+t.obras.length,0);
-  const ws=document.getElementById('weekStart')?.value||'';
-  const han=new Set(responses.filter(r=>r.semana===ws).map(r=>r.tecnico)).size;
-  document.getElementById('statsGrid').innerHTML=
-    '<div class="stat-box"><div class="stat-num">'+tecData.length+'</div><div class="stat-label">Técnicos</div></div>'
-    +'<div class="stat-box"><div class="stat-num">'+tot+'</div><div class="stat-label">Obras activas</div></div>'
-    +'<div class="stat-box"><div class="stat-num">'+han+'</div><div class="stat-label">Han respondido</div></div>'
-    +'<div class="stat-box"><div class="stat-num">'+responses.length+'</div><div class="stat-label">Respuestas totales</div></div>';
+const tot=tecData.reduce((s,t)=>s+t.obras.length,0);
+const ws=document.getElementById('weekStart')?.value||'';
+const han=new Set(responses.filter(r=>r.semana===ws).map(r=>r.tecnico)).size;
+document.getElementById('statsGrid').innerHTML=
+'<div class="stat-box"><div class="stat-num">'+tecData.length+'</div><div class="stat-label">Técnicos</div></div>'
++'<div class="stat-box"><div class="stat-num">'+tot+'</div><div class="stat-label">Obras encuestables</div></div>'
++'<div class="stat-box"><div class="stat-num">'+han+'</div><div class="stat-label">Han respondido</div></div>'
++'<div class="stat-box"><div class="stat-num">'+responses.length+'</div><div class="stat-label">Respuestas totales</div></div>';
 }
 
 function updateSelCount() {
-  let s=0; tecData.forEach((_,i)=>{ if(document.getElementById('chk_'+i)?.checked) s++; });
-  document.getElementById('selCount').textContent=s+' seleccionado'+(s!==1?'s':'');
+let s=0; tecData.forEach((_,i)=>{ if(document.getElementById('chk_'+i)?.checked) s++; });
+document.getElementById('selCount').textContent=s+' seleccionado'+(s!==1?'s':'');
 }
 function toggleAll(cb) { tecData.forEach((_,i)=>{ const c=document.getElementById('chk_'+i); if(c) c.checked=cb.checked; }); updateSelCount(); }
 
 // ── GENERATE EMAILS ───────────────────────────────────────────
 async function generarEmails() {
-  const ws=document.getElementById('weekStart').value;
-  const we=document.getElementById('weekEnd').value;
-  const dest='';
-  const sel=tecData.filter((_,i)=>document.getElementById('chk_'+i)?.checked);
-  if (!sel.length) { alert('Selecciona al menos un técnico.'); return; }
-
-  document.getElementById('modalEmailsBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Generando enlaces...</div>';
-  document.getElementById('modalEmails').classList.add('open');
-
-  const uris = await Promise.all(sel.map(t => buildDataURI(t, ws, we, dest)));
-
-  document.getElementById('modalEmailsBody').innerHTML = sel.map((t, idx) => {
-    const uri = uris[idx];
-    const body='Estimado/a '+t.name.split(' ')[0]+',\n\n'
-      +'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+').\n\n'
-      +'Para rellenar tu encuesta accede al siguiente enlace:\n\n'
-      +uri+'\n\n'
-      +'El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas".\n\n'
-      +'Gracias por tu colaboración.\n\nSaludos,\nDepartamento de Coordinación';
-    const asunto='Encuesta semanal obras – '+t.name+' – semana '+ws;
-    const mailto='mailto:'+encodeURIComponent(t.email||'')+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(body);
-    return '<div style="margin-bottom:2rem;padding-bottom:2rem;border-bottom:0.5px solid #f0f0e8;">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;gap:8px;flex-wrap:wrap;">'
-      +'<div><span style="font-weight:500;font-size:0.9rem;">'+t.name+'</span>'
-      +'<span style="font-size:0.75rem;color:#aaa;margin-left:8px;">'+t.obras.length+' obras · '+escH(t.email||'sin email')+'</span></div>'
-      +(t.email
-        ? '<div style="display:flex;gap:6px;">'
-          +'<a class="btn btn-sm btn-primary" href="'+escA(mailto)+'" title="Abre Outlook con el email listo">📧 Abrir en email</a>'
-          +'<button class="btn btn-sm btn-success" onclick="enviarOutlook('+JSON.stringify(t.email)+','+JSON.stringify(asunto)+','+JSON.stringify(uri)+')" title="Envía directamente via Microsoft Graph">⚡ Enviar directo</button>'
-          +'</div>'
-        : '<span style="font-size:0.75rem;color:#ef9f27;">⚠️ Sin email configurado</span>')
-      +'</div>'
-      +'<div class="ep"><div class="ep-head">'
-      +'<div class="ep-row"><span>Para:</span><span>'+escH(t.email||'(sin email)')+'</span></div>'
-      +'<div class="ep-row"><span>Asunto:</span><span>'+escH(asunto)+'</span></div>'
-      +'</div><div class="ep-body">'+escH(body)+'</div></div>'
-      +'<div style="margin-top:6px;font-size:0.72rem;color:#4a4a8a;word-break:break-all;">'+escH(uri)+'</div>'
-      +'</div>';
-  }).join('');
+const ws=document.getElementById('weekStart').value;
+const we=document.getElementById('weekEnd').value;
+const dest='';
+const sel=tecData.filter((_,i)=>document.getElementById('chk_'+i)?.checked);
+if (!sel.length) { alert('Selecciona al menos un técnico.'); return; }
+document.getElementById('modalEmailsBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Generando enlaces...</div>';
+document.getElementById('modalEmails').classList.add('open');
+const uris = await Promise.all(sel.map(t => buildDataURI(t, ws, we, dest)));
+document.getElementById('modalEmailsBody').innerHTML = sel.map((t, idx) => {
+const uri = uris[idx];
+const body='Estimado/a '+t.name.split(' ')[0]+',\n\n'
++'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+').\n\n'
++'Para rellenar tu encuesta accede al siguiente enlace:\n\n'
++uri+'\n\n'
++'El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas".\n\n'
++'Gracias por tu colaboración.\n\nSaludos,\nDepartamento de Coordinación';
+const asunto='Encuesta semanal obras – '+t.name+' – semana '+ws;
+const mailto='mailto:'+encodeURIComponent(t.email||'')+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(body);
+return '<div style="margin-bottom:2rem;padding-bottom:2rem;border-bottom:0.5px solid #f0f0e8;">'
++'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;gap:8px;flex-wrap:wrap;">'
++'<div><span style="font-weight:500;font-size:0.9rem;">'+escH(t.name)+'</span>'
++'<span style="font-size:0.75rem;color:#aaa;margin-left:8px;">'+t.obras.length+' obras · '+escH(t.email||'sin email')+'</span></div>'
++(t.email
+? '<div style="display:flex;gap:6px;">'
++'<a class="btn btn-sm btn-primary" href="'+escA(mailto)+'" title="Abre Outlook con el email listo">📧 Abrir en email</a>'
++'<button class="btn btn-sm btn-success" onclick="enviarOutlook('+JSON.stringify(t.email)+','+JSON.stringify(asunto)+','+JSON.stringify(uri)+')" title="Envía directamente via Microsoft Graph">⚡ Enviar directo</button>'
++'</div>'
+: '<span style="font-size:0.75rem;color:#ef9f27;">⚠️ Sin email configurado</span>')
++'</div>'
++'<div class="ep"><div class="ep-head">'
++'<div class="ep-row"><span>Para:</span><span>'+escH(t.email||'(sin email)')+'</span></div>'
++'<div class="ep-row"><span>Asunto:</span><span>'+escH(asunto)+'</span></div>'
++'</div><div class="ep-body">'+escH(body)+'</div></div>'
++'<div style="margin-top:6px;font-size:0.72rem;color:#4a4a8a;word-break:break-all;">'+escH(uri)+'</div>'
++'</div>';
+}).join('');
 }
 
 function parsearEmail() {
-  const txt=document.getElementById('importTxt').value;
-  const m=txt.match(/---DATOS_ENCUESTA---([\s\S]*?)---FIN_DATOS---/);
-  if (!m) { document.getElementById('importPreview').innerHTML='<div class="notice notice-warn">No se encontró el bloque de datos. Asegúrate de copiar el email completo.</div>'; return; }
-  const blk=m[1];
-  const get=k=>{ const r=blk.match(new RegExp(k+':(.+)')); return r?r[1].trim():''; };
-  const tecnico=get('TECNICO'), semana=get('SEMANA'), semanaFin=get('SEMANA_FIN');
-  const obras=[...blk.matchAll(/OBRA:([^\n]+)/g)].map(x=>{
-    const p=x[1].split('|');
-    return {num:p[0]||'',desc:p[1]||'',
-      pss:parseInt(p[2])||0, anotaciones:parseInt(p[3])||0, reuniones:parseInt(p[4])||0,
-      anexos:parseInt(p[5])||0, informes:parseInt(p[6])||0, visitas:parseInt(p[7])||0, actas:parseInt(p[8])||0};
-  });
-  if (!tecnico||!semana||!obras.length) { document.getElementById('importPreview').innerHTML='<div class="notice notice-warn">Datos incompletos en el email.</div>'; return; }
-  const rows=obras.map(o=>'<tr>'
-    +'<td><span class="pill pill-blue">'+escH(o.num)+'</span></td>'
-    +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escH(o.desc||'—')+'</td>'
-    +'<td><span class="pill-num">'+o.pss+'</span></td>'
-    +'<td><span class="pill-num">'+o.anotaciones+'</span></td>'
-    +'<td><span class="pill-num">'+o.reuniones+'</span></td>'
-    +'<td><span class="pill-num">'+o.anexos+'</span></td>'
-    +'<td><span class="pill-num">'+o.informes+'</span></td>'
-    +'<td><span class="pill-num">'+o.visitas+'</span></td>'
-    +'<td><span class="pill-num">'+o.actas+'</span></td>'
-    +'</tr>').join('');
-  const d={tecnico,semana,semanaFin,obras};
-  document.getElementById('importPreview').innerHTML=
-    '<div class="notice notice-success" style="margin-bottom:1rem;">✅ <strong>'+escH(tecnico)+'</strong> · semana '+semana+' · '+obras.length+' obra'+(obras.length!==1?'s':'')+'</div>'
-    +'<div style="overflow-x:auto;margin-bottom:1rem;"><table class="resp-table"><thead><tr><th>Nº Obra</th><th>Descripción</th><th>Rev.PSS</th><th>Anot.</th><th>Reun.</th><th>Anex.</th><th>Inf.</th><th>Vis.</th><th>Actas</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'<button class="btn btn-success" id="btnConfirmar">✅ Guardar estas respuestas</button>';
-  document.getElementById('btnConfirmar').onclick = () => confirmar(d);
+const txt=document.getElementById('importTxt').value;
+const m=txt.match(/---DATOS_ENCUESTA---([\s\S]*?)---FIN_DATOS---/);
+if (!m) { document.getElementById('importPreview').innerHTML='<div class="notice notice-warn">No se encontró el bloque de datos. Asegúrate de copiar el email completo.</div>'; return; }
+const blk=m[1];
+const get=k=>{ const r=blk.match(new RegExp(k+':(.+)')); return r?r[1].trim():''; };
+const tecnico=get('TECNICO'), semana=get('SEMANA'), semanaFin=get('SEMANA_FIN');
+const obras=[...blk.matchAll(/OBRA:([^\n]+)/g)].map(x=>{
+const p=x[1].split('|');
+return {num:p[0]||'',desc:p[1]||'',
+pss:parseInt(p[2])||0, anotaciones:parseInt(p[3])||0, reuniones:parseInt(p[4])||0,
+anexos:parseInt(p[5])||0, informes:parseInt(p[6])||0, visitas:parseInt(p[7])||0, actas:parseInt(p[8])||0};
+});
+if (!tecnico||!semana||!obras.length) { document.getElementById('importPreview').innerHTML='<div class="notice notice-warn">Datos incompletos en el email.</div>'; return; }
+const rows=obras.map(o=>'<tr>'
++'<td><span class="pill pill-blue">'+escH(o.num)+'</span></td>'
++'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escH(o.desc||'—')+'</td>'
++'<td><span class="pill-num">'+o.pss+'</span></td>'
++'<td><span class="pill-num">'+o.anotaciones+'</span></td>'
++'<td><span class="pill-num">'+o.reuniones+'</span></td>'
++'<td><span class="pill-num">'+o.anexos+'</span></td>'
++'<td><span class="pill-num">'+o.informes+'</span></td>'
++'<td><span class="pill-num">'+o.visitas+'</span></td>'
++'<td><span class="pill-num">'+o.actas+'</span></td>'
++'</tr>').join('');
+const d={tecnico,semana,semanaFin,obras};
+document.getElementById('importPreview').innerHTML=
+'<div class="notice notice-success" style="margin-bottom:1rem;">✅ <strong>'+escH(tecnico)+'</strong> · semana '+semana+' · '+obras.length+' obra'+(obras.length!==1?'s':'')+'</div>'
++'<div style="overflow-x:auto;margin-bottom:1rem;"><table class="resp-table"><thead><tr><th>Nº Obra</th><th>Descripción</th><th>Rev.PSS</th><th>Anot.</th><th>Reun.</th><th>Anex.</th><th>Inf.</th><th>Vis.</th><th>Actas</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
++'<button class="btn btn-success" id="btnConfirmar">✅ Guardar estas respuestas</button>';
+document.getElementById('btnConfirmar').onclick = () => confirmar(d);
 }
 
 function confirmar(d) {
-  const fecha=new Date().toLocaleString('es-ES');
-  d.obras.forEach(o=>{
-    const key=d.semana+'_'+d.tecnico+'_'+o.num;
-    const p=responses.findIndex(r=>r.semana+'_'+r.tecnico+'_'+r.num_obra===key);
-    if(p>=0) responses.splice(p,1);
-    responses.push({fecha,semana:d.semana,semana_fin:d.semanaFin||'',tecnico:d.tecnico,num_obra:o.num,desc_obra:o.desc,revision_pss:o.pss,anotaciones:o.anotaciones,reuniones:o.reuniones,anexos:o.anexos,informes_mensuales:o.informes,visitas:o.visitas,actas_visita:o.actas});
-  });
-  localStorage.setItem('enc_resp_v3',JSON.stringify(responses));
-  document.getElementById('importTxt').value='';
-  document.getElementById('importPreview').innerHTML='<div class="notice notice-success">✅ '+d.obras.length+' respuesta'+(d.obras.length!==1?'s':'')+' guardada'+(d.obras.length!==1?'s':'')+'.</div>';
-  renderRespuestas(); updateStats(); switchTab('respuestas');
+const fecha=new Date().toLocaleString('es-ES');
+d.obras.forEach(o=>{
+const key=d.semana+'_'+d.tecnico+'_'+o.num;
+const p=responses.findIndex(r=>r.semana+'_'+r.tecnico+'_'+r.num_obra===key);
+if(p>=0) responses.splice(p,1);
+responses.push({fecha,semana:d.semana,semana_fin:d.semanaFin||'',tecnico:d.tecnico,num_obra:o.num,desc_obra:o.desc,revision_pss:o.pss,anotaciones:o.anotaciones,reuniones:o.reuniones,anexos:o.anexos,informes_mensuales:o.informes,visitas:o.visitas,actas_visita:o.actas});
+});
+localStorage.setItem('enc_resp_v3',JSON.stringify(responses));
+document.getElementById('importTxt').value='';
+document.getElementById('importPreview').innerHTML='<div class="notice notice-success">✅ '+d.obras.length+' respuesta'+(d.obras.length!==1?'s':'')+' guardada'+(d.obras.length!==1?'s':'')+'.</div>';
+renderRespuestas(); updateStats(); switchTab('respuestas');
 }
 
 // ── RESPONSES ─────────────────────────────────────────────────
 function renderRespuestas() {
-  const c=document.getElementById('respContainer');
-  if (!responses.length) { c.innerHTML='<div class="empty"><span class="big">📭</span>Aún no hay respuestas</div>'; return; }
-  const g={};
-  responses.forEach(r=>{ if(!g[r.semana]) g[r.semana]=[]; g[r.semana].push(r); });
-  c.innerHTML=Object.keys(g).sort().reverse().map(s=>'<div style="margin-bottom:1.75rem;">'
-    +'<div style="font-size:0.72rem;font-weight:500;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Semana del '+s+'</div>'
-    +'<div style="overflow-x:auto;"><table class="resp-table"><thead><tr><th>Técnico</th><th>Nº Obra</th><th>Descripción</th><th>Rev.PSS</th><th>Anot.</th><th>Reun.</th><th>Anex.</th><th>Inf.</th><th>Vis.</th><th>Actas</th><th>Registrado</th></tr></thead><tbody>'
-    +g[s].map(r=>'<tr>'
-      +'<td style="white-space:nowrap;">'+escH(r.tecnico)+'</td>'
-      +'<td><span class="pill pill-blue">'+escH(r.num_obra)+'</span></td>'
-      +'<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escA(r.desc_obra||'')+'">'+escH(r.desc_obra||'—')+'</td>'
-      +'<td><span class="pill-num">'+(r.revision_pss||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.anotaciones||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.reuniones||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.anexos||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.informes_mensuales||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.visitas||0)+'</span></td>'
-      +'<td><span class="pill-num">'+(r.actas_visita||0)+'</span></td>'
-      +'<td style="font-size:0.72rem;color:#bbb;white-space:nowrap;">'+escH(r.fecha)+'</td>'
-      +'</tr>').join('')
-    +'</tbody></table></div></div>').join('');
+const c=document.getElementById('respContainer');
+if (!responses.length) { c.innerHTML='<div class="empty"><span class="big">📭</span>Aún no hay respuestas</div>'; return; }
+const g={};
+responses.forEach(r=>{ if(!g[r.semana]) g[r.semana]=[]; g[r.semana].push(r); });
+c.innerHTML=Object.keys(g).sort().reverse().map(s=>'<div style="margin-bottom:1.75rem;">'
++'<div style="font-size:0.72rem;font-weight:500;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">Semana del '+s+'</div>'
++'<div style="overflow-x:auto;"><table class="resp-table"><thead><tr><th>Técnico</th><th>Nº Obra</th><th>Descripción</th><th>Rev.PSS</th><th>Anot.</th><th>Reun.</th><th>Anex.</th><th>Inf.</th><th>Vis.</th><th>Actas</th><th>Registrado</th></tr></thead><tbody>'
++g[s].map(r=>'<tr>'
++'<td style="white-space:nowrap;">'+escH(r.tecnico)+'</td>'
++'<td><span class="pill pill-blue">'+escH(r.num_obra)+'</span></td>'
++'<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escA(r.desc_obra||'')+'">'+escH(r.desc_obra||'—')+'</td>'
++'<td><span class="pill-num">'+(r.revision_pss||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.anotaciones||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.reuniones||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.anexos||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.informes_mensuales||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.visitas||0)+'</span></td>'
++'<td><span class="pill-num">'+(r.actas_visita||0)+'</span></td>'
++'<td style="font-size:0.72rem;color:#bbb;white-space:nowrap;">'+escH(r.fecha)+'</td>'
++'</tr>').join('')
++'</tbody></table></div></div>').join('');
 }
 
 function exportCSV() {
-  if (!responses.length) { alert('No hay respuestas para exportar.'); return; }
-  const h=['Fecha registro','Semana inicio','Semana fin','Técnico','Nº Obra','Descripción obra','Revisión PSS','Anotaciones','Reuniones','Anexos','Informes mensuales','Visitas','Actas visita'];
-  const rows=responses.map(r=>[r.fecha,r.semana,r.semana_fin||'',r.tecnico,r.num_obra,'"'+(r.desc_obra||'').replace(/"/g,'""')+'"',r.revision_pss||0,r.anotaciones||0,r.reuniones||0,r.anexos||0,r.informes_mensuales||0,r.visitas||0,r.actas_visita||0]);
-  const csv=[h,...rows].map(r=>r.join(';')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='respuestas_encuesta_'+new Date().toISOString().split('T')[0]+'.csv';
-  a.click();
+if (!responses.length) { alert('No hay respuestas para exportar.'); return; }
+const h=['Fecha registro','Semana inicio','Semana fin','Técnico','Nº Obra','Descripción obra','Revisión PSS','Anotaciones','Reuniones','Anexos','Informes mensuales','Visitas','Actas visita'];
+const rows=responses.map(r=>[r.fecha,r.semana,r.semana_fin||'',r.tecnico,r.num_obra,'"'+(r.desc_obra||'').replace(/"/g,'""')+'"',r.revision_pss||0,r.anotaciones||0,r.reuniones||0,r.anexos||0,r.informes_mensuales||0,r.visitas||0,r.actas_visita||0]);
+const csv=[h,...rows].map(r=>r.join(';')).join('\n');
+const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
+a.download='respuestas_encuesta_'+new Date().toISOString().split('T')[0]+'.csv';
+a.click();
 }
 
 function limpiar() {
-  if(!confirm('¿Borrar todas las respuestas guardadas?')) return;
-  responses=[]; localStorage.removeItem('enc_resp_v3');
-  renderRespuestas(); updateStats();
+if(!confirm('¿Borrar todas las respuestas guardadas?')) return;
+responses=[]; localStorage.removeItem('enc_resp_v3');
+renderRespuestas(); updateStats();
 }
 
 function switchTab(name) {
-  ['envio','importar','respuestas'].forEach((t,i)=>{
-    document.querySelectorAll('.tab')[i].classList.toggle('active',t===name);
-    document.getElementById('tab-'+t).style.display=t===name?'':'none';
-  });
-  if(name==='respuestas') renderRespuestas();
+['envio','importar','respuestas'].forEach((t,i)=>{
+document.querySelectorAll('.tab')[i].classList.toggle('active',t===name);
+document.getElementById('tab-'+t).style.display=t===name?'':'none';
+});
+if(name==='respuestas') renderRespuestas();
 }
 
 // ── MICROSOFT GRAPH — ENVÍO DIRECTO ──────────────────────────
@@ -559,121 +452,77 @@ const MS_CLIENT_ID = 'placeholder'; // Se configura al registrar app en Azure
 let msToken = null;
 
 async function getMSToken() {
-  // Use MSAL implicit flow via popup
-  return new Promise((resolve, reject) => {
-    const redirectUri = encodeURIComponent(window.location.href.split('#')[0]);
-    const scope = encodeURIComponent('https://graph.microsoft.com/Mail.Send');
-    const tenant = 'common';
-    const authUrl = 'https://login.microsoftonline.com/' + tenant + '/oauth2/v2.0/authorize'
-      + '?client_id=' + MS_CLIENT_ID
-      + '&response_type=token'
-      + '&redirect_uri=' + redirectUri
-      + '&scope=' + scope
-      + '&response_mode=fragment';
-
-    const popup = window.open(authUrl, 'msauth', 'width=500,height=600');
-    const timer = setInterval(() => {
-      try {
-        if (popup.closed) { clearInterval(timer); reject(new Error('Popup cerrado')); return; }
-        const hash = popup.location.hash;
-        if (hash && hash.includes('access_token')) {
-          clearInterval(timer);
-          popup.close();
-          const params = new URLSearchParams(hash.slice(1));
-          resolve(params.get('access_token'));
-        }
-      } catch(e) {}
-    }, 500);
-  });
+// Use MSAL implicit flow via popup
+return new Promise((resolve, reject) => {
+const redirectUri = encodeURIComponent(window.location.href.split('#')[0]);
+const scope = encodeURIComponent('https://graph.microsoft.com/Mail.Send');
+const tenant = 'common';
+const authUrl = 'https://login.microsoftonline.com/' + tenant + '/oauth2/v2.0/authorize'
++ '?client_id=' + MS_CLIENT_ID
++ '&response_type=token'
++ '&redirect_uri=' + redirectUri
++ '&scope=' + scope
++ '&response_mode=fragment';
+const popup = window.open(authUrl, 'msauth', 'width=500,height=600');
+const timer = setInterval(() => {
+try {
+if (popup.closed) { clearInterval(timer); reject(new Error('Popup cerrado')); return; }
+const hash = popup.location.hash;
+if (hash && hash.includes('access_token')) {
+clearInterval(timer);
+popup.close();
+const params = new URLSearchParams(hash.slice(1));
+resolve(params.get('access_token'));
+}
+} catch(e) {}
+}, 500);
+});
 }
 
 async function enviarOutlook(toEmail, asunto, enlace) {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = '⏳ Enviando...';
-  try {
-    if (!msToken) msToken = await getMSToken();
-    const body = '<p>Estimado/a,</p>'
-      + '<p>Te enviamos la encuesta semanal de obras.</p>'
-      + '<p>Para rellenar tu encuesta pulsa el siguiente enlace:</p>'
-      + '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
-      + '<p>El formulario ya tiene tus obras cargadas.</p>'
-      + '<p>Gracias por tu colaboración.<br>Departamento de Coordinación</p>';
-
-    const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + msToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: asunto,
-          body: { contentType: 'HTML', content: body },
-          toRecipients: [{ emailAddress: { address: toEmail } }]
-        }
-      })
-    });
-    if (res.ok || res.status === 202) {
-      btn.textContent = '✅ Enviado';
-      btn.style.background = '#0f6e56';
-    } else {
-      throw new Error('Error ' + res.status);
-    }
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = '⚡ Enviar directo';
-    msToken = null;
-    alert('Error al enviar: ' + e.message + '\n\nUsa el botón "Abrir en email" como alternativa.');
-  }
+const btn = event.target;
+btn.disabled = true;
+btn.textContent = '⏳ Enviando...';
+try {
+if (!msToken) msToken = await getMSToken();
+const body = '<p>Estimado/a,</p>'
++ '<p>Te enviamos la encuesta semanal de obras.</p>'
++ '<p>Para rellenar tu encuesta pulsa el siguiente enlace:</p>'
++ '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
++ '<p>El formulario ya tiene tus obras cargadas.</p>'
++ '<p>Gracias por tu colaboración.<br>Departamento de Coordinación</p>';
+const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + msToken, 'Content-Type': 'application/json' },
+body: JSON.stringify({
+message: {
+subject: asunto,
+body: { contentType: 'HTML', content: body },
+toRecipients: [{ emailAddress: { address: toEmail } }]
 }
-
-
-// ── CARGAR DESDE SUPABASE ─────────────────────────────────────
-async function cargarDesdeSupabase() {
-  const zone = document.getElementById('supabaseZone') || document.querySelector('[onclick="cargarDesdeSupabase()"]');
-  if (zone) { zone.style.opacity = '0.6'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">⏳</span><p style="font-size:0.82rem;color:#666;">Cargando...</p>'; }
-
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=5000', {
-      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
-    });
-    const rows = await res.json();
-    if (!Array.isArray(rows) || !rows.length) {
-      alert('No se encontraron obras activas en Supabase.');
-      if (zone) { zone.style.opacity = '1'; zone.innerHTML = '<span style="font-size:1.75rem;display:block;margin-bottom:0.5rem;">☁️</span><p style="font-size:0.82rem;color:#666;">Cargar obras activas desde Supabase</p><small style="color:#aaa;font-size:0.75rem;margin-top:4px;display:block;">Sin necesidad de Excel</small>'; }
-      return;
-    }
-
-    // Filter by date (60 days)
-    const cutoff = new Date(Date.now() - 60*864e5);
-    // No date filter for loading - show all obras with valid estados
-    const filtered = rows;
-
-    // Build tecData
-    const map = {};
-    filtered.forEach(o => {
-      const tec = o.tecnico;
-      if (!tec) return;
-      if (!map[tec]) map[tec] = { name: tec, email: o.email||'', obras: [] };
-      if (o.email && !map[tec].email) map[tec].email = o.email;
-      if (!map[tec].obras.find(x => x.num === o.cod_obra)) {
-        map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'' });
-      }
-    });
-
-    tecData = Object.values(map).filter(t => t.obras.length > 0).sort((a,b) => a.name.localeCompare(b.name));
-    origenDatos = 'supabase';
-    initWeek();
-    renderMain();
-  } catch(e) {
-    alert('Error al cargar desde Supabase: ' + e.message);
-    if (zone) zone.style.opacity = '1';
-  }
+})
+});
+if (res.ok || res.status === 202) {
+btn.textContent = '✅ Enviado';
+btn.style.background = '#0f6e56';
+} else {
+throw new Error('Error ' + res.status);
+}
+} catch(e) {
+btn.disabled = false;
+btn.textContent = '⚡ Enviar directo';
+msToken = null;
+alert('Error al enviar: ' + e.message + '\n\nUsa el botón "Abrir en email" como alternativa.');
+}
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function goBack() { document.getElementById('step-main').classList.remove('active'); document.getElementById('step-upload').classList.add('active'); }
 function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escA(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+// Arranque: cargar directamente desde Supabase
+cargarDesdeSupabase();
 </script>
 </body>
 </html>
