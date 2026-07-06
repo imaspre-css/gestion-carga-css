@@ -57,7 +57,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     <a href="tecnicos.html">Técnicos</a>
     <a href="contratos.html">Contratos</a>
     <a href="nueva-solicitud.html">+ Nueva solicitud</a>
-    <a href="#" onclick="localStorage.removeItem('css_rol');window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+    <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
 </div>
 
@@ -116,13 +116,52 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 <script>
 var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
+var misContratos = [];
+try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
+var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
 
 async function init() {
-  const [obras, solicitudes, respuestas] = await Promise.all([
-    fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico,carga_teorica_semanal&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
-    fetch(SUPABASE_URL + '/rest/v1/solicitudes?select=estado,prioridad&limit=200', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
-    fetch(SUPABASE_URL + '/rest/v1/respuestas?select=tecnico,semana_inicio&limit=500&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
-  ]);
+let [obras, solicitudes, respuestas] = await Promise.all([
+fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico,carga_teorica_semanal,cod_contrato,cod_obra,estado&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/solicitudes?select=estado,prioridad,cod_contrato&limit=200', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/respuestas?select=tecnico,semana_inicio,cod_obra&limit=500&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+]);
+
+if (!Array.isArray(obras)) obras = [];
+if (!Array.isArray(solicitudes)) solicitudes = [];
+if (!Array.isArray(respuestas)) respuestas = [];
+if (filtrarPorContrato) {
+obras = obras.filter(o => misContratos.includes(o.cod_contrato));
+solicitudes = solicitudes.filter(s => misContratos.includes(s.cod_contrato));
+const codsObra = new Set(obras.map(o => o.cod_obra));
+respuestas = respuestas.filter(r => codsObra.has(r.cod_obra));
+}
+
+const enCurso = obras.filter(o => ['ACTIVA','PDTE. INICIO','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
+const tecnicos = [...new Set(obras.map(o => o.tecnico))];
+const pendientes = solicitudes.filter(s => s.estado === 'PENDIENTE').length;
+const urgentes = solicitudes.filter(s => s.estado === 'PENDIENTE' && s.prioridad === 'URGENTE').length;
+const ultimaSemana = respuestas[0]?.semana_inicio || '';
+const conResp = ultimaSemana ? [...new Set(respuestas.filter(r => r.semana_inicio === ultimaSemana).map(r => r.tecnico))].length : 0;
+
+document.getElementById('statsGrid').innerHTML =
+'<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
+'<div class="stat-box"><div class="stat-num">' + enCurso.length + '</div><div class="stat-label">Obras en curso</div></div>' +
+'<div class="stat-box' + (pendientes ? ' stat-warn' : '') + '"><div class="stat-num">' + pendientes + '</div><div class="stat-label">Solicitudes pendientes</div></div>' +
+'<div class="stat-box"><div class="stat-num">' + conResp + '/' + tecnicos.length + '</div><div class="stat-label">Encuestas esta semana</div></div>';
+
+const alerts = [];
+if (urgentes > 0) alerts.push({ type: 'warn', text: urgentes + ' solicitud' + (urgentes>1?'es':'') + ' urgente' + (urgentes>1?'s':'') + ' pendiente' + (urgentes>1?'s':'') + ' de asignación', link: 'solicitudes.html', btn: 'Ver solicitudes' });
+if (conResp < tecnicos.length && ultimaSemana) alerts.push({ type: 'warn', text: (tecnicos.length - conResp) + ' técnico' + (tecnicos.length-conResp>1?'s':'') + ' sin responder la encuesta de la semana ' + ultimaSemana, link: 'dashboard.html', btn: 'Ver dashboard' });
+if (alerts.length === 0) alerts.push({ type: 'ok', text: '✅ Todo en orden — sin alertas pendientes', link: null });
+document.getElementById('alertList').innerHTML = alerts.map(a =>
+'<div class="alert-item ' + a.type + '">'
++ '<span>' + a.text + '</span>'
++ (a.link ? '<a href="' + a.link + '" class="btn btn-primary">' + a.btn + '</a>' : '')
++ '</div>'
+).join('');
+}
 
   const tecnicos = [...new Set(obras.map(o => o.tecnico))];
   const pendientes = solicitudes.filter(s => s.estado === 'PENDIENTE').length;
