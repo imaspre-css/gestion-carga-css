@@ -105,6 +105,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 <div class="module-desc">Genera y envía las encuestas semanales a los técnicos. Carga el Excel o usa Supabase directamente.</div>
 <span class="module-tag">Staffer</span>
 </a>
+<a href="carga-masiva.html" class="module-card" id="moduleCarga" style="display:none;">
+<div class="module-icon">📦</div>
+<div class="module-title">Carga masiva</div>
+<div class="module-desc">Sube la plantilla Excel para crear o actualizar obras, técnicos, contratos y usuarios de una sola vez.</div>
+<span class="module-tag">Staffer</span>
+</a>
 </div>
 
 <div class="section-title">Estado del sistema</div>
@@ -199,6 +205,10 @@ if (localStorage.getItem('css_rol') === 'staffer') {
 const m = document.getElementById('moduleEncuesta');
 
 if (m) m.style.display = '';
+
+const mc = document.getElementById('moduleCarga');
+
+if (mc) mc.style.display = '';
 
 }
 
