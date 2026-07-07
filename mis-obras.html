@@ -28,7 +28,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
 .btn-primary:hover { background: #2a2a4e; }
 .btn-full { width: 100%; justify-content: center; }
-
 /* Horizonte */
 .cal-wrap { overflow-x: auto; }
 .cal-grid { display: grid; grid-template-columns: 80px repeat(52, 1fr); gap: 2px; min-width: 900px; }
@@ -39,12 +38,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .cal-legend { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #888; flex-wrap: wrap; }
 .cal-legend-cell { width: 14px; height: 10px; border-radius: 2px; }
 .tooltip { position: fixed; background: #1a1a2e; color: #fff; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 999; display: none; white-space: nowrap; }
-
 /* Obras */
 .obra-card { border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
 .obra-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
 .cliente-tag { font-size: 0.68rem; font-weight: 600; color: #fff; background: #4a4a8a; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
 .obra-cod { font-size: 0.72rem; font-weight: 500; color: #4a4a8a; background: #eeeefa; padding: 2px 8px; border-radius: 20px; }
+.producto-tag { font-size: 0.68rem; font-weight: 500; color: #4a4a8a; background: #eeeefa; padding: 2px 8px; border-radius: 20px; }
 .estado-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
 .estado-ACTIVA { background: #e1f5ee; color: #0f6e56; }
 .estado-PDTE-INICIO { background: #e6f1fb; color: #185fa5; }
@@ -55,7 +54,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .estado-FINALIZADA { background: #ececec; color: #999; }
 .obra-desc { font-size: 0.85rem; color: #333; margin-bottom: 6px; }
 .obra-fechas { font-size: 0.75rem; color: #888; }
-
 .empty { text-align: center; padding: 3rem; color: #bbb; font-size: 0.875rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -81,26 +79,25 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 <div class="tooltip" id="tooltip"></div>
 
 <div class="header">
-  <div>
-    <h1 id="headerNombre">Mis obras</h1>
-    <div class="header-sub" id="headerEmail"></div>
-  </div>
-  <div class="nav"><a href="#" class="logout" onclick="localStorage.clear();window.location.href='login.html'">Salir</a></div>
+<div>
+<h1 id="headerNombre">Mis obras</h1>
+<div class="header-sub" id="headerEmail"></div>
+</div>
+<div class="nav"><a href="#" class="logout" onclick="localStorage.clear();window.location.href='login.html'">Salir</a></div>
 </div>
 
 <div class="container">
-  <div id="loadingDiv"><div class="spinner"></div></div>
-  <div id="mainContent" style="display:none;">
+<div id="loadingDiv"><div class="spinner"></div></div>
+<div id="mainContent" style="display:none;">
 
-    <div class="stats-row" id="statsRow"></div>
+<div class="stats-row" id="statsRow"></div>
 
+<div class="card">
+<div class="card-title">Mis obras</div>
+<div id="obrasWrap"></div>
+</div>
 
-    <div class="card">
-      <div class="card-title">Mis obras</div>
-      <div id="obrasWrap"></div>
-    </div>
-
-  </div>
+</div>
 </div>
 
 <script>
@@ -112,47 +109,47 @@ var tecnicoEmail = (localStorage.getItem('css_ms_email') || '').toLowerCase();
 var obras = [];
 
 function getColor(pct) {
-  if (!pct) return '#f0f0e8';
-  if (pct >= 100) return '#e24b4a';
-  if (pct >= 85) return '#ef9f27';
-  if (pct >= 60) return '#0f6e56';
-  if (pct >= 30) return '#5dcaa5';
-  return '#e1f5ee';
+if (!pct) return '#f0f0e8';
+if (pct >= 100) return '#e24b4a';
+if (pct >= 85) return '#ef9f27';
+if (pct >= 60) return '#0f6e56';
+if (pct >= 30) return '#5dcaa5';
+return '#e1f5ee';
 }
 
 function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+const dayNum = d.getUTCDay() || 7;
+d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
 }
 
 function getMonday(year, week) {
-  const jan4 = new Date(year, 0, 4);
-  const startOfWeek1 = new Date(jan4);
-  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
-  const monday = new Date(startOfWeek1);
-  monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
-  return monday;
+const jan4 = new Date(year, 0, 4);
+const startOfWeek1 = new Date(jan4);
+startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+const monday = new Date(startOfWeek1);
+monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
+return monday;
 }
 
 function calcCargaPorSemana(year) {
-  const semanas = new Array(53).fill(0);
-  obras.forEach(o => {
-    const carga = parseFloat(o.carga_teorica_semanal) || 0;
-    if (!carga) return;
-    const inicio = o.fecha_inicio ? new Date(o.fecha_inicio) : null;
-    const fin = o.fecha_fin ? new Date(o.fecha_fin) : null;
-    for (let w = 1; w <= 52; w++) {
-      const monday = getMonday(year, w);
-      const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
-      const desde = inicio || new Date(year, 0, 1);
-      const hasta = fin || new Date(year, 11, 31);
-      if (monday <= hasta && friday >= desde) semanas[w] += carga;
-    }
-  });
-  return semanas;
+const semanas = new Array(53).fill(0);
+obras.forEach(o => {
+const carga = parseFloat(o.carga_teorica_semanal) || 0;
+if (!carga) return;
+const inicio = o.fecha_inicio ? new Date(o.fecha_inicio) : null;
+const fin = o.fecha_fin ? new Date(o.fecha_fin) : null;
+for (let w = 1; w <= 52; w++) {
+const monday = getMonday(year, w);
+const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+const desde = inicio || new Date(year, 0, 1);
+const hasta = fin || new Date(year, 11, 31);
+if (monday <= hasta && friday >= desde) semanas[w] += carga;
+}
+});
+return semanas;
 }
 
 function renderStats() {
@@ -162,74 +159,44 @@ document.getElementById('statsRow').innerHTML =
 + '<div class="mini-stat"><div class="mini-stat-num">' + proxFin + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>';
 }
 
-function renderCalendario() {
-  const year = new Date().getFullYear();
-  const cargas = calcCargaPorSemana(year);
-  const currentWeek = getWeekNumber(new Date());
-  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
-
-  let monthLabels = '<div></div>';
-  let lastMonth = -1;
-  for (let w = 1; w <= 52; w++) {
-    const monday = getMonday(year, w);
-    const m = monday.getMonth();
-    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
-    lastMonth = m;
-  }
-  document.getElementById('monthRow').innerHTML = monthLabels;
-
-  let cells = '<div class="cal-label">' + year + '</div>';
-  for (let w = 1; w <= 52; w++) {
-    const pct = Math.round(cargas[w]);
-    const color = getColor(pct);
-    const monday = getMonday(year, w);
-    const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
-    const tip = 'S' + w + ' (' + dateStr + '): ' + pct + '%';
-    cells += '<div class="cal-cell" style="background:' + color + ';'
-      + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
-      + (w > currentWeek ? 'opacity:0.55;' : '')
-      + '" data-tip="' + tip + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()"></div>';
-  }
-  document.getElementById('calGrid').innerHTML = cells;
-}
-
 function renderObras() {
-  if (!obras.length) {
-    document.getElementById('obrasWrap').innerHTML = '<div class="empty">No tienes obras activas asignadas</div>';
-    return;
-  }
-  document.getElementById('obrasWrap').innerHTML = obras.map(o => {
-    const est = (o.estado||'').toUpperCase();
-    const estadoClass =
-    est === 'ACTIVA' ? 'estado-ACTIVA' :
-    est === 'PDTE. INICIO' ? 'estado-PDTE-INICIO' :
-    est === 'PDTE. DESIG. CSS' ? 'estado-PDTE-DESIG' :
-    est === 'SIN ACTIVIDAD' ? 'estado-SIN-ACTIVIDAD' :
-    est === 'SUSPENDIDA' ? 'estado-SUSPENDIDA' :
-    est.includes('FINALIZACIÓN') ? 'estado-PROC-FINAL' :
-    est === 'FINALIZADA' ? 'estado-FINALIZADA' : 'estado-ACTIVA';
-    return '<div class="obra-card">'
-      + '<div class="obra-meta">'
-      + (o.cliente ? '<span class="cliente-tag">' + o.cliente + '</span>' : '')
-      + '<span class="obra-cod">' + (o.cod_obra||'—') + '</span>'
-      + '<span class="estado-tag ' + estadoClass + '">' + (o.estado||'ACTIVA') + '</span>'
-      + '</div>'
-      + '<div class="obra-desc">' + (o.descripcion||'Sin descripción') + '</div>'
-      + '<div class="obra-fechas">'
-      + (o.fecha_inicio ? 'Inicio: ' + new Date(o.fecha_inicio).toLocaleDateString('es-ES') : 'Sin fecha inicio')
-      + ' · ' + (o.fecha_fin ? 'Fin: ' + new Date(o.fecha_fin).toLocaleDateString('es-ES') : 'Sin fecha fin')
-      + '</div>'
-      + '<button class="btn btn-sm" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" data-id="' + o.id + '" onclick="abrirProponer(event)">📅 Proponer cambio de fecha</button>'
-      + '</div>';
-  }).join('');
+if (!obras.length) {
+document.getElementById('obrasWrap').innerHTML = '<div class="empty">No tienes obras asignadas</div>';
+return;
+}
+document.getElementById('obrasWrap').innerHTML = obras.map(o => {
+const est = (o.estado||'').toUpperCase();
+const estadoClass =
+est === 'ACTIVA' ? 'estado-ACTIVA' :
+est === 'PDTE. INICIO' ? 'estado-PDTE-INICIO' :
+est === 'PDTE. DESIG. CSS' ? 'estado-PDTE-DESIG' :
+est === 'SIN ACTIVIDAD' ? 'estado-SIN-ACTIVIDAD' :
+est === 'SUSPENDIDA' ? 'estado-SUSPENDIDA' :
+est.includes('FINALIZACIÓN') ? 'estado-PROC-FINAL' :
+est === 'FINALIZADA' ? 'estado-FINALIZADA' : 'estado-ACTIVA';
+return '<div class="obra-card">'
++ '<div class="obra-meta">'
++ (o.cliente ? '<span class="cliente-tag">' + o.cliente + '</span>' : '')
++ '<span class="obra-cod">' + (o.cod_obra||'—') + '</span>'
++ '<span class="producto-tag">' + (o.producto||'CSS') + '</span>'
++ '<span class="estado-tag ' + estadoClass + '">' + (o.estado||'ACTIVA') + '</span>'
++ '</div>'
++ '<div class="obra-desc">' + (o.descripcion||'Sin descripción') + '</div>'
++ '<div class="obra-fechas">'
++ (o.fecha_inicio ? 'Inicio: ' + new Date(o.fecha_inicio).toLocaleDateString('es-ES') : 'Sin fecha inicio')
++ ' · ' + (o.fecha_fin ? 'Fin: ' + new Date(o.fecha_fin).toLocaleDateString('es-ES') : 'Sin fecha fin')
++ '</div>'
++ '<button class="btn btn-sm" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" data-id="' + o.id + '" onclick="abrirProponer(event)">📅 Proponer cambio de fecha</button>'
++ '</div>';
+}).join('');
 }
 
 function showTip(e, text) {
-  const t = document.getElementById('tooltip');
-  t.textContent = text;
-  t.style.display = 'block';
-  t.style.left = (e.clientX + 10) + 'px';
-  t.style.top = (e.clientY - 30) + 'px';
+const t = document.getElementById('tooltip');
+t.textContent = text;
+t.style.display = 'block';
+t.style.left = (e.clientX + 10) + 'px';
+t.style.top = (e.clientY - 30) + 'px';
 }
 function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
 
@@ -254,87 +221,82 @@ renderObras();
 init();
 
 function abrirProponer(event) {
-  const id = event.currentTarget.dataset.id;
-  const o = obras.find(x => x.id === id);
-  if (!o) return;
-  document.getElementById('pObraId').value = id;
-  document.getElementById('proponerObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
-  document.getElementById('pFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
-  document.getElementById('pMotivo').value = '';
-  document.getElementById('proponerStatus').innerHTML = '';
-  document.getElementById('modalProponer').classList.add('open');
+const id = event.currentTarget.dataset.id;
+const o = obras.find(x => x.id === id);
+if (!o) return;
+document.getElementById('pObraId').value = id;
+document.getElementById('proponerObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
+document.getElementById('pFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
+document.getElementById('pMotivo').value = '';
+document.getElementById('proponerStatus').innerHTML = '';
+document.getElementById('modalProponer').classList.add('open');
 }
 
 function closeProponerModal() {
-  document.getElementById('modalProponer').classList.remove('open');
+document.getElementById('modalProponer').classList.remove('open');
 }
 
 async function enviarPropuesta() {
-  const obraId = document.getElementById('pObraId').value;
-  const nuevaFecha = document.getElementById('pFechaFin').value;
-  const motivo = document.getElementById('pMotivo').value.trim();
-  const o = obras.find(x => x.id === obraId);
-
-  if (!nuevaFecha) { alert('Introduce la nueva fecha propuesta.'); return; }
-
-  const payload = {
-    obra_id: obraId,
-    tecnico: tecnicoNombre,
-    campo: 'fecha_fin',
-    valor_actual: o?.fecha_fin || '',
-    valor_propuesto: nuevaFecha,
-    motivo: motivo,
-    estado: 'PENDIENTE'
-  };
-
-  const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
-    body: JSON.stringify(payload)
-  });
-
-  if (res.ok) {
-    document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El delegado del contrato la revisará.</div>';
-    setTimeout(closeProponerModal, 1500);
-  } else {
-    document.getElementById('proponerStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar.</div>';
-  }
+const obraId = document.getElementById('pObraId').value;
+const nuevaFecha = document.getElementById('pFechaFin').value;
+const motivo = document.getElementById('pMotivo').value.trim();
+const o = obras.find(x => x.id === obraId);
+if (!nuevaFecha) { alert('Introduce la nueva fecha propuesta.'); return; }
+const payload = {
+obra_id: obraId,
+tecnico: tecnicoNombre,
+campo: 'fecha_fin',
+valor_actual: o?.fecha_fin || '',
+valor_propuesto: nuevaFecha,
+motivo: motivo,
+estado: 'PENDIENTE'
+};
+const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+body: JSON.stringify(payload)
+});
+if (res.ok) {
+document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El delegado del contrato la revisará.</div>';
+setTimeout(closeProponerModal, 1500);
+} else {
+document.getElementById('proponerStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar.</div>';
+}
 }
 
 document.getElementById('modalProponer').addEventListener('click', e => {
-  if (e.target === document.getElementById('modalProponer')) closeProponerModal();
+if (e.target === document.getElementById('modalProponer')) closeProponerModal();
 });
-
 </script>
 
 <!-- Modal proponer cambio -->
 <div class="modal-bg" id="modalProponer">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Proponer cambio de fecha</h3>
-      <button class="close-btn" onclick="closeProponerModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="proponerStatus"></div>
-      <div style="margin-bottom:0.75rem;">
-        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Obra</label>
-        <div id="proponerObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
-      </div>
-      <div style="margin-bottom:0.75rem;">
-        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Nueva fecha de fin propuesta</label>
-        <input type="date" id="pFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
-      </div>
-      <div style="margin-bottom:0.75rem;">
-        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo</label>
-        <textarea id="pMotivo" placeholder="Explica brevemente por qué propones este cambio..." style="width:100%;min-height:70px;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;resize:vertical;"></textarea>
-      </div>
-      <input type="hidden" id="pObraId">
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
-        <button class="btn" onclick="closeProponerModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="enviarPropuesta()">Enviar propuesta</button>
-      </div>
-    </div>
-  </div>
+<div class="modal">
+<div class="modal-head">
+<h3>Proponer cambio de fecha</h3>
+<button class="close-btn" onclick="closeProponerModal()">✕</button>
+</div>
+<div class="modal-body">
+<div id="proponerStatus"></div>
+<div style="margin-bottom:0.75rem;">
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Obra</label>
+<div id="proponerObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
+</div>
+<div style="margin-bottom:0.75rem;">
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Nueva fecha de fin propuesta</label>
+<input type="date" id="pFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+</div>
+<div style="margin-bottom:0.75rem;">
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo</label>
+<textarea id="pMotivo" placeholder="Explica brevemente por qué propones este cambio..." style="width:100%;min-height:70px;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;resize:vertical;"></textarea>
+</div>
+<input type="hidden" id="pObraId">
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
+<button class="btn" onclick="closeProponerModal()">Cancelar</button>
+<button class="btn btn-primary" onclick="enviarPropuesta()">Enviar propuesta</button>
+</div>
+</div>
+</div>
 </div>
 
 </body>
