@@ -376,7 +376,7 @@ return '<div style="margin-bottom:2rem;padding-bottom:2rem;border-bottom:0.5px s
 +(t.email
 ? '<div style="display:flex;gap:6px;">'
 +'<a class="btn btn-sm btn-primary" href="'+escA(mailto)+'" title="Abre Outlook con el email listo">📧 Abrir en email</a>'
-+'<button class="btn btn-sm btn-success" onclick="enviarOutlook(this,'+JSON.stringify(t.email)+','+JSON.stringify(asunto)+','+JSON.stringify(uri)+')" title="Envía directamente via Microsoft Graph">⚡ Enviar directo</button>'
++'<button class="btn btn-sm btn-success" onclick="enviarOutlookIdx(this,'+idx+')" title="Envía directamente via Microsoft Graph">⚡ Enviar directo</button>'
 +'</div>'
 : '<span style="font-size:0.75rem;color:#ef9f27;">⚠️ Sin email configurado</span>')
 +'</div>'
@@ -575,11 +575,13 @@ toRecipients: [{ emailAddress: { address: toEmail } }]
 if (!(res.ok || res.status === 202)) throw new Error('Graph ' + res.status + ': ' + await res.text());
 }
 
-async function enviarOutlook(btn, toEmail, asunto, enlace) {
+async function enviarOutlookIdx(btn, idx) {
+const x = (window._loteEnvio || [])[idx];
+if (!x || !x.email) { alert('Este técnico no tiene email.'); return; }
 btn.disabled = true;
 btn.textContent = '⏳ Enviando...';
 try {
-await enviarConGraph(toEmail, asunto, enlace);
+await enviarConGraph(x.email, x.asunto, x.uri);
 btn.textContent = '✅ Enviado';
 btn.style.background = '#0f6e56';
 } catch(e) {
