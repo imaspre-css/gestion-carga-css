@@ -206,12 +206,12 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
 <div id="envioStatus" style="margin-top:0.75rem;"></div>
 </div>
 
-<!-- RIGHT: Wizard -->
+<!-- RIGHT: Info de baremo (los baremos se gestionan en Contratos) -->
 <div class="card" id="wizardCard">
-<div class="card-title">⚙️ Configuración de baremo</div>
-<div id="wizardWrap">
+<div class="card-title">⚙️ Baremo del contrato</div>
+<div id="baremoInfoWrap">
 <div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">
-Selecciona un contrato para empezar.<br>Si ya tiene baremo se cargará automáticamente.
+Selecciona un contrato.<br>Su baremo se cargará automáticamente.
 </div>
 </div>
 </div>
@@ -234,9 +234,11 @@ document.getElementById('cargaManualWrap').style.display = esCSS ? 'none' : '';
 document.getElementById('cargaBox').style.display = esCSS ? '' : 'none';
 document.getElementById('wizardCard').style.display = esCSS ? '' : 'none';
 if (esCSS) {
+// CSS requiere contrato con baremo configurado
 document.getElementById('btnEnviar').disabled = !baremoActual;
 if (baremoActual) calcularCarga();
 } else {
+// Otros productos: basta con tener contrato seleccionado (carga manual)
 document.getElementById('btnEnviar').disabled = !document.getElementById('fContrato').value;
 }
 }
@@ -245,213 +247,62 @@ document.getElementById('btnEnviar').disabled = !document.getElementById('fContr
 async function loadContratos() {
 const [rc, ro] = await Promise.all([
 fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
-fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_contrato,cliente&limit=500', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_contrato,cliente&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json())
 ]);
 const contratos = Array.isArray(rc) ? rc : [];
 const obras = Array.isArray(ro) ? ro : [];
-const unique = [...new Map(obras.filter(o=>o.cod_contrato).map(o=>[o.cod_contrato,o])).values()];
-const sinBaremo = unique.filter(o => !contratos.find(c => c.cod_contrato === o.cod_contrato));
+// Unir: contratos de la tabla + los que solo existen en obras (por si falta alguno)
+const mapa = new Map();
+contratos.forEach(c => mapa.set(c.cod_contrato, { cod: c.cod_contrato, cliente: c.cliente||'', baremo: c.jornada_horas_mes != null ? c : null }));
+obras.forEach(o => { if (o.cod_contrato && !mapa.has(o.cod_contrato)) mapa.set(o.cod_contrato, { cod: o.cod_contrato, cliente: o.cliente||'', baremo: null }); });
+const lista = [...mapa.values()].sort((a,b) => a.cod.localeCompare(b.cod));
+window._contratosInfo = lista;
 const sel = document.getElementById('fContrato');
 sel.innerHTML = '<option value="">Selecciona un contrato...</option>';
-if (contratos.length) {
-const og = document.createElement('optgroup'); og.label = 'Con baremo configurado';
-contratos.forEach(c => { const op = document.createElement('option'); op.value = c.cod_contrato; op.textContent = c.cod_contrato + (c.cliente ? ' — ' + c.cliente : ''); og.appendChild(op); });
-sel.appendChild(og);
-}
-if (sinBaremo.length) {
-const og2 = document.createElement('optgroup'); og2.label = 'Sin baremo (requiere configuración)';
-sinBaremo.forEach(o => { const op = document.createElement('option'); op.value = o.cod_contrato; op.textContent = o.cod_contrato + (o.cliente ? ' — ' + o.cliente : ''); og2.appendChild(op); });
-sel.appendChild(og2);
-}
-const opNew = document.createElement('option'); opNew.value = '__nuevo__'; opNew.textContent = '+ Nuevo contrato...';
-sel.appendChild(opNew);
+lista.forEach(c => {
+const op = document.createElement('option');
+op.value = c.cod;
+op.textContent = c.cod + (c.cliente ? ' — ' + c.cliente : '') + (c.baremo ? '' : ' (sin baremo)');
+sel.appendChild(op);
+});
 }
 
-async function onContratoChange() {
+function infoContrato(cod) {
+return (window._contratosInfo || []).find(c => c.cod === cod) || null;
+}
+
+function onContratoChange() {
 const val = document.getElementById('fContrato').value;
 const status = document.getElementById('contratoStatus');
-baremoActual = null;
-document.getElementById('btnEnviar').disabled = true;
+const info = val ? infoContrato(val) : null;
+baremoActual = (info && info.baremo) ? info.baremo : null;
 document.getElementById('cargaBox').innerHTML = '<div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div>';
-if (!val) { status.innerHTML = ''; document.getElementById('wizardWrap').innerHTML = '<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para empezar.</div>'; onProductoChange(); return; }
-const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(val) + '&select=*', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
-const rows = await res.json();
-if (rows && rows.length > 0) {
-baremoActual = rows[0];
+if (!val) {
+status.innerHTML = '';
+document.getElementById('baremoInfoWrap').innerHTML = '<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato.<br>Su baremo se cargará automáticamente.</div>';
+onProductoChange();
+return;
+}
+if (baremoActual) {
 status.innerHTML = '<div class="notice notice-success">✅ Baremo cargado — ' + val + '</div>';
-mostrarBaremoConfirmado(baremoActual);
+mostrarBaremoInfo(baremoActual);
 calcularCarga();
-document.getElementById('btnEnviar').disabled = false;
-} else if (val !== '__nuevo__') {
-status.innerHTML = '<div class="notice notice-warn">⚠️ Este contrato no tiene baremo configurado</div>';
-iniciarWizard(val);
 } else {
 status.innerHTML = '';
-iniciarWizard('');
+mostrarBaremoInfo(null, val);
 }
 onProductoChange();
 }
 
-// ── WIZARD ────────────────────────────────────────────────────
-function iniciarWizard(cod) {
-wizardPhase = 1;
-wizardData = { cod_contrato: cod };
-renderWizard();
+function mostrarBaremoInfo(b, codSinBaremo) {
+const wrap = document.getElementById('baremoInfoWrap');
+if (!b) {
+wrap.innerHTML = '<div class="notice notice-warn">⚠️ El contrato <strong>' + codSinBaremo + '</strong> no tiene baremo configurado.<br><br>'
++ 'El baremo es necesario para calcular la carga de las solicitudes <strong>CSS</strong>. Se configura desde la página de Contratos (botón ⚙️ del contrato).<br><br>'
++ '<a href="contratos.html" class="btn btn-primary" style="text-decoration:none;">Ir a Contratos</a></div>';
+return;
 }
-
-function renderWizard() {
-const wrap = document.getElementById('wizardWrap');
-const phases = ['Datos base', 'Tipos de obra', 'Confirmar baremo'];
-const progress = phases.map((p, i) =>
-'<div class="wp-step ' + (i+1 < wizardPhase ? 'done' : i+1 === wizardPhase ? 'active' : '') + '"></div>'
-).join('');
-let content = '';
-if (wizardPhase === 1) content = renderPhase1();
-else if (wizardPhase === 2) content = renderPhase2();
-else if (wizardPhase === 3) content = renderPhase3();
-wrap.innerHTML = '<div class="wizard">'
-+ '<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;">' + progress
-+ '<span style="font-size:0.75rem;color:#888;margin-left:4px;">Fase ' + wizardPhase + ' de 3</span></div>'
-+ content
-+ '</div>';
-}
-
-function renderPhase1() {
-return '<div class="wizard-phase active">'
-+ '<div class="phase-title">Fase 1 — Datos base del contrato</div>'
-+ '<div class="phase-desc">Introduce los tiempos unitarios de referencia para este contrato. Son los tiempos estándar por tarea en obra activa.</div>'
-+ '<div class="wfield-row">'
-+ '<div class="wfield"><label>Código contrato</label><input id="w_cod" value="' + (wizardData.cod_contrato||'') + '" placeholder="ej. 2647-ADIF"></div>'
-+ '<div class="wfield"><label>Cliente</label><input id="w_cliente" value="' + (wizardData.cliente||'') + '" placeholder="ej. ADIF"></div>'
-+ '</div>'
-+ '<div class="wfield-row">'
-+ '<div class="wfield"><label>Desplazamiento one way (h)</label><input type="number" id="w_desp" value="' + (wizardData.t_desplazamiento||1) + '" step="0.25" min="0"></div>'
-+ '<div class="wfield"><label>Duración visita (h)</label><input type="number" id="w_visita" value="' + (wizardData.t_visita||1) + '" step="0.25" min="0"></div>'
-+ '</div>'
-+ '<div class="wfield-row">'
-+ '<div class="wfield"><label>Redacción acta (h)</label><input type="number" id="w_acta" value="' + (wizardData.t_acta||0.75) + '" step="0.25" min="0"></div>'
-+ '<div class="wfield"><label>Informe mensual (h)</label><input type="number" id="w_informe" value="' + (wizardData.t_informe||0.75) + '" step="0.25" min="0"></div>'
-+ '</div>'
-+ '<div class="wfield-row">'
-+ '<div class="wfield"><label>Reunión mensual (h)</label><input type="number" id="w_reunion" value="' + (wizardData.t_reunion||3) + '" step="0.25" min="0"></div>'
-+ '<div class="wfield"><label>Jornada mensual (h)</label><input type="number" id="w_jornada" value="' + (wizardData.jornada_horas_mes||120) + '" step="5" min="1"></div>'
-+ '</div>'
-+ '<div class="wizard-nav">'
-+ '<span></span>'
-+ '<button class="btn btn-primary" onclick="guardarFase1()">Siguiente →</button>'
-+ '</div></div>';
-}
-
-function guardarFase1() {
-wizardData.cod_contrato = document.getElementById('w_cod').value.trim();
-wizardData.cliente = document.getElementById('w_cliente').value.trim();
-wizardData.t_desplazamiento = parseFloat(document.getElementById('w_desp').value)||1;
-wizardData.t_visita = parseFloat(document.getElementById('w_visita').value)||1;
-wizardData.t_acta = parseFloat(document.getElementById('w_acta').value)||0.75;
-wizardData.t_informe = parseFloat(document.getElementById('w_informe').value)||0.75;
-wizardData.t_reunion = parseFloat(document.getElementById('w_reunion').value)||3;
-wizardData.jornada_horas_mes = parseFloat(document.getElementById('w_jornada').value)||120;
-if (!wizardData.cod_contrato) { alert('Introduce el código del contrato.'); return; }
-wizardPhase = 2;
-renderWizard();
-}
-
-function renderPhase2() {
-const tipos = [
-{ id: 'lejana', title: '🚗 Obra lejana', desc: 'Mayor tiempo de desplazamiento' },
-{ id: 'nocturna', title: '🌙 Obra nocturna', desc: 'Desplazamiento ×1.5' },
-{ id: 'discontinua', title: '📅 Obra discontinua', desc: 'Menos visitas mensuales' },
-{ id: 'multicss', title: '👥 MultiCSS', desc: 'Varios coordinadores comparten informe y reunión' },
-{ id: 'sin_comenzar', title: '⏳ Sin comenzar', desc: 'Obra adjudicada pero no iniciada' },
-];
-const selected = wizardData.tipos || [];
-return '<div class="wizard-phase active">'
-+ '<div class="phase-title">Fase 2 — Tipos de obra especiales</div>'
-+ '<div class="phase-desc">Selecciona los tipos de obra especiales que existen en este contrato. Para cada tipo podrás ajustar los parámetros.</div>'
-+ '<div class="tipo-grid">'
-+ tipos.map(t => '<div class="tipo-card ' + (selected.includes(t.id)?'selected':'') + '" onclick="toggleTipo(\'' + t.id + '\')" id="tipo_' + t.id + '">'
-+ '<div class="tipo-card-title">' + t.title + '</div>'
-+ '<div class="tipo-card-desc">' + t.desc + '</div>'
-+ '</div>').join('')
-+ '</div>'
-+ '<div class="wizard-nav">'
-+ '<button class="btn" onclick="wizardPhase=1;renderWizard()">← Atrás</button>'
-+ '<button class="btn btn-primary" onclick="guardarFase2()">Siguiente →</button>'
-+ '</div></div>';
-}
-
-function toggleTipo(id) {
-if (!wizardData.tipos) wizardData.tipos = [];
-const idx = wizardData.tipos.indexOf(id);
-if (idx >= 0) wizardData.tipos.splice(idx, 1);
-else wizardData.tipos.push(id);
-document.getElementById('tipo_' + id).classList.toggle('selected');
-}
-
-function guardarFase2() {
-wizardPhase = 3;
-renderWizard();
-}
-
-function renderPhase3() {
-const b = wizardData;
-const hBase = ((b.t_desplazamiento*2) + b.t_visita + b.t_acta) * 4 + b.t_informe + b.t_reunion;
-const pct = Math.round((hBase / b.jornada_horas_mes) * 100);
-return '<div class="wizard-phase active">'
-+ '<div class="phase-title">Fase 3 — Confirmar baremo</div>'
-+ '<div class="phase-desc">Revisa los parámetros antes de guardar. Podrás modificarlos en cualquier momento.</div>'
-+ '<div class="baremo-preview"><table>'
-+ '<tr><td style="color:#888;">Contrato</td><td>' + b.cod_contrato + (b.cliente ? ' — ' + b.cliente : '') + '</td></tr>'
-+ '<tr><td style="color:#888;">Desplazamiento (one way)</td><td>' + b.t_desplazamiento + 'h</td></tr>'
-+ '<tr><td style="color:#888;">Visita a obra</td><td>' + b.t_visita + 'h</td></tr>'
-+ '<tr><td style="color:#888;">Redacción acta</td><td>' + b.t_acta + 'h</td></tr>'
-+ '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
-+ '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
-+ '<tr><td style="color:#888;">Jornada mensual</td><td>' + b.jornada_horas_mes + 'h</td></tr>'
-+ '</table></div>'
-+ '<div style="background:#eeeefa;border-radius:8px;padding:0.75rem;text-align:center;margin-top:0.75rem;">'
-+ '<div style="font-size:1.5rem;font-weight:500;color:#1a1a2e;">' + pct + '%</div>'
-+ '<div style="font-size:0.72rem;color:#4a4a8a;">Carga estándar (1 visita/semana, sin nocturnidad)</div>'
-+ '</div>'
-+ (wizardData.tipos && wizardData.tipos.length ? '<div style="margin-top:0.75rem;font-size:0.78rem;color:#888;">Tipos especiales: ' + wizardData.tipos.join(', ') + '</div>' : '')
-+ '<div class="wizard-nav">'
-+ '<button class="btn" onclick="wizardPhase=2;renderWizard()">← Atrás</button>'
-+ '<button class="btn btn-primary" onclick="guardarBaremo()">✅ Guardar baremo</button>'
-+ '</div></div>';
-}
-
-async function guardarBaremo() {
-const b = wizardData;
-const payload = {
-cod_contrato: b.cod_contrato,
-cliente: b.cliente || '',
-t_desplazamiento: b.t_desplazamiento,
-t_visita: b.t_visita,
-t_acta: b.t_acta,
-t_informe: b.t_informe,
-t_reunion: b.t_reunion,
-visitas_mes: 4,
-jornada_horas_mes: b.jornada_horas_mes
-};
-const res = await fetch(SUPABASE_URL + '/rest/v1/contratos', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'resolution=merge-duplicates,return=minimal' },
-body: JSON.stringify(payload)
-});
-if (res.ok) {
-baremoActual = payload;
-document.getElementById('contratoStatus').innerHTML = '<div class="notice notice-success">✅ Baremo guardado correctamente</div>';
-mostrarBaremoConfirmado(baremoActual);
-calcularCarga();
-document.getElementById('btnEnviar').disabled = false;
-await loadContratos();
-} else {
-alert('Error al guardar el baremo. Inténtalo de nuevo.');
-}
-}
-
-function mostrarBaremoConfirmado(b) {
-document.getElementById('wizardWrap').innerHTML =
+wrap.innerHTML =
 '<div class="notice notice-success" style="margin-bottom:0.75rem;">✅ Baremo configurado</div>'
 + '<div class="baremo-preview"><table>'
 + '<tr><td style="color:#888;">Desplazamiento</td><td>' + b.t_desplazamiento + 'h</td></tr>'
@@ -461,7 +312,7 @@ document.getElementById('wizardWrap').innerHTML =
 + '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
 + '<tr><td style="color:#888;">Jornada</td><td>' + b.jornada_horas_mes + 'h/mes</td></tr>'
 + '</table></div>'
-+ '<button class="btn" style="margin-top:0.75rem;width:100%;justify-content:center;" onclick="iniciarWizard(\'' + (b.cod_contrato||'') + '\')">✏️ Modificar baremo</button>';
++ '<div style="margin-top:0.75rem;font-size:0.72rem;color:#888;">Los baremos se editan en la página de Contratos (botón ⚙️).</div>';
 }
 
 // ── CARGA TEÓRICA ─────────────────────────────────────────────
