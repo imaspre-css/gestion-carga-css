@@ -308,11 +308,12 @@ function renderContratos() {
         obrasHTML = '<div class="obras-wrap open"><div class="empty" style="padding:1.5rem;">Este contrato aún no tiene obras. Se crearán al asignar sus solicitudes.</div></div>';
       } else {
       obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
-        + '<th>Nº Obra</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
+        + '<th>Nº Obra</th><th>Producto</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
         + '</tr></thead><tbody>'
         + obrasFiltered.map(o => {
           return '<tr>'
             + '<td><span class="pill pill-blue">' + (o.cod_obra||'—') + '</span></td>'
+            + '<td><span class="pill" style="background:#eeeefa;color:#4a4a8a;">' + escH(o.producto||'CSS') + '</span></td>'
             + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(o.descripcion) + '">' + (o.descripcion||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.tecnico||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (o.territorio||'—') + '</td>'
