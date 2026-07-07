@@ -246,10 +246,18 @@ async function cargarDesdeSupabase() {
 const zone = document.getElementById('loadZone');
 zone.innerHTML = '<span class="spinner"></span><p style="font-size:0.85rem;color:#666;">Obteniendo obras encuestables...</p>';
 try {
-const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=5000', {
+const [res, resTec] = await Promise.all([
+fetch(SUPABASE_URL + '/rest/v1/obras?select=*&estado=in.("PDTE. INICIO","ACTIVA","EN PROCESO DE FINALIZACIÓN")&limit=5000', {
 headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' }
-});
+}),
+fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,email&activo=eq.true', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+})
+]);
 const rows = await res.json();
+const tecRows = await resTec.json();
+const emailCanonico = {};
+(Array.isArray(tecRows) ? tecRows : []).forEach(t => { if (t.nombre && t.email) emailCanonico[t.nombre] = t.email; });
 if (!Array.isArray(rows) || !rows.length) {
 zone.innerHTML = '<p style="font-size:0.85rem;color:#a32d2d;">No se encontraron obras encuestables en Supabase.</p>'
 + '<button class="btn btn-primary" style="margin-top:1rem;" onclick="cargarDesdeSupabase()">Reintentar</button>';
@@ -259,8 +267,8 @@ const map = {};
 rows.forEach(o => {
 const tec = o.tecnico;
 if (!tec) return;
-if (!map[tec]) map[tec] = { name: tec, email: o.email||'', obras: [] };
-if (o.email && !map[tec].email) map[tec].email = o.email;
+if (!map[tec]) map[tec] = { name: tec, email: emailCanonico[tec] || o.email || '', obras: [] };
+if (!map[tec].email && (emailCanonico[tec] || o.email)) map[tec].email = emailCanonico[tec] || o.email;
 if (!map[tec].obras.find(x => x.num === o.cod_obra)) {
 map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'' });
 }
