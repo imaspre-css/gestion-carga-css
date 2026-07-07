@@ -1,4 +1,23 @@
-padding: 1.5rem; text-decoration: none; color: #1a1a1a; transition: all 0.15s; display: flex; flex-direction: column; gap: 0.5rem; }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Carga CSS — Imaspre</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1.5rem 2rem; }
+.header h1 { font-size: 1.25rem; font-weight: 500; }
+.header p { font-size: 0.82rem; color: #9090b0; margin-top: 4px; }
+.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+.stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; text-align: center; }
+.stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
+.stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-warn .stat-num { color: #854f0b; }
+.modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.module-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: #1a1a1a; transition: all 0.15s; display: flex; flex-direction: column; gap: 0.5rem; }
 .module-card:hover { border-color: #4a4a8a; box-shadow: 0 4px 12px rgba(74,74,138,0.1); transform: translateY(-1px); }
 .module-icon { font-size: 1.75rem; }
 .module-title { font-size: 1rem; font-weight: 500; }
