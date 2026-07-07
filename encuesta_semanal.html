@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Encuesta Semanal — Gestión</title>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
@@ -187,6 +188,19 @@ if (rol !== 'staffer') { window.location.href = 'index.html'; }
 <script>
 let tecData = [];
 let responses = JSON.parse(localStorage.getItem('enc_resp_v3') || '[]');
+let respSemanaSupabase = new Set();
+
+async function cargarRespuestasSemana(ws) {
+respSemanaSupabase = new Set();
+if (!ws) return;
+try {
+const r = await fetch(SUPABASE_URL + '/rest/v1/respuestas?select=tecnico&semana_inicio=eq.' + ws + '&limit=1000', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+});
+const rows = await r.json();
+(Array.isArray(rows) ? rows : []).forEach(x => respSemanaSupabase.add(x.tecnico));
+} catch(e) {}
+}
 
 const FORM_BASE_URL = 'https://imaspre-css.github.io/gestion-carga-css/encuesta.html';
 const SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
@@ -277,6 +291,12 @@ document.getElementById('weekEnd').value=fri.toISOString().split('T')[0];
 function renderMain() {
 document.getElementById('step-upload').classList.remove('active');
 document.getElementById('step-main').classList.add('active');
+const wsEl = document.getElementById('weekStart');
+if (wsEl && !wsEl._listener) {
+wsEl._listener = true;
+wsEl.addEventListener('change', () => cargarRespuestasSemana(wsEl.value).then(updateStats));
+}
+cargarRespuestasSemana(wsEl ? wsEl.value : '').then(updateStats);
 updateStats();
 document.getElementById('techList').innerHTML = tecData.map((t,i) => {
 const ini=t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
@@ -296,7 +316,8 @@ updateSelCount(); renderRespuestas();
 function updateStats() {
 const tot=tecData.reduce((s,t)=>s+t.obras.length,0);
 const ws=document.getElementById('weekStart')?.value||'';
-const han=new Set(responses.filter(r=>r.semana===ws).map(r=>r.tecnico)).size;
+const hanSet=new Set([...respSemanaSupabase, ...responses.filter(r=>r.semana===ws).map(r=>r.tecnico)]);
+const han=hanSet.size;
 document.getElementById('statsGrid').innerHTML=
 '<div class="stat-box"><div class="stat-num">'+tecData.length+'</div><div class="stat-label">Técnicos</div></div>'
 +'<div class="stat-box"><div class="stat-num">'+tot+'</div><div class="stat-label">Obras encuestables</div></div>'
@@ -320,7 +341,17 @@ if (!sel.length) { alert('Selecciona al menos un técnico.'); return; }
 document.getElementById('modalEmailsBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Generando enlaces...</div>';
 document.getElementById('modalEmails').classList.add('open');
 const uris = await Promise.all(sel.map(t => buildDataURI(t, ws, we, dest)));
-document.getElementById('modalEmailsBody').innerHTML = sel.map((t, idx) => {
+window._loteEnvio = sel.map((t, idx) => ({
+nombre: t.name,
+email: t.email || '',
+asunto: 'Encuesta semanal obras – ' + t.name + ' – semana ' + ws,
+uri: uris[idx]
+}));
+const cabeceraMasivo = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:0.5px solid #e8e8e0;">'
++ '<button class="btn btn-success" id="btnEnviarTodos" onclick="enviarTodosDirecto()">⚡ Enviar directo a todos (' + window._loteEnvio.filter(x=>x.email).length + ')</button>'
++ '<span id="envioMasivoStatus" style="font-size:0.8rem;color:#888;"></span>'
++ '</div>';
+document.getElementById('modalEmailsBody').innerHTML = cabeceraMasivo + sel.map((t, idx) => {
 const uri = uris[idx];
 const body='Estimado/a '+t.name.split(' ')[0]+',\n\n'
 +'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+').\n\n'
@@ -393,8 +424,43 @@ responses.push({fecha,semana:d.semana,semana_fin:d.semanaFin||'',tecnico:d.tecni
 });
 localStorage.setItem('enc_resp_v3',JSON.stringify(responses));
 document.getElementById('importTxt').value='';
-document.getElementById('importPreview').innerHTML='<div class="notice notice-success">✅ '+d.obras.length+' respuesta'+(d.obras.length!==1?'s':'')+' guardada'+(d.obras.length!==1?'s':'')+'.</div>';
+document.getElementById('importPreview').innerHTML='<div class="notice notice-success">✅ '+d.obras.length+' respuesta'+(d.obras.length!==1?'s':'')+' guardada'+(d.obras.length!==1?'s':'')+' localmente. <span id="sbStatus" style="color:#888;">☁️ Sincronizando con Supabase...</span></div>';
+guardarRespuestasSupabase(d).then(okMsg => {
+const el = document.getElementById('sbStatus');
+if (el) el.innerHTML = okMsg;
+});
 renderRespuestas(); updateStats(); switchTab('respuestas');
+}
+
+async function guardarRespuestasSupabase(d) {
+const filas = d.obras.map(o => ({
+tecnico: d.tecnico,
+cod_obra: o.num,
+desc_obra: o.desc || null,
+semana_inicio: d.semana,
+semana_fin: d.semanaFin || null,
+revision_pss: o.pss || 0,
+anotaciones: o.anotaciones || 0,
+reuniones: o.reuniones || 0,
+anexos: o.anexos || 0,
+informes_mensuales: o.informes || 0,
+actas_visita: o.actas || 0
+}));
+try {
+const res = await fetch(SUPABASE_URL + '/rest/v1/respuestas?on_conflict=tecnico,cod_obra,semana_inicio', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'resolution=merge-duplicates,return=minimal' },
+body: JSON.stringify(filas)
+});
+if (res.ok) {
+if (respSemanaSupabase && d.semana === document.getElementById('weekStart')?.value) respSemanaSupabase.add(d.tecnico);
+updateStats();
+return '<span style="color:#0f6e56;">☁️ Sincronizado con Supabase ✓</span>';
+}
+return '<span style="color:#a32d2d;">☁️ Error al sincronizar con Supabase (' + res.status + ') — la respuesta quedó solo en local.</span>';
+} catch(e) {
+return '<span style="color:#a32d2d;">☁️ Error al sincronizar: ' + escH(e.message) + '</span>';
+}
 }
 
 // ── RESPONSES ─────────────────────────────────────────────────
@@ -447,36 +513,58 @@ document.getElementById('tab-'+t).style.display=t===name?'':'none';
 if(name==='respuestas') renderRespuestas();
 }
 
-// ── MICROSOFT GRAPH — ENVÍO DIRECTO ──────────────────────────
-const MS_CLIENT_ID = 'placeholder'; // Se configura al registrar app en Azure
-let msToken = null;
+// ── MICROSOFT GRAPH — ENVÍO DIRECTO (MSAL, mismo registro que el login) ──
+const MSAL_CONFIG = {
+auth: {
+clientId: '57ab0a98-8087-4167-816a-8252d8311e85',
+authority: 'https://login.microsoftonline.com/e55abdc2-666a-4057-a6e9-681e2220c6b4',
+redirectUri: window.location.origin + window.location.pathname
+},
+cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+};
+let msalInstance = null;
+try { msalInstance = new msal.PublicClientApplication(MSAL_CONFIG); } catch(e) { console.warn('MSAL no disponible:', e.message); }
 
-async function getMSToken() {
-// Use MSAL implicit flow via popup
-return new Promise((resolve, reject) => {
-const redirectUri = encodeURIComponent(window.location.href.split('#')[0]);
-const scope = encodeURIComponent('https://graph.microsoft.com/Mail.Send');
-const tenant = 'common';
-const authUrl = 'https://login.microsoftonline.com/' + tenant + '/oauth2/v2.0/authorize'
-+ '?client_id=' + MS_CLIENT_ID
-+ '&response_type=token'
-+ '&redirect_uri=' + redirectUri
-+ '&scope=' + scope
-+ '&response_mode=fragment';
-const popup = window.open(authUrl, 'msauth', 'width=500,height=600');
-const timer = setInterval(() => {
-try {
-if (popup.closed) { clearInterval(timer); reject(new Error('Popup cerrado')); return; }
-const hash = popup.location.hash;
-if (hash && hash.includes('access_token')) {
-clearInterval(timer);
-popup.close();
-const params = new URLSearchParams(hash.slice(1));
-resolve(params.get('access_token'));
+async function getGraphToken() {
+if (!msalInstance) throw new Error('MSAL no cargado');
+const request = { scopes: ['Mail.Send'] };
+let account = msalInstance.getAllAccounts()[0];
+if (!account) {
+const login = await msalInstance.loginPopup(request);
+account = login.account;
 }
-} catch(e) {}
-}, 500);
+try {
+const silent = await msalInstance.acquireTokenSilent({ ...request, account });
+return silent.accessToken;
+} catch(e) {
+const popup = await msalInstance.acquireTokenPopup(request);
+return popup.accessToken;
+}
+}
+
+function cuerpoEmailHTML(enlace) {
+return '<p>Estimado/a,</p>'
++ '<p>Te enviamos la encuesta semanal de obras.</p>'
++ '<p>Para rellenar tu encuesta pulsa el siguiente enlace:</p>'
++ '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
++ '<p>El formulario ya tiene tus obras cargadas.</p>'
++ '<p>Gracias por tu colaboración.<br>Departamento de Coordinación</p>';
+}
+
+async function enviarConGraph(toEmail, asunto, enlace) {
+const token = await getGraphToken();
+const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+method: 'POST',
+headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+body: JSON.stringify({
+message: {
+subject: asunto,
+body: { contentType: 'HTML', content: cuerpoEmailHTML(enlace) },
+toRecipients: [{ emailAddress: { address: toEmail } }]
+}
+})
 });
+if (!(res.ok || res.status === 202)) throw new Error('Graph ' + res.status + ': ' + await res.text());
 }
 
 async function enviarOutlook(toEmail, asunto, enlace) {
@@ -484,36 +572,34 @@ const btn = event.target;
 btn.disabled = true;
 btn.textContent = '⏳ Enviando...';
 try {
-if (!msToken) msToken = await getMSToken();
-const body = '<p>Estimado/a,</p>'
-+ '<p>Te enviamos la encuesta semanal de obras.</p>'
-+ '<p>Para rellenar tu encuesta pulsa el siguiente enlace:</p>'
-+ '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
-+ '<p>El formulario ya tiene tus obras cargadas.</p>'
-+ '<p>Gracias por tu colaboración.<br>Departamento de Coordinación</p>';
-const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-method: 'POST',
-headers: { 'Authorization': 'Bearer ' + msToken, 'Content-Type': 'application/json' },
-body: JSON.stringify({
-message: {
-subject: asunto,
-body: { contentType: 'HTML', content: body },
-toRecipients: [{ emailAddress: { address: toEmail } }]
-}
-})
-});
-if (res.ok || res.status === 202) {
+await enviarConGraph(toEmail, asunto, enlace);
 btn.textContent = '✅ Enviado';
 btn.style.background = '#0f6e56';
-} else {
-throw new Error('Error ' + res.status);
-}
 } catch(e) {
 btn.disabled = false;
 btn.textContent = '⚡ Enviar directo';
-msToken = null;
 alert('Error al enviar: ' + e.message + '\n\nUsa el botón "Abrir en email" como alternativa.');
 }
+}
+
+async function enviarTodosDirecto() {
+const lote = window._loteEnvio || [];
+const conEmail = lote.filter(x => x.email);
+if (!conEmail.length) { alert('No hay destinatarios con email.'); return; }
+if (!confirm('¿Enviar la encuesta por email a ' + conEmail.length + ' técnico' + (conEmail.length!==1?'s':'') + '?')) return;
+const status = document.getElementById('envioMasivoStatus');
+const btn = document.getElementById('btnEnviarTodos');
+btn.disabled = true;
+let ok = 0, fallos = [];
+for (let i = 0; i < conEmail.length; i++) {
+const x = conEmail[i];
+status.innerHTML = '⏳ Enviando ' + (i+1) + ' / ' + conEmail.length + ' — ' + escH(x.nombre) + '...';
+try { await enviarConGraph(x.email, x.asunto, x.uri); ok++; }
+catch(e) { fallos.push(x.nombre + ' (' + e.message.substring(0,60) + ')'); }
+}
+status.innerHTML = '<span style="color:#0f6e56;">✅ ' + ok + ' enviados</span>'
++ (fallos.length ? '<br><span style="color:#a32d2d;">❌ Fallos: ' + fallos.map(escH).join(', ') + '</span>' : '');
+btn.disabled = false;
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
