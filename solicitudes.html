@@ -25,6 +25,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .btn:hover { background: #f5f5f0; }
 .btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
 .btn-primary:hover { background: #2a2a4e; }
+.btn-danger { color: #a32d2d; border-color: #f7c1c1; }
+.btn-danger:hover { background: #fcebeb; }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .filters select { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 0.5px solid #d0d0c8; background: #fff; cursor: pointer; }
@@ -37,9 +39,11 @@ tr:hover td { background: #fafaf8; }
 .tag-pendiente { background: #faeeda; color: #854f0b; }
 .tag-asignada { background: #e1f5ee; color: #0f6e56; }
 .tag-rechazada { background: #fcebeb; color: #a32d2d; }
+.tag-cancelada { background: #f0f0e8; color: #888; }
 .tag-urgente { background: #fcebeb; color: #a32d2d; }
 .tag-alta { background: #e6f1fb; color: #185fa5; }
 .tag-media { background: #f5f5f0; color: #666; }
+.tag-producto { background: #eeeefa; color: #4a4a8a; }
 .pct { font-weight: 500; }
 .pct-ok { color: #0f6e56; }
 .pct-warn { color: #854f0b; }
@@ -115,6 +119,7 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
             <option value="PENDIENTE">Pendientes</option>
             <option value="ASIGNADA">Asignadas</option>
             <option value="RECHAZADA">Rechazadas</option>
+            <option value="CANCELADA">Canceladas</option>
           </select>
           <select id="filtroPrioridad" onchange="renderTabla()">
             <option value="">Todas las prioridades</option>
@@ -132,7 +137,7 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
   </div>
 </div>
 
-<!-- Modal asignación -->
+<!-- Modal asignación / detalle / rechazo -->
 <div class="modal-bg" id="modalAsignar">
   <div class="modal">
     <div class="modal-head">
@@ -148,10 +153,13 @@ var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
 var solicitudes = [], obras = [], tecnicoSeleccionado = null, solicitudActual = null;
+var isStaffer = localStorage.getItem('css_rol') === 'staffer';
 var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
 var misContratos = [];
 try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
 var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
+
+function escH(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 async function fetchAll() {
   const [s, o] = await Promise.all([
@@ -195,7 +203,7 @@ function renderTabla() {
   }
 
   let html = '<div style="overflow-x:auto;"><table><thead><tr>'
-    + '<th>Obra</th><th>Contrato</th><th>Territorio</th><th>Prioridad</th>'
+    + '<th>Obra</th><th>Producto</th><th>Contrato</th><th>Territorio</th><th>Prioridad</th>'
     + '<th>Carga teórica</th><th>Estado</th><th>Técnico</th><th>Fecha</th><th></th>'
     + '</tr></thead><tbody>';
 
@@ -203,26 +211,91 @@ function renderTabla() {
     const pct = s.carga_teorica_calculada;
     const pctClass = pct > 90 ? 'pct-over' : pct > 70 ? 'pct-warn' : 'pct-ok';
     const fecha = s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES') : '—';
+    // Acciones según estado y rol
+    let acciones = '';
+    if (s.estado === 'PENDIENTE') {
+      if (isStaffer) {
+        acciones = '<div style="display:flex;gap:4px;">'
+          + '<button class="btn btn-sm btn-primary" onclick="abrirAsignar(\'' + s.id + '\')">Asignar</button>'
+          + '<button class="btn btn-sm btn-danger" onclick="abrirResolucion(\'' + s.id + '\',\'RECHAZADA\')">Rechazar</button>'
+          + '</div>';
+      } else if (isDelegadoRol) {
+        acciones = '<button class="btn btn-sm btn-danger" onclick="abrirResolucion(\'' + s.id + '\',\'CANCELADA\')">Cancelar</button>';
+      } else {
+        acciones = '<span style="font-size:0.75rem;color:#888;">Pendiente</span>';
+      }
+    } else {
+      acciones = '<button class="btn btn-sm" onclick="verDetalle(\'' + s.id + '\')">Ver</button>';
+    }
     html += '<tr>'
-      + '<td><div style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (s.denominacion||'—') + '</div>'
-      + '<div style="font-size:0.72rem;color:#aaa;">' + (s.cliente||s.cod_contrato||'') + '</div></td>'
-      + '<td style="font-size:0.78rem;color:#4a4a8a;">' + (s.cod_contrato||'—') + '</td>'
-      + '<td style="font-size:0.78rem;color:#888;">' + (s.territorio||'—') + '</td>'
-      + '<td><span class="tag tag-' + (s.prioridad||'media').toLowerCase() + '">' + (s.prioridad||'MEDIA') + '</span></td>'
+      + '<td><div style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escH(s.denominacion||'—') + '</div>'
+      + '<div style="font-size:0.72rem;color:#aaa;">' + escH(s.cliente||s.cod_contrato||'') + '</div></td>'
+      + '<td><span class="tag tag-producto">' + escH(s.producto||'CSS') + '</span></td>'
+      + '<td style="font-size:0.78rem;color:#4a4a8a;">' + escH(s.cod_contrato||'—') + '</td>'
+      + '<td style="font-size:0.78rem;color:#888;">' + escH(s.territorio||'—') + '</td>'
+      + '<td><span class="tag tag-' + (s.prioridad||'media').toLowerCase() + '">' + escH(s.prioridad||'MEDIA') + '</span></td>'
       + '<td><span class="pct ' + pctClass + '">' + (pct ? pct + '%' : '—') + '</span></td>'
-      + '<td><span class="tag tag-' + s.estado.toLowerCase() + '">' + s.estado + '</span></td>'
-      + '<td style="font-size:0.78rem;">' + (s.tecnico_asignado||'—') + '</td>'
+      + '<td><span class="tag tag-' + s.estado.toLowerCase() + '">' + escH(s.estado) + '</span></td>'
+      + '<td style="font-size:0.78rem;">' + escH(s.tecnico_asignado||'—') + '</td>'
       + '<td style="font-size:0.72rem;color:#bbb;white-space:nowrap;">' + fecha + '</td>'
-      + '<td>'
-      + (s.estado === 'PENDIENTE'
-        ? (localStorage.getItem('css_rol')==='staffer' ? '<button class="btn btn-sm btn-primary" onclick="abrirAsignar(\'' + s.id + '\')">Asignar</button>' : '<span style="font-size:0.75rem;color:#888;">Pendiente</span>')
-        : '<button class="btn btn-sm" onclick="verDetalle(\'' + s.id + '\')">Ver</button>')
-      + '</td>'
+      + '<td>' + acciones + '</td>'
       + '</tr>';
   });
 
   html += '</tbody></table></div>';
   document.getElementById('tablaWrap').innerHTML = html;
+}
+
+// ── RECHAZO (staffer) / CANCELACIÓN (delegado) ─────────────────
+function abrirResolucion(id, estadoDestino) {
+  const s = solicitudes.find(x => x.id === id);
+  if (!s) return;
+  solicitudActual = s;
+  const esRechazo = estadoDestino === 'RECHAZADA';
+  document.getElementById('modalTitle').textContent = (esRechazo ? 'Rechazar' : 'Cancelar') + ' solicitud';
+  document.getElementById('modalBody').innerHTML =
+    '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.82rem;">'
+    + '<div style="font-weight:500;margin-bottom:4px;">' + escH(s.denominacion||'') + '</div>'
+    + '<div style="color:#888;">' + escH(s.cod_contrato||'') + ' · ' + escH(s.producto||'CSS') + ' · solicitada por ' + escH(s.delegado||'—') + '</div>'
+    + '</div>'
+    + '<div style="margin-bottom:1rem;">'
+    + '<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo ' + (esRechazo ? 'del rechazo' : 'de la cancelación') + ' *</label>'
+    + '<textarea id="motivoResolucion" style="width:100%;min-height:90px;padding:0.6rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.85rem;resize:vertical;" placeholder="' + (esRechazo ? 'ej. Solicitud duplicada de la obra X / no procede porque...' : 'ej. La obra finalmente no se ejecuta / se creó por error...') + '"></textarea>'
+    + '</div>'
+    + '<div id="resolucionStatus"></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button class="btn" onclick="closeModal()">Volver</button>'
+    + '<button class="btn btn-danger" id="btnResolucion" onclick="confirmarResolucion(\'' + estadoDestino + '\')">' + (esRechazo ? 'Rechazar solicitud' : 'Cancelar solicitud') + '</button>'
+    + '</div>';
+  document.getElementById('modalAsignar').classList.add('open');
+}
+
+async function confirmarResolucion(estadoDestino) {
+  const motivo = document.getElementById('motivoResolucion').value.trim();
+  if (!motivo) {
+    document.getElementById('resolucionStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">El motivo es obligatorio.</div>';
+    return;
+  }
+  const btn = document.getElementById('btnResolucion');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  const quien = (localStorage.getItem('css_ms_email') || localStorage.getItem('css_rol') || '').toLowerCase();
+  const res = await fetch(SUPABASE_URL + '/rest/v1/solicitudes?id=eq.' + solicitudActual.id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      estado: estadoDestino,
+      motivo_rechazo: motivo,
+      resuelto_por: quien,
+      fecha_resolucion: new Date().toISOString()
+    })
+  });
+  if (res.ok) {
+    closeModal();
+    await init();
+  } else {
+    btn.disabled = false; btn.textContent = estadoDestino === 'RECHAZADA' ? 'Rechazar solicitud' : 'Cancelar solicitud';
+    document.getElementById('resolucionStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar. ¿Ejecutaste el ALTER TABLE de las columnas nuevas?</div>';
+  }
 }
 
 function getTecnicosConCarga(territorio) {
@@ -251,8 +324,8 @@ function abrirAsignar(id) {
   const tecnicos = getTecnicosConCarga(solicitudActual.territorio);
 
   let html = '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
-    + '<div style="font-weight:500;margin-bottom:4px;">' + (solicitudActual.denominacion||'') + '</div>'
-    + '<div style="color:#888;">' + (solicitudActual.cod_contrato||'') + ' · ' + (solicitudActual.territorio||'') + ' · Carga: <strong>' + (cargaNueva||'—') + '%</strong></div>'
+    + '<div style="font-weight:500;margin-bottom:4px;">' + escH(solicitudActual.denominacion||'') + '</div>'
+    + '<div style="color:#888;">' + escH(solicitudActual.cod_contrato||'') + ' · ' + escH(solicitudActual.producto||'CSS') + ' · ' + escH(solicitudActual.territorio||'') + ' · Carga: <strong>' + (cargaNueva||'—') + '%</strong></div>'
     + '</div>';
 
   html += '<div class="card-title" style="margin-bottom:0.75rem;">Técnicos disponibles</div>';
@@ -266,7 +339,7 @@ function abrirAsignar(id) {
     html += '<div class="tech-option" id="opt_' + t.name.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.name.replace(/'/g,"\\'") + '\')">'
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-info">'
-      + '<div class="tech-name">' + t.name + '</div>'
+      + '<div class="tech-name">' + escH(t.name) + '</div>'
       + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
       + '<div class="bar-bg"><div class="bar-fill ' + barColor + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
       + '</div>'
@@ -312,17 +385,20 @@ async function confirmarAsignacion() {
   });
 
   if (res.ok) {
-    // Auto-create obra in obras table
+    // Auto-create obra in obras table (con producto y municipio de la solicitud)
     const obraPayload = {
       tecnico: tecnicoSeleccionado,
       email: obras.find(o => o.tecnico === tecnicoSeleccionado)?.email || '',
       cliente: solicitudActual.cliente || '',
       cod_contrato: solicitudActual.cod_contrato || '',
       cod_obra: 'SOL-' + solicitudActual.id.slice(0,8).toUpperCase(),
-      descripcion: solicitudActual.denominacion || '',
+      producto: solicitudActual.producto || 'CSS',
+      descripcion: (solicitudActual.denominacion || '').substring(0, 120),
       territorio: solicitudActual.territorio || '',
+      municipio: solicitudActual.municipio || null,
       estado: 'ACTIVA',
       fecha_inicio: solicitudActual.fecha_inicio || null,
+      plazo_meses: solicitudActual.plazo_meses || null,
       fecha_fin: null,
       carga_teorica_semanal: solicitudActual.carga_teorica_calculada || null
     };
@@ -345,6 +421,7 @@ async function confirmarAsignacion() {
       const asunto = 'Obra asignada — ' + (solicitudActual.denominacion||'');
       const cuerpo = 'Hola,\n\nTe confirmamos la asignacion de la siguiente obra:\n\n'
         + '* Obra: ' + (solicitudActual.denominacion||'') + '\n'
+        + '* Producto: ' + (solicitudActual.producto||'CSS') + '\n'
         + '* Contrato: ' + (solicitudActual.cod_contrato||'') + '\n'
         + '* Territorio: ' + (solicitudActual.territorio||'') + '\n'
         + '* Tecnico asignado: ' + tecnicoSeleccionado + '\n'
@@ -369,21 +446,24 @@ function verDetalle(id) {
   document.getElementById('modalTitle').textContent = s.denominacion || 'Detalle';
   const fecha = s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES') : '—';
   const fechaAsig = s.fecha_asignacion ? new Date(s.fecha_asignacion).toLocaleDateString('es-ES') : '—';
+  const fechaRes = s.fecha_resolucion ? new Date(s.fecha_resolucion).toLocaleDateString('es-ES') : null;
   document.getElementById('modalBody').innerHTML = '<div class="detail-grid">'
-    + '<div class="detail-item"><label>Contrato</label><span>' + (s.cod_contrato||'—') + '</span></div>'
-    + '<div class="detail-item"><label>Cliente</label><span>' + (s.cliente||'—') + '</span></div>'
-    + '<div class="detail-item"><label>Territorio</label><span>' + (s.territorio||'—') + '</span></div>'
-    + '<div class="detail-item"><label>Municipio</label><span>' + (s.municipio||'—') + '</span></div>'
-    + '<div class="detail-item"><label>Inicio</label><span>' + (s.fecha_inicio||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Producto</label><span>' + escH(s.producto||'CSS') + '</span></div>'
+    + '<div class="detail-item"><label>Contrato</label><span>' + escH(s.cod_contrato||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Cliente</label><span>' + escH(s.cliente||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Territorio</label><span>' + escH(s.territorio||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Municipio</label><span>' + escH(s.municipio||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Inicio</label><span>' + escH(s.fecha_inicio||'—') + '</span></div>'
     + '<div class="detail-item"><label>Plazo</label><span>' + (s.plazo_meses ? s.plazo_meses + ' meses' : '—') + '</span></div>'
     + '<div class="detail-item"><label>Visitas/semana</label><span>' + (s.visitas_semana||'—') + '</span></div>'
     + '<div class="detail-item"><label>Carga teórica</label><span>' + (s.carga_teorica_calculada ? s.carga_teorica_calculada + '%' : '—') + '</span></div>'
-    + '<div class="detail-item"><label>Prioridad</label><span>' + (s.prioridad||'—') + '</span></div>'
-    + '<div class="detail-item"><label>Estado</label><span>' + s.estado + '</span></div>'
-    + '<div class="detail-item"><label>Técnico asignado</label><span>' + (s.tecnico_asignado||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Prioridad</label><span>' + escH(s.prioridad||'—') + '</span></div>'
+    + '<div class="detail-item"><label>Estado</label><span>' + escH(s.estado) + '</span></div>'
+    + '<div class="detail-item"><label>Técnico asignado</label><span>' + escH(s.tecnico_asignado||'—') + '</span></div>'
     + '<div class="detail-item"><label>Fecha asignación</label><span>' + fechaAsig + '</span></div>'
     + '</div>'
-    + (s.observaciones ? '<div style="margin-top:0.75rem;"><label style="font-size:0.72rem;color:#aaa;text-transform:uppercase;">Observaciones</label><p style="font-size:0.875rem;margin-top:4px;">' + s.observaciones + '</p></div>' : '')
+    + (s.observaciones ? '<div style="margin-top:0.75rem;"><label style="font-size:0.72rem;color:#aaa;text-transform:uppercase;">Observaciones</label><p style="font-size:0.875rem;margin-top:4px;">' + escH(s.observaciones) + '</p></div>' : '')
+    + (s.motivo_rechazo ? '<div style="margin-top:0.75rem;background:#fcebeb;border-radius:8px;padding:0.75rem;"><label style="font-size:0.72rem;color:#a32d2d;text-transform:uppercase;">Motivo de ' + (s.estado === 'CANCELADA' ? 'cancelación' : 'rechazo') + (fechaRes ? ' (' + fechaRes + ')' : '') + '</label><p style="font-size:0.875rem;margin-top:4px;color:#a32d2d;">' + escH(s.motivo_rechazo) + '</p>' + (s.resuelto_por ? '<p style="font-size:0.72rem;color:#c07070;margin-top:4px;">por ' + escH(s.resuelto_por) + '</p>' : '') + '</div>' : '')
     + '<div style="margin-top:1.25rem;display:flex;justify-content:flex-end;"><button class="btn" onclick="closeModal()">Cerrar</button></div>';
   document.getElementById('modalAsignar').classList.add('open');
 }
