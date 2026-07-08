@@ -59,6 +59,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .nav { display: flex; gap: 4px; }
 .nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
 .nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+/* Modal respuestas técnico */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 92%; max-width: 720px; max-height: 88vh; overflow-y: auto; }
+.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; z-index: 1; }
+.modal-head h3 { font-size: 1rem; font-weight: 500; }
+.modal-body { padding: 1.5rem; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
+.tech-row.clickable { cursor: pointer; border-radius: 8px; }
+.tech-row.clickable:hover { background: #fafaf8; }
 </style>
 </head>
 <body>
@@ -126,6 +136,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
       <div class="card-title">Detalle de respuestas</div>
       <div id="detalleTabla" style="overflow-x:auto;"></div>
     </div>
+  </div>
+</div>
+
+<!-- Modal respuestas de técnico -->
+<div class="modal-bg" id="modalRespTecnico">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="rtTitulo">Respuestas</h3>
+        <div id="rtSub" style="font-size:0.75rem;color:#888;margin-top:3px;"></div>
+      </div>
+      <button class="close-btn" onclick="closeRespTecnicoModal()">✕</button>
+    </div>
+    <div class="modal-body" id="rtBody"></div>
   </div>
 </div>
 
@@ -236,7 +260,7 @@ function renderTechList(resp) {
       pctClass = isOver ? 'pct-over' : cargaReal > 70 ? 'pct-warn' : 'pct-ok';
     }
 
-    html += '<div class="tech-row">'
+    html += '<div class="tech-row clickable" title="Ver respuestas de la semana" data-t="' + t.replace(/"/g,'&quot;') + '" onclick="abrirRespTecnico(this.dataset.t)">'
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-info"><div class="tech-name">' + t + '</div>'
       + '<div class="tech-meta">' + obrasTec.length + ' obras · teórico: ' + Math.round(cargaTeorica) + '%</div></div>'
@@ -358,6 +382,62 @@ function renderDetalle(resp) {
   document.getElementById('detalleTabla').innerHTML = html;
 }
 
+function escH(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── MODAL: RESPUESTAS DE UN TÉCNICO (semana seleccionada) ──────
+function abrirRespTecnico(nombre) {
+  const f = getFilters();
+  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const resp = getFilteredResp().filter(r => r.tecnico === nombre && (!semana || r.semana_inicio === semana));
+  const obrasTec = obras.filter(o => o.tecnico === nombre);
+  const teorico = Math.round(obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0));
+  const real = resp.reduce((s, r) => s + calcCargaReal(r), 0);
+
+  document.getElementById('rtTitulo').textContent = nombre;
+  document.getElementById('rtSub').textContent = (semana ? 'Semana del ' + semana : 'Todas las semanas')
+    + ' · teórico ' + teorico + '% · real ' + real + '%';
+
+  // Obras encuestables sin respuesta esta semana
+  const encuestables = obrasTec.filter(o => ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
+  const respondidas = new Set(resp.map(r => r.cod_obra));
+  const sinResponder = encuestables.filter(o => !respondidas.has(o.cod_obra));
+
+  let html = '';
+  if (!resp.length) {
+    html += '<div class="no-data">Sin respuestas de ' + escH(nombre.split(' ')[0]) + ' en esta semana.</div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;"><thead><tr style="background:#f5f5f0;">'
+      + ['Nº Obra','Descripción','Rev.PSS','Anot.','Reun.','Anex.','Inf.','Actas','Carga'].map(h =>
+        '<th style="padding:6px 8px;text-align:left;font-weight:500;color:#888;font-size:0.7rem;text-transform:uppercase;border-bottom:0.5px solid #e0e0d8;">' + h + '</th>').join('')
+      + '</tr></thead><tbody>'
+      + resp.map(r => {
+        const carga = calcCargaReal(r);
+        const color = carga > 90 ? '#a32d2d' : carga > 70 ? '#854f0b' : '#0f6e56';
+        return '<tr style="border-bottom:0.5px solid #f0f0e8;">'
+          + '<td style="padding:5px 8px;"><span style="background:#eeeefa;color:#4a4a8a;padding:1px 6px;border-radius:10px;font-size:0.7rem;">' + escH(r.cod_obra) + '</span></td>'
+          + '<td style="padding:5px 8px;color:#666;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(r.desc_obra||'') + '">' + escH((r.desc_obra||'—').substring(0,60)) + '</td>'
+          + [r.revision_pss,r.anotaciones,r.reuniones,r.anexos,r.informes_mensuales,r.actas_visita].map(v =>
+            '<td style="padding:5px 8px;text-align:center;">' + (v||0) + '</td>').join('')
+          + '<td style="padding:5px 8px;text-align:center;font-weight:500;color:' + color + ';">' + carga + '%</td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table></div>';
+  }
+  if (sinResponder.length) {
+    html += '<div style="margin-top:1rem;font-size:0.78rem;color:#854f0b;background:#faeeda;border-radius:8px;padding:0.6rem 0.9rem;">'
+      + '⏳ Sin respuesta esta semana (' + sinResponder.length + '): '
+      + sinResponder.slice(0,10).map(o => escH(o.cod_obra)).join(', ')
+      + (sinResponder.length > 10 ? '…' : '')
+      + '</div>';
+  }
+  document.getElementById('rtBody').innerHTML = html;
+  document.getElementById('modalRespTecnico').classList.add('open');
+}
+
+function closeRespTecnicoModal() {
+  document.getElementById('modalRespTecnico').classList.remove('open');
+}
+
 function renderAll() {
   const resp = getFilteredResp();
   renderStats(resp);
@@ -377,6 +457,10 @@ async function init() {
 }
 
 init();
+
+document.getElementById('modalRespTecnico').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalRespTecnico')) closeRespTecnicoModal();
+});
 </script>
 </body>
 </html>
