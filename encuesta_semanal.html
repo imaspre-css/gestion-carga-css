@@ -353,7 +353,9 @@ window._loteEnvio = sel.map((t, idx) => ({
 nombre: t.name,
 email: t.email || '',
 asunto: 'Encuesta semanal obras – ' + t.name + ' – semana ' + ws,
-uri: uris[idx]
+uri: uris[idx],
+ws: ws,
+we: we
 }));
 const cabeceraMasivo = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:0.5px solid #e8e8e0;">'
 + '<button class="btn btn-success" id="btnEnviarTodos" onclick="enviarTodosDirecto()">⚡ Enviar directo a todos (' + window._loteEnvio.filter(x=>x.email).length + ')</button>'
@@ -362,11 +364,10 @@ const cabeceraMasivo = '<div style="display:flex;align-items:center;gap:10px;fle
 document.getElementById('modalEmailsBody').innerHTML = cabeceraMasivo + sel.map((t, idx) => {
 const uri = uris[idx];
 const body='Estimado/a '+t.name.split(' ')[0]+',\n\n'
-+'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+').\n\n'
-+'Para rellenar tu encuesta accede al siguiente enlace:\n\n'
++'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+'). Para rellenar tu encuesta accede al siguiente enlace:\n\n'
 +uri+'\n\n'
-+'El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas".\n\n'
-+'Gracias por tu colaboración.\n\nSaludos,\nDepartamento de Operaciones';
++'El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas". Gracias por tu colaboración.\n\n'
++'Saludos,';
 const asunto='Encuesta semanal obras – '+t.name+' – semana '+ws;
 const mailto='mailto:'+encodeURIComponent(t.email||'')+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(body);
 return '<div style="margin-bottom:2rem;padding-bottom:2rem;border-bottom:0.5px solid #f0f0e8;">'
@@ -535,7 +536,7 @@ try { msalInstance = new msal.PublicClientApplication(MSAL_CONFIG); } catch(e) {
 
 async function getGraphToken() {
 if (!msalInstance) throw new Error('MSAL no cargado');
-const request = { scopes: ['Mail.Send'] };
+const request = { scopes: ['Mail.Send', 'Mail.Send.Shared'] };
 let account = msalInstance.getAllAccounts()[0];
 if (!account) {
 const login = await msalInstance.loginPopup(request);
@@ -550,25 +551,27 @@ return popup.accessToken;
 }
 }
 
-function cuerpoEmailHTML(enlace) {
-return '<p>Estimado/a,</p>'
-+ '<p>Te enviamos la encuesta semanal de obras.</p>'
-+ '<p>Para rellenar tu encuesta pulsa el siguiente enlace:</p>'
+const REMITENTE_ENVIO = 'operaciones@imaspre.net';
+
+function cuerpoEmailHTML(nombre, ws, we, enlace) {
+return '<p>Estimado/a ' + (nombre||'').split(' ')[0] + ',</p>'
++ '<p>Te enviamos la encuesta semanal de obras (semana del ' + ws + ' al ' + we + '). Para rellenar tu encuesta accede al siguiente enlace:</p>'
 + '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
-+ '<p>El formulario ya tiene tus obras cargadas.</p>'
-+ '<p>Gracias por tu colaboración.<br>Departamento de Operaciones</p>';
++ '<p>El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas". Gracias por tu colaboración.</p>'
++ '<p>Saludos,</p>';
 }
 
-async function enviarConGraph(toEmail, asunto, enlace) {
+async function enviarConGraph(x) {
 const token = await getGraphToken();
 const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
 method: 'POST',
 headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
 body: JSON.stringify({
 message: {
-subject: asunto,
-body: { contentType: 'HTML', content: cuerpoEmailHTML(enlace) },
-toRecipients: [{ emailAddress: { address: toEmail } }]
+subject: x.asunto,
+from: { emailAddress: { address: REMITENTE_ENVIO } },
+body: { contentType: 'HTML', content: cuerpoEmailHTML(x.nombre, x.ws, x.we, x.uri) },
+toRecipients: [{ emailAddress: { address: x.email } }]
 }
 })
 });
@@ -581,7 +584,7 @@ if (!x || !x.email) { alert('Este técnico no tiene email.'); return; }
 btn.disabled = true;
 btn.textContent = '⏳ Enviando...';
 try {
-await enviarConGraph(x.email, x.asunto, x.uri);
+await enviarConGraph(x);
 btn.textContent = '✅ Enviado';
 btn.style.background = '#0f6e56';
 } catch(e) {
@@ -603,7 +606,7 @@ let ok = 0, fallos = [];
 for (let i = 0; i < conEmail.length; i++) {
 const x = conEmail[i];
 status.innerHTML = '⏳ Enviando ' + (i+1) + ' / ' + conEmail.length + ' — ' + escH(x.nombre) + '...';
-try { await enviarConGraph(x.email, x.asunto, x.uri); ok++; }
+try { await enviarConGraph(x); ok++; }
 catch(e) { fallos.push(x.nombre + ' (' + e.message.substring(0,60) + ')'); }
 }
 status.innerHTML = '<span style="color:#0f6e56;">✅ ' + ok + ' enviados</span>'
