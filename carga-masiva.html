@@ -216,6 +216,7 @@ function parsearObras(rows) {
       cod_contrato, cod_obra, producto,
       descripcion,
       municipio: norm(r.municipio) || null,
+      territorio: norm(r.territorio) || null,
       estado,
       fecha_inicio: fmtFecha(r.fecha_inicio),
       plazo_meses: r.plazo_meses != null && r.plazo_meses !== '' ? parseInt(r.plazo_meses) : null,
@@ -304,6 +305,7 @@ function validarCruces() {
   const contratosExcel = new Set(datos.contratos.map(c => c.cod_contrato));
   const tecEmails = new Map(datos.tecnicos.map(t => [t.nombre, t.email]));
   const tecCods = new Map(datos.tecnicos.filter(t => t.cod_empleado).map(t => [t.nombre, t.cod_empleado]));
+  const tecTerr = new Map(datos.tecnicos.filter(t => t.territorio).map(t => [t.nombre, t.territorio]));
 
   const contratosObras = new Set(datos.obras.map(o => o.cod_contrato));
   contratosObras.forEach(c => {
@@ -311,14 +313,16 @@ function validarCruces() {
   });
 
   // Propagar email y cod_empleado desde TECNICOS a las obras que no lo traigan
-  let propagadosEmail = 0, propagadosCod = 0;
+  let propagadosEmail = 0, propagadosCod = 0, propagadosTerr = 0;
   datos.obras.forEach(o => {
     if (!o.email && tecEmails.has(o.tecnico)) { o.email = tecEmails.get(o.tecnico); propagadosEmail++; }
     if (!o.cod_empleado && tecCods.has(o.tecnico)) { o.cod_empleado = tecCods.get(o.tecnico); propagadosCod++; }
+    if (!o.territorio && tecTerr.has(o.tecnico)) { o.territorio = tecTerr.get(o.tecnico); propagadosTerr++; }
     if (!o.email) avisos.push('Obra ' + escH(o.cod_obra) + ' (' + escH(o.tecnico) + '): sin email de técnico.');
   });
   if (propagadosEmail) avisos.push(propagadosEmail + ' obras heredaron el email desde la hoja TECNICOS.');
   if (propagadosCod) avisos.push(propagadosCod + ' obras heredaron el cod_empleado desde la hoja TECNICOS.');
+  if (propagadosTerr) avisos.push(propagadosTerr + ' obras heredaron el territorio desde la hoja TECNICOS.');
 
   // Técnicos en OBRAS que no están en TECNICOS
   if (datos.tecnicos.length) {
@@ -372,7 +376,7 @@ async function calcularImpacto() {
       fetch(SUPABASE_URL + '/rest/v1/contratos?select=cod_contrato', { headers: HB }).then(r => r.json()),
       fetch(SUPABASE_URL + '/rest/v1/usuarios?select=email', { headers: HB }).then(r => r.json())
     ]);
-    const kObras = new Set((Array.isArray(obrasBD) ? obrasBD : []).map(o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].map(v => v == null ? '' : String(v)).join('||')));
+    const kObras = new Set((Array.isArray(obrasBD) ? obrasBD : []).map(o => [o.cod_obra, o.cod_contrato, o.descripcion, o.tecnico].map(norm).join('||')));
     const kTec = new Set((Array.isArray(tecBD) ? tecBD : []).map(t => normEmail(t.email)));
     const kCon = new Set((Array.isArray(conBD) ? conBD : []).map(c => norm(c.cod_contrato)));
     const kUsr = new Set((Array.isArray(usrBD) ? usrBD : []).map(u => normEmail(u.email)));
