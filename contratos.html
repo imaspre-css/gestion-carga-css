@@ -321,7 +321,7 @@ function renderContratos() {
             + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
             + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
-            + (puedeEditar ? '<td><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '')
+            + (puedeEditar ? '<td style="white-space:nowrap;"><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> <button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '')
             + '</tr>';
         }).join('')
         + '</tbody></table></div>';
@@ -881,6 +881,67 @@ async function resolverPropuesta(id, aprobar) {
 }
 
 
+// ── RESPUESTAS DE ENCUESTA POR OBRA ────────────────────────────
+// Horas por actividad (baremo CSS canónico de la tabla productos)
+var HORAS_ACTIVIDAD = { revision_pss: 1, anotaciones: 0.25, reuniones: 3, anexos: 0.5, informes_mensuales: 0.75, actas_visita: 0.75 };
+
+function abrirRespuestasObraBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('roTitulo').textContent = 'Respuestas — ' + (o.cod_obra||'') ;
+  document.getElementById('roSub').innerHTML = escH((o.descripcion||'').substring(0,80)) + '<br><span style="color:#4a4a8a;">' + escH(o.tecnico||'—') + '</span> · ' + escH(o.cod_contrato||'');
+  document.getElementById('roBody').innerHTML = '<div style="text-align:center;padding:1.5rem;"><span class="spinner" style="margin:0;"></span></div>';
+  document.getElementById('modalRespuestasObra').classList.add('open');
+  cargarRespuestasObra(o);
+}
+
+async function cargarRespuestasObra(o) {
+  try {
+    const url = SUPABASE_URL + '/rest/v1/respuestas?tecnico=eq.' + encodeURIComponent(o.tecnico||'')
+      + '&cod_obra=eq.' + encodeURIComponent(o.cod_obra||'')
+      + '&order=semana_inicio.desc&limit=12';
+    const res = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+    const rows = await res.json();
+    const lista = Array.isArray(rows) ? rows : [];
+    if (!lista.length) {
+      document.getElementById('roBody').innerHTML = '<div class="empty" style="padding:1.5rem;">Sin respuestas registradas para esta obra y técnico.</div>';
+      return;
+    }
+    const horasDe = r => (
+      (r.revision_pss||0) * HORAS_ACTIVIDAD.revision_pss
+      + (r.anotaciones||0) * HORAS_ACTIVIDAD.anotaciones
+      + (r.reuniones||0) * HORAS_ACTIVIDAD.reuniones
+      + (r.anexos||0) * HORAS_ACTIVIDAD.anexos
+      + (r.informes_mensuales||0) * HORAS_ACTIVIDAD.informes_mensuales
+      + (r.actas_visita||0) * HORAS_ACTIVIDAD.actas_visita
+    );
+    document.getElementById('roBody').innerHTML =
+      '<div style="overflow-x:auto;"><table class="obras-table" style="min-width:640px;"><thead><tr>'
+      + '<th>Semana</th><th>Rev.PSS</th><th>Anot.</th><th>Reun.</th><th>Anex.</th><th>Inf.</th><th>Actas</th><th>≈ Horas</th>'
+      + '</tr></thead><tbody>'
+      + lista.map(r => '<tr>'
+        + '<td style="white-space:nowrap;font-weight:500;">' + escH(r.semana_inicio||'—') + '</td>'
+        + '<td>' + (r.revision_pss||0) + '</td>'
+        + '<td>' + (r.anotaciones||0) + '</td>'
+        + '<td>' + (r.reuniones||0) + '</td>'
+        + '<td>' + (r.anexos||0) + '</td>'
+        + '<td>' + (r.informes_mensuales||0) + '</td>'
+        + '<td>' + (r.actas_visita||0) + '</td>'
+        + '<td style="font-weight:500;color:#4a4a8a;">' + horasDe(r).toFixed(1) + 'h</td>'
+        + '</tr>').join('')
+      + '</tbody></table></div>'
+      + '<div style="font-size:0.72rem;color:#aaa;margin-top:0.5rem;">Últimas ' + lista.length + ' semanas · Horas estimadas con el baremo de actividades CSS.</div>';
+  } catch(e) {
+    document.getElementById('roBody').innerHTML = '<div class="empty" style="padding:1.5rem;color:#a32d2d;">Error al cargar: ' + escH(e.message) + '</div>';
+  }
+}
+
+function closeRespuestasObraModal() {
+  document.getElementById('modalRespuestasObra').classList.remove('open');
+}
+
 function abrirEditarObraBtn(event) {
   event.stopPropagation();
   const id = event.currentTarget.dataset.id;
@@ -957,6 +1018,10 @@ document.getElementById('modalEditarContrato').addEventListener('click', e => {
 
 document.getElementById('modalBaremo').addEventListener('click', e => {
   if (e.target === document.getElementById('modalBaremo')) closeBaremoModal();
+});
+
+document.getElementById('modalRespuestasObra').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalRespuestasObra')) closeRespuestasObraModal();
 });
 
 </script>
@@ -1112,6 +1177,20 @@ document.getElementById('modalBaremo').addEventListener('click', e => {
       <button class="close-btn" onclick="closeBaremoModal()">✕</button>
     </div>
     <div class="modal-body" id="baremoWizardWrap"></div>
+  </div>
+</div>
+
+<!-- Modal respuestas de obra -->
+<div class="modal-bg" id="modalRespuestasObra">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-head">
+      <div>
+        <h3 id="roTitulo">Respuestas</h3>
+        <div id="roSub" style="font-size:0.75rem;color:#888;margin-top:3px;line-height:1.5;"></div>
+      </div>
+      <button class="close-btn" onclick="closeRespuestasObraModal()">✕</button>
+    </div>
+    <div class="modal-body" id="roBody"></div>
   </div>
 </div>
 
