@@ -139,7 +139,7 @@ async function init() {
 
 let [obras, solicitudes, respuestas] = await Promise.all([
 
-fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico,carga_teorica_semanal,cod_contrato,cod_obra,estado&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/obras?select=id,tecnico,carga_teorica_semanal,cod_contrato,cod_obra,estado&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
 
 fetch(SUPABASE_URL + '/rest/v1/solicitudes?select=estado,prioridad,cod_contrato&limit=200', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
 
@@ -185,6 +185,22 @@ const alerts = [];
 if (urgentes > 0) alerts.push({ type: 'warn', text: urgentes + ' solicitud' + (urgentes>1?'es':'') + ' urgente' + (urgentes>1?'s':'') + ' pendiente' + (urgentes>1?'s':'') + ' de asignación', link: 'solicitudes.html', btn: 'Ver solicitudes' });
 
 if (conResp < tecnicos.length && ultimaSemana) alerts.push({ type: 'warn', text: (tecnicos.length - conResp) + ' técnico' + (tecnicos.length-conResp>1?'s':'') + ' sin responder la encuesta de la semana ' + ultimaSemana, link: 'dashboard.html', btn: 'Ver dashboard' });
+
+// Propuestas de cambio de fecha pendientes de revisión (solo delegado, filtradas a sus contratos)
+if (isDelegadoRol) {
+  try {
+    const idsObra = new Set(obras.map(o => o.id));
+    const rp = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio?select=id,obra_id&estado=eq.PENDIENTE', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    let propuestas = await rp.json();
+    if (!Array.isArray(propuestas)) propuestas = [];
+    const propuestasMias = propuestas.filter(p => idsObra.has(p.obra_id));
+    if (propuestasMias.length > 0) {
+      alerts.push({ type: 'warn', text: propuestasMias.length + ' propuesta' + (propuestasMias.length>1?'s':'') + ' de cambio de fecha pendiente' + (propuestasMias.length>1?'s':'') + ' de tu revisión', link: 'contratos.html', btn: 'Revisar propuestas' });
+    }
+  } catch(e) {}
+}
 
 if (alerts.length === 0) alerts.push({ type: 'ok', text: '✅ Todo en orden — sin alertas pendientes', link: null });
 
