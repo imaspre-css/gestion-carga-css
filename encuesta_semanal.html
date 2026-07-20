@@ -270,7 +270,7 @@ if (!tec) return;
 if (!map[tec]) map[tec] = { name: tec, email: emailCanonico[tec] || o.email || '', obras: [] };
 if (!map[tec].email && (emailCanonico[tec] || o.email)) map[tec].email = emailCanonico[tec] || o.email;
 if (!map[tec].obras.find(x => x.num === o.cod_obra)) {
-map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'' });
+map[tec].obras.push({ num: o.cod_obra, desc: o.descripcion||'', cliente: o.cliente||'', cod_contrato: o.cod_contrato||'', territorio: o.territorio||'', producto: o.producto||'CSS' });
 }
 });
 tecData = Object.values(map).filter(t => t.obras.length > 0).sort((a,b) => a.name.localeCompare(b.name));
