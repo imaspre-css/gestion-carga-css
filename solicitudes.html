@@ -298,37 +298,69 @@ async function confirmarResolucion(estadoDestino) {
   }
 }
 
-function getTecnicosConCarga(territorio) {
+async function getPoolContrato(codContrato) {
+  if (!codContrato) return [];
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(codContrato) + '&select=tecnicos_preseleccionados', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await res.json();
+    return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? rows[0].tecnicos_preseleccionados : [];
+  } catch(e) { return []; }
+}
+
+function getTecnicosConCarga(territorio, poolEmails) {
   let tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
-  if (territorio) {
+  let origen = 'todos';
+
+  // Prioridad 1: preseleccionados del contrato (por email)
+  if (poolEmails && poolEmails.length) {
+    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
+    const tecsPool = [...new Set(obras.filter(o => poolLower.includes((o.email||'').toLowerCase())).map(o => o.tecnico))];
+    if (tecsPool.length > 0) { tecnicos = tecsPool.sort(); origen = 'pool'; }
+  }
+
+  // Prioridad 2: técnicos con obras en el territorio (si no hubo pool)
+  if (origen === 'todos' && territorio) {
     const tUpper = territorio.toUpperCase();
     const tecsFiltrados = [...new Set(obras.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))];
-    if (tecsFiltrados.length > 0) tecnicos = tecsFiltrados.sort();
+    if (tecsFiltrados.length > 0) { tecnicos = tecsFiltrados.sort(); origen = 'territorio'; }
   }
-  return tecnicos.map(t => {
+
+  const lista = tecnicos.map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
     const email = obrasTec[0]?.email || '';
     return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
   });
+  return { lista, origen };
 }
 
-function abrirAsignar(id) {
+async function abrirAsignar(id) {
   solicitudActual = solicitudes.find(s => s.id === id);
   if (!solicitudActual) return;
   tecnicoSeleccionado = null;
 
   document.getElementById('modalTitle').textContent = 'Asignar técnico — ' + (solicitudActual.denominacion||'').substring(0, 40);
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando técnicos...</div>';
+  document.getElementById('modalAsignar').classList.add('open');
 
   const cargaNueva = solicitudActual.carga_teorica_calculada || 0;
-  const tecnicos = getTecnicosConCarga(solicitudActual.territorio);
+  const poolEmails = await getPoolContrato(solicitudActual.cod_contrato);
+  const { lista: tecnicos, origen } = getTecnicosConCarga(solicitudActual.territorio, poolEmails);
+
+  const origenLabel = origen === 'pool'
+    ? '<span style="color:#0f6e56;">⭐ Preseleccionados para este contrato</span>'
+    : origen === 'territorio'
+    ? '<span style="color:#185fa5;">📍 Técnicos con obras en ' + escH(solicitudActual.territorio||'') + '</span>'
+    : '<span style="color:#888;">Todos los técnicos</span>';
 
   let html = '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
     + '<div style="font-weight:500;margin-bottom:4px;">' + escH(solicitudActual.denominacion||'') + '</div>'
     + '<div style="color:#888;">' + escH(solicitudActual.cod_contrato||'') + ' · ' + escH(solicitudActual.producto||'CSS') + ' · ' + escH(solicitudActual.territorio||'') + ' · Carga: <strong>' + (cargaNueva||'—') + '%</strong></div>'
     + '</div>';
 
-  html += '<div class="card-title" style="margin-bottom:0.75rem;">Técnicos disponibles</div>';
+  html += '<div class="card-title" style="margin-bottom:0.75rem;">Técnicos disponibles — ' + origenLabel + '</div>';
   html += '<div class="tech-list" id="techList">';
 
   tecnicos.forEach(t => {
@@ -353,7 +385,6 @@ function abrirAsignar(id) {
     + '</div>';
 
   document.getElementById('modalBody').innerHTML = html;
-  document.getElementById('modalAsignar').classList.add('open');
 }
 
 function seleccionarTecnico(nombre) {
