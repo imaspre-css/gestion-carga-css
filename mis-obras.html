@@ -63,6 +63,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; }
 .modal-head h3 { font-size: 1rem; font-weight: 500; }
 .modal-body { padding: 1.5rem; }
+.prop-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0.6rem 0; border-bottom: 0.5px solid #f0f0e8; font-size: 0.82rem; flex-wrap: wrap; }
+.prop-row:last-child { border-bottom: none; }
+.prop-tag { font-size: 0.68rem; padding: 2px 9px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.prop-pendiente { background: #faeeda; color: #854f0b; }
+.prop-aprobada { background: #e1f5ee; color: #0f6e56; }
+.prop-rechazada { background: #fcebeb; color: #a32d2d; }
 .close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 </style>
@@ -91,6 +97,11 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 <div id="mainContent" style="display:none;">
 
 <div class="stats-row" id="statsRow"></div>
+
+<div class="card" id="propuestasCard" style="display:none;">
+<div class="card-title">📅 Tus propuestas de cambio de fecha</div>
+<div id="propuestasWrap"></div>
+</div>
 
 <div class="card">
 <div class="card-title">Mis obras</div>
@@ -216,6 +227,31 @@ document.getElementById('loadingDiv').style.display = 'none';
 document.getElementById('mainContent').style.display = 'block';
 renderStats();
 renderObras();
+cargarPropuestas();
+}
+
+async function cargarPropuestas() {
+if (!tecnicoNombre) return;
+try {
+const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio?tecnico=eq.' + encodeURIComponent(tecnicoNombre) + '&order=created_at.desc&limit=10', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+});
+const rows = await res.json();
+const propuestas = Array.isArray(rows) ? rows : [];
+if (!propuestas.length) return;
+document.getElementById('propuestasCard').style.display = 'block';
+document.getElementById('propuestasWrap').innerHTML = propuestas.map(p => {
+const o = obras.find(x => x.id === p.obra_id);
+const cod = o ? o.cod_obra : (p.obra_id||'').toString().slice(0,8);
+const estadoClass = p.estado === 'APROBADA' ? 'prop-aprobada' : p.estado === 'RECHAZADA' ? 'prop-rechazada' : 'prop-pendiente';
+const estadoTxt = p.estado === 'APROBADA' ? '✅ Aprobada' : p.estado === 'RECHAZADA' ? '✕ Rechazada' : '⏳ Pendiente';
+const fechaProp = p.valor_propuesto ? new Date(p.valor_propuesto).toLocaleDateString('es-ES') : '—';
+return '<div class="prop-row">'
++ '<span><span class="obra-cod" style="margin-right:6px;">' + (cod||'—') + '</span>Nueva fecha: <strong>' + fechaProp + '</strong></span>'
++ '<span class="prop-tag ' + estadoClass + '">' + estadoTxt + '</span>'
++ '</div>';
+}).join('');
+} catch(e) {}
 }
 
 init();
