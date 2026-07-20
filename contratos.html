@@ -204,6 +204,10 @@ var misContratos = [];
 try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
 var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;  
 var openContratos = new Set();
+var openGrupos = new Set();
+var nuevoCoordinadorSeleccionado = null;
+var vistasCoordinador = null;
+var origenActivoCoordinador = 'todos';
 
 // Show encuesta link for staffers
 if (isStaffer) {
@@ -325,24 +329,51 @@ function renderContratos() {
       if (!obrasFiltered.length) {
         obrasHTML = '<div class="obras-wrap open"><div class="empty" style="padding:1.5rem;">Este contrato aún no tiene obras. Se crearán al asignar sus solicitudes.</div></div>';
       } else {
-      obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
-        + '<th>Nº Obra</th><th>Producto</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
-        + '</tr></thead><tbody>'
-        + obrasFiltered.map(o => {
-          return '<tr>'
-            + '<td><span class="pill pill-blue">' + (o.cod_obra||'—') + '</span></td>'
-            + '<td><span class="pill" style="background:#eeeefa;color:#4a4a8a;">' + escH(o.producto||'CSS') + '</span></td>'
-            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(o.descripcion) + '">' + (o.descripcion||'—') + '</td>'
-            + '<td style="font-size:0.78rem;">' + (o.tecnico||'—') + '</td>'
-            + '<td style="font-size:0.78rem;">' + (o.territorio||'—') + '</td>'
-            + '<td style="font-size:0.78rem;">' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
-            + '<td style="font-size:0.78rem;">' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
-            + '<td style="font-weight:500;">' + (o.carga_teorica_semanal ? Math.round(parseFloat(o.carga_teorica_semanal)) + '%' : '—') + '</td>'
-            + '<td><span class="pill ' + getEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
-            + (puedeEditar ? '<td style="white-space:nowrap;"><button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> <button class="btn btn-sm" data-id="' + o.id + '" onclick="abrirEditarObraBtn(event)">✏️</button></td>' : '')
-            + '</tr>';
-        }).join('')
-        + '</tbody></table></div>';
+        const grupos = agruparPorObra(obrasFiltered);
+        const filas = [];
+        grupos.forEach(g => {
+          const first = g.rows[0];
+          const esGrupo = g.rows.length > 1;
+          const cargaTotal = g.rows.reduce((s,r) => s + (parseFloat(r.carga_teorica_semanal)||0), 0);
+          const abierto = openGrupos.has(g.key);
+          filas.push('<tr' + (esGrupo ? ' style="cursor:pointer;" onclick="toggleGrupo(\'' + g.key.replace(/'/g,"\\'") + '\')"' : '') + '>'
+            + '<td><span class="pill pill-blue">' + (first.cod_obra||'—') + '</span></td>'
+            + '<td><span class="pill" style="background:#eeeefa;color:#4a4a8a;">' + escH(first.producto||'CSS') + '</span></td>'
+            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(first.descripcion) + '">' + (first.descripcion||'—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (esGrupo ? '<span style="color:#4a4a8a;font-weight:500;">👥 ' + g.rows.length + ' técnicos ' + (abierto?'▲':'▼') + '</span>' : (first.tecnico||'—')) + '</td>'
+            + '<td style="font-size:0.78rem;">' + (first.territorio||'—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (first.fecha_inicio ? new Date(first.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
+            + '<td style="font-size:0.78rem;">' + (first.fecha_fin ? new Date(first.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
+            + '<td style="font-weight:500;">' + (cargaTotal ? Math.round(cargaTotal) + '%' : '—') + '</td>'
+            + '<td><span class="pill ' + getEstadoClass(first.estado) + '">' + (first.estado||'—') + '</span></td>'
+            + (puedeEditar ? '<td style="white-space:nowrap;" onclick="event.stopPropagation()">'
+                + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> ')
+                + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> ')
+                + '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirAnadirCoordinadorBtn(event)" title="Añadir coordinador">+👥</button>'
+                + '</td>' : '')
+            + '</tr>');
+          if (esGrupo && abierto) {
+            g.rows.forEach(r => {
+              filas.push('<tr style="background:#fafaf8;">'
+                + '<td></td><td></td>'
+                + '<td style="font-size:0.76rem;color:#888;padding-left:1.5rem;" title="' + escH(r.descripcion||'') + '">↳ ' + escH((r.descripcion||'').substring(0,40)) + '</td>'
+                + '<td style="font-size:0.78rem;font-weight:500;">' + (r.tecnico||'—') + '</td>'
+                + '<td style="font-size:0.78rem;">' + (r.territorio||'—') + '</td>'
+                + '<td></td><td></td>'
+                + '<td style="font-weight:500;">' + (r.carga_teorica_semanal ? Math.round(parseFloat(r.carga_teorica_semanal)) + '%' : '—') + '</td>'
+                + '<td><span class="pill ' + getEstadoClass(r.estado) + '">' + (r.estado||'—') + '</span></td>'
+                + (puedeEditar ? '<td style="white-space:nowrap;">'
+                    + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> '
+                    + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> '
+                    + '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + r.id + '" onclick="quitarCoordinadorBtn(event)" title="Quitar coordinador">✕</button>'
+                    + '</td>' : '')
+                + '</tr>');
+            });
+          }
+        });
+        obrasHTML = '<div class="obras-wrap open" style="overflow-x:auto;"><table class="obras-table" style="min-width:900px;"><thead><tr>'
+          + '<th>Nº Obra</th><th>Producto</th><th>Descripción</th><th>Técnico</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th><th>Estado</th>' + (puedeEditar ? '<th></th>' : '')
+          + '</tr></thead><tbody>' + filas.join('') + '</tbody></table></div>';
       }
     }
 
@@ -1011,13 +1042,30 @@ async function getPoolContrato(codContrato) {
   } catch(e) { return []; }
 }
 
-function construirFichaTecnico(nombres, excluirNombre) {
-  return nombres.filter(t => t !== excluirNombre).map(t => {
+function construirFichaTecnico(nombres, excluir) {
+  const excluirArr = Array.isArray(excluir) ? excluir : [excluir];
+  return nombres.filter(t => !excluirArr.includes(t)).map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
     const email = obrasTec[0]?.email || '';
     return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
   });
+}
+
+function agruparPorObra(lista) {
+  const map = new Map();
+  lista.forEach(o => {
+    const key = (o.cod_contrato||'') + '||' + (o.cod_obra||'');
+    if (!map.has(key)) map.set(key, { key, rows: [] });
+    map.get(key).rows.push(o);
+  });
+  return [...map.values()];
+}
+
+function toggleGrupo(key) {
+  if (openGrupos.has(key)) openGrupos.delete(key);
+  else openGrupos.add(key);
+  renderContratos();
 }
 
 async function abrirCambioTecnico() {
@@ -1109,6 +1157,195 @@ function cancelarCambioTecnico() {
   document.getElementById('btnCambiarTecnico').style.display = '';
 }
 
+// ── AÑADIR / QUITAR COORDINADOR (multicoordinador) ─────────────
+function abrirAnadirCoordinadorBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  abrirAnadirCoordinador(id);
+}
+
+async function abrirAnadirCoordinador(refId) {
+  const ref = obras.find(o => o.id === refId);
+  if (!ref) return;
+  const key = (ref.cod_contrato||'') + '||' + (ref.cod_obra||'');
+  const grupoActual = obras.filter(o => (o.cod_contrato||'') + '||' + (o.cod_obra||'') === key);
+  window._acGrupo = { key, refId };
+  nuevoCoordinadorSeleccionado = null;
+
+  document.getElementById('acTitulo').textContent = 'Añadir coordinador — ' + (ref.cod_obra||'');
+  document.getElementById('acSub').innerHTML = escH((ref.descripcion||'').substring(0,80)) + '<br>Coordinadores actuales: ' + grupoActual.map(o => escH(o.tecnico||'—')).join(', ');
+  document.getElementById('acPickerWrap').innerHTML = '<div style="text-align:center;padding:1rem;color:#888;font-size:0.82rem;">Cargando técnicos...</div>';
+  document.getElementById('acConfirmBtn').disabled = true;
+  document.getElementById('modalAnadirCoordinador').classList.add('open');
+
+  const nombresActuales = grupoActual.map(o => o.tecnico);
+  const poolEmails = await getPoolContrato(ref.cod_contrato);
+  const todosNombres = [...new Set(obras.map(x => x.tecnico))].sort();
+  let poolNombres = [];
+  if (poolEmails.length) {
+    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
+    poolNombres = [...new Set(obras.filter(x => poolLower.includes((x.email||'').toLowerCase())).map(x => x.tecnico))].sort();
+  }
+  let territorioNombres = [];
+  if (ref.territorio) {
+    const tUpper = ref.territorio.toUpperCase();
+    territorioNombres = [...new Set(obras.filter(x => (x.territorio||'').toUpperCase() === tUpper).map(x => x.tecnico))].sort();
+  }
+  vistasCoordinador = {
+    pool: construirFichaTecnico(poolNombres, nombresActuales),
+    territorio: construirFichaTecnico(territorioNombres, nombresActuales),
+    todos: construirFichaTecnico(todosNombres, nombresActuales)
+  };
+  origenActivoCoordinador = vistasCoordinador.pool.length ? 'pool' : vistasCoordinador.territorio.length ? 'territorio' : 'todos';
+  renderCoordinadorPicker();
+}
+
+function renderCoordinadorPicker() {
+  const vistas = vistasCoordinador;
+  const tabs = [
+    { key: 'pool', label: '⭐ Preseleccionados', n: vistas.pool.length },
+    { key: 'territorio', label: '📍 Territorio', n: vistas.territorio.length },
+    { key: 'todos', label: 'Todos', n: vistas.todos.length }
+  ];
+  let html = '<div class="origen-tabs">' + tabs.map(tb =>
+    '<span class="origen-tab' + (tb.key===origenActivoCoordinador?' active':'') + (tb.n===0?' disabled':'') + '" ' + (tb.n>0 ? 'onclick="cambiarOrigenCoordinador(\'' + tb.key + '\')"' : '') + '>' + tb.label + ' (' + tb.n + ')</span>'
+  ).join('') + '</div>';
+  html += '<div class="tech-list">';
+  const lista = vistas[origenActivoCoordinador] || [];
+  if (!lista.length) html += '<div style="text-align:center;padding:1rem;color:#bbb;font-size:0.82rem;">Sin técnicos en esta vista.</div>';
+  lista.forEach(t => {
+    const ini = t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const selected = nuevoCoordinadorSeleccionado === t.name ? ' selected' : '';
+    html += '<div class="tech-option' + selected + '" onclick="seleccionarNuevoCoordinador(\'' + t.name.replace(/'/g,"\\'") + '\',this)">'
+      + '<div class="avatar">' + ini + '</div>'
+      + '<div class="tech-info"><div class="tech-name">' + escH(t.name) + '</div>'
+      + '<div class="tech-meta">' + t.obras + ' obras · carga actual: ' + t.cargaTeorica + '%</div></div>'
+      + '</div>';
+  });
+  html += '</div>';
+  document.getElementById('acPickerWrap').innerHTML = html;
+}
+
+function cambiarOrigenCoordinador(key) {
+  origenActivoCoordinador = key;
+  renderCoordinadorPicker();
+}
+
+function seleccionarNuevoCoordinador(nombre, el) {
+  nuevoCoordinadorSeleccionado = nombre;
+  document.querySelectorAll('#acPickerWrap .tech-option').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('acConfirmBtn').disabled = false;
+}
+
+function closeAnadirCoordinadorModal() {
+  document.getElementById('modalAnadirCoordinador').classList.remove('open');
+}
+
+async function confirmarAnadirCoordinador() {
+  if (!nuevoCoordinadorSeleccionado || !window._acGrupo) return;
+  const ref = obras.find(o => o.id === window._acGrupo.refId);
+  if (!ref) return;
+  const btn = document.getElementById('acConfirmBtn');
+  btn.disabled = true; btn.textContent = '⏳ Añadiendo...';
+
+  const key = window._acGrupo.key;
+  const grupoActual = obras.filter(o => (o.cod_contrato||'') + '||' + (o.cod_obra||'') === key);
+  const totalCarga = grupoActual.reduce((s,o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
+  const nuevoCount = grupoActual.length + 1;
+  const share = nuevoCount ? Math.round((totalCarga / nuevoCount) * 10) / 10 : 0;
+
+  const tecInfo = tecnicosDB.find(t => t.nombre === nuevoCoordinadorSeleccionado);
+  const nuevoEmail = tecInfo ? tecInfo.email : (obras.find(o => o.tecnico === nuevoCoordinadorSeleccionado)?.email || null);
+
+  const nuevaObraPayload = {
+    tecnico: nuevoCoordinadorSeleccionado,
+    email: nuevoEmail,
+    cliente: ref.cliente || '',
+    cod_contrato: ref.cod_contrato || '',
+    cod_obra: ref.cod_obra || '',
+    producto: ref.producto || 'CSS',
+    descripcion: ref.descripcion || '',
+    municipio: ref.municipio || null,
+    territorio: ref.territorio || '',
+    estado: ref.estado || 'ACTIVA',
+    fecha_inicio: ref.fecha_inicio || null,
+    fecha_fin: ref.fecha_fin || null,
+    carga_teorica_semanal: share
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=representation' },
+    body: JSON.stringify(nuevaObraPayload)
+  });
+
+  if (!res.ok) {
+    btn.disabled = false; btn.textContent = 'Añadir coordinador';
+    alert('Error al añadir el coordinador. Inténtalo de nuevo.');
+    return;
+  }
+
+  const creado = await res.json();
+  const nuevaObra = Array.isArray(creado) ? creado[0] : creado;
+  if (nuevaObra && nuevaObra.id) obras.push(nuevaObra);
+
+  // Redistribuir la carga entre los coordinadores ya existentes
+  for (const o of grupoActual) {
+    await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + o.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify({ carga_teorica_semanal: share })
+    });
+    o.carga_teorica_semanal = share;
+  }
+
+  openGrupos.add(key);
+  closeAnadirCoordinadorModal();
+  btn.disabled = false; btn.textContent = 'Añadir coordinador';
+  showToast('Coordinador añadido — carga repartida al ' + share + '% cada uno');
+  renderStats();
+  renderContratos();
+}
+
+function quitarCoordinadorBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  quitarCoordinador(id);
+}
+
+async function quitarCoordinador(id) {
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  const key = (o.cod_contrato||'') + '||' + (o.cod_obra||'');
+  const grupoActual = obras.filter(x => (x.cod_contrato||'') + '||' + (x.cod_obra||'') === key);
+  if (grupoActual.length <= 1) { alert('No se puede quitar el último coordinador de la obra.'); return; }
+  if (!confirm('¿Quitar a ' + (o.tecnico||'este técnico') + ' de esta obra? Se eliminará su fila y se redistribuirá la carga entre el resto.')) return;
+
+  const totalCarga = grupoActual.reduce((s,x) => s + (parseFloat(x.carga_teorica_semanal)||0), 0);
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' }
+  });
+  if (!res.ok) { showToast('Error al quitar el coordinador'); return; }
+
+  obras = obras.filter(x => x.id !== id);
+  const restantes = obras.filter(x => (x.cod_contrato||'') + '||' + (x.cod_obra||'') === key);
+  const nuevoShare = restantes.length ? Math.round((totalCarga / restantes.length) * 10) / 10 : 0;
+  for (const r of restantes) {
+    await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + r.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify({ carga_teorica_semanal: nuevoShare })
+    });
+    r.carga_teorica_semanal = nuevoShare;
+  }
+  showToast('Coordinador eliminado — carga redistribuida al ' + nuevoShare + '%');
+  renderStats();
+  renderContratos();
+}
+
 async function guardarObra() {
   const id = document.getElementById('eId').value;
   const obraActual = obras.find(o => o.id === id);
@@ -1178,6 +1415,10 @@ document.getElementById('modalBaremo').addEventListener('click', e => {
 
 document.getElementById('modalRespuestasObra').addEventListener('click', e => {
   if (e.target === document.getElementById('modalRespuestasObra')) closeRespuestasObraModal();
+});
+
+document.getElementById('modalAnadirCoordinador').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalAnadirCoordinador')) closeAnadirCoordinadorModal();
 });
 
 </script>
@@ -1361,6 +1602,27 @@ document.getElementById('modalRespuestasObra').addEventListener('click', e => {
       <button class="close-btn" onclick="closeBaremoModal()">✕</button>
     </div>
     <div class="modal-body" id="baremoWizardWrap"></div>
+  </div>
+</div>
+
+<!-- Modal añadir coordinador -->
+<div class="modal-bg" id="modalAnadirCoordinador">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div>
+        <h3 id="acTitulo">Añadir coordinador</h3>
+        <div id="acSub" style="font-size:0.75rem;color:#888;margin-top:3px;line-height:1.5;"></div>
+      </div>
+      <button class="close-btn" onclick="closeAnadirCoordinadorModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="acPickerWrap"></div>
+      <div style="font-size:0.72rem;color:#aaa;margin-top:0.75rem;">La carga teórica de la obra se repartirá a partes iguales entre todos los coordinadores.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+        <button class="btn" onclick="closeAnadirCoordinadorModal()">Cancelar</button>
+        <button class="btn btn-primary" id="acConfirmBtn" onclick="confirmarAnadirCoordinador()" disabled>Añadir coordinador</button>
+      </div>
+    </div>
   </div>
 </div>
 
