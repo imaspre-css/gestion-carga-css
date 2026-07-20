@@ -1019,6 +1019,22 @@ function abrirEditarObra(event, id) {
   document.getElementById('tecnicoPickerWrap').innerHTML = '';
   document.getElementById('tecnicoPickerWrap').style.display = 'none';
   document.getElementById('btnCambiarTecnico').style.display = '';
+
+  // Si la obra tiene otros coordinadores, ofrecer aplicar los cambios compartidos a todos
+  const hermanos = obras.filter(x => x.id !== id && (x.cod_contrato||'') === (o.cod_contrato||'') && (x.cod_obra||'') === (o.cod_obra||''));
+  window._editHermanosIds = hermanos.map(x => x.id);
+  const grupoWrap = document.getElementById('eGrupoAviso');
+  if (hermanos.length) {
+    grupoWrap.style.display = '';
+    grupoWrap.innerHTML = '<label style="display:flex;align-items:flex-start;gap:8px;font-size:0.8rem;color:#185fa5;cursor:pointer;">'
+      + '<input type="checkbox" id="eAplicarGrupo" checked style="margin-top:2px;">'
+      + '<span>Esta obra tiene ' + hermanos.length + ' coordinador' + (hermanos.length!==1?'es':'') + ' más (' + hermanos.map(x=>escH(x.tecnico||'—')).join(', ') + '). Aplicar estos cambios (excepto técnico y carga) a todos ellos.</span>'
+      + '</label>';
+  } else {
+    grupoWrap.style.display = 'none';
+    grupoWrap.innerHTML = '';
+  }
+
   document.getElementById('modalEditarObra').classList.add('open');
 }
 
@@ -1349,7 +1365,7 @@ async function quitarCoordinador(id) {
 async function guardarObra() {
   const id = document.getElementById('eId').value;
   const obraActual = obras.find(o => o.id === id);
-  const payload = {
+  const camposCompartidos = {
     cod_obra: document.getElementById('eCodObra').value.trim(),
     producto: document.getElementById('eProducto').value,
     descripcion: document.getElementById('eDescripcion').value.trim(),
@@ -1358,11 +1374,13 @@ async function guardarObra() {
     territorio: document.getElementById('eTerritorio').value,
     fecha_inicio: document.getElementById('eFechaInicio').value || null,
     fecha_fin: document.getElementById('eFechaFin').value || null,
-    carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null,
     estado: document.getElementById('eEstado').value
   };
+  const payload = Object.assign({}, camposCompartidos, {
+    carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null
+  });
 
-  // Reasignación de técnico (si se seleccionó uno nuevo)
+  // Reasignación de técnico (si se seleccionó uno nuevo) — nunca se propaga a hermanos
   if (nuevoTecnicoSeleccionado && nuevoTecnicoSeleccionado !== (obraActual ? obraActual.tecnico : null)) {
     const tecnicoInfo = tecnicosDB.find(t => t.nombre === nuevoTecnicoSeleccionado);
     const confirmMsg = '¿Reasignar esta obra de "' + (obraActual.tecnico||'—') + '" a "' + nuevoTecnicoSeleccionado + '"?';
@@ -1384,17 +1402,40 @@ async function guardarObra() {
     body: JSON.stringify(payload)
   });
 
-  if (res.ok) {
-    // Update local data
-    const obra = obras.find(o => o.id === id);
-    if (obra) Object.assign(obra, payload);
-    closeEditModal();
-    showToast(payload.tecnico ? 'Obra actualizada y reasignada a ' + payload.tecnico : 'Obra actualizada correctamente');
-    renderStats();
-    renderContratos();
-  } else {
+  if (!res.ok) {
     document.getElementById('editStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar.</div>';
+    return;
   }
+
+  // Update local data
+  const obra = obras.find(o => o.id === id);
+  if (obra) Object.assign(obra, payload);
+
+  // Propagar campos compartidos a los demás coordinadores de la misma obra, si se marcó
+  const hermanosIds = window._editHermanosIds || [];
+  const aplicarGrupo = document.getElementById('eAplicarGrupo');
+  let propagados = 0;
+  if (hermanosIds.length && aplicarGrupo && aplicarGrupo.checked) {
+    for (const hid of hermanosIds) {
+      const hres = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + hid, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+        body: JSON.stringify(camposCompartidos)
+      });
+      if (hres.ok) {
+        const h = obras.find(x => x.id === hid);
+        if (h) Object.assign(h, camposCompartidos);
+        propagados++;
+      }
+    }
+  }
+
+  closeEditModal();
+  showToast(payload.tecnico
+    ? 'Obra actualizada y reasignada a ' + payload.tecnico
+    : (propagados ? 'Obra actualizada — cambios aplicados también a ' + propagados + ' coordinador' + (propagados!==1?'es':'') + ' más' : 'Obra actualizada correctamente'));
+  renderStats();
+  renderContratos();
 }
 
 document.getElementById('modalEditarObra').addEventListener('click', e => {
@@ -1441,6 +1482,8 @@ document.getElementById('modalAnadirCoordinador').addEventListener('click', e =>
         </div>
         <div id="tecnicoPickerWrap" style="display:none;margin-top:0.75rem;"></div>
       </div>
+
+      <div id="eGrupoAviso" style="display:none;background:#e6f1fb;border-radius:8px;padding:0.65rem 0.85rem;margin-bottom:1rem;"></div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
