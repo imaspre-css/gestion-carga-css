@@ -75,6 +75,11 @@ tr:hover td { background: #fafaf8; }
 .bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 4px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
 .bar-over { background: #e24b4a !important; }
+.origen-tabs { display: flex; gap: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.origen-tab { font-size: 0.75rem; padding: 4px 11px; border-radius: 20px; border: 0.5px solid #d0d0c8; background: #fff; color: #888; cursor: pointer; transition: all 0.15s; }
+.origen-tab:hover { background: #f5f5f0; }
+.origen-tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.origen-tab.disabled { color: #ccc; cursor: not-allowed; opacity: 0.6; }
 @media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr 1fr; } .detail-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -309,32 +314,42 @@ async function getPoolContrato(codContrato) {
   } catch(e) { return []; }
 }
 
-function getTecnicosConCarga(territorio, poolEmails) {
-  let tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
-  let origen = 'todos';
-
-  // Prioridad 1: preseleccionados del contrato (por email)
-  if (poolEmails && poolEmails.length) {
-    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
-    const tecsPool = [...new Set(obras.filter(o => poolLower.includes((o.email||'').toLowerCase())).map(o => o.tecnico))];
-    if (tecsPool.length > 0) { tecnicos = tecsPool.sort(); origen = 'pool'; }
-  }
-
-  // Prioridad 2: técnicos con obras en el territorio (si no hubo pool)
-  if (origen === 'todos' && territorio) {
-    const tUpper = territorio.toUpperCase();
-    const tecsFiltrados = [...new Set(obras.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))];
-    if (tecsFiltrados.length > 0) { tecnicos = tecsFiltrados.sort(); origen = 'territorio'; }
-  }
-
-  const lista = tecnicos.map(t => {
+function construirFicha(nombres) {
+  return nombres.map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
     const email = obrasTec[0]?.email || '';
     return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
   });
-  return { lista, origen };
 }
+
+function getVistasTecnicos(territorio, poolEmails) {
+  const todosNombres = [...new Set(obras.map(o => o.tecnico))].sort();
+
+  let poolNombres = [];
+  if (poolEmails && poolEmails.length) {
+    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
+    poolNombres = [...new Set(obras.filter(o => poolLower.includes((o.email||'').toLowerCase())).map(o => o.tecnico))].sort();
+  }
+
+  let territorioNombres = [];
+  if (territorio) {
+    const tUpper = territorio.toUpperCase();
+    territorioNombres = [...new Set(obras.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))].sort();
+  }
+
+  const vistas = {
+    pool: construirFicha(poolNombres),
+    territorio: construirFicha(territorioNombres),
+    todos: construirFicha(todosNombres)
+  };
+
+  const defecto = vistas.pool.length ? 'pool' : vistas.territorio.length ? 'territorio' : 'todos';
+  return { vistas, defecto };
+}
+
+var vistasActuales = null;
+var origenActivo = 'todos';
 
 async function abrirAsignar(id) {
   solicitudActual = solicitudes.find(s => s.id === id);
@@ -345,46 +360,67 @@ async function abrirAsignar(id) {
   document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando técnicos...</div>';
   document.getElementById('modalAsignar').classList.add('open');
 
-  const cargaNueva = solicitudActual.carga_teorica_calculada || 0;
   const poolEmails = await getPoolContrato(solicitudActual.cod_contrato);
-  const { lista: tecnicos, origen } = getTecnicosConCarga(solicitudActual.territorio, poolEmails);
+  const { vistas, defecto } = getVistasTecnicos(solicitudActual.territorio, poolEmails);
+  vistasActuales = vistas;
+  origenActivo = defecto;
 
-  const origenLabel = origen === 'pool'
-    ? '<span style="color:#0f6e56;">⭐ Preseleccionados para este contrato</span>'
-    : origen === 'territorio'
-    ? '<span style="color:#185fa5;">📍 Técnicos con obras en ' + escH(solicitudActual.territorio||'') + '</span>'
-    : '<span style="color:#888;">Todos los técnicos</span>';
+  renderModalAsignar();
+}
+
+function renderModalAsignar() {
+  const cargaNueva = solicitudActual.carga_teorica_calculada || 0;
+  const vistas = vistasActuales;
+
+  const tabs = [
+    { key: 'pool', label: '\u2b50 Preseleccionados', n: vistas.pool.length },
+    { key: 'territorio', label: '\ud83d\udccd ' + (solicitudActual.territorio || 'Territorio'), n: vistas.territorio.length },
+    { key: 'todos', label: 'Todos', n: vistas.todos.length }
+  ];
 
   let html = '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
     + '<div style="font-weight:500;margin-bottom:4px;">' + escH(solicitudActual.denominacion||'') + '</div>'
     + '<div style="color:#888;">' + escH(solicitudActual.cod_contrato||'') + ' · ' + escH(solicitudActual.producto||'CSS') + ' · ' + escH(solicitudActual.territorio||'') + ' · Carga: <strong>' + (cargaNueva||'—') + '%</strong></div>'
     + '</div>';
 
-  html += '<div class="card-title" style="margin-bottom:0.75rem;">Técnicos disponibles — ' + origenLabel + '</div>';
-  html += '<div class="tech-list" id="techList">';
+  html += '<div class="card-title" style="margin-bottom:0.5rem;">Técnicos disponibles</div>';
+  html += '<div class="origen-tabs">' + tabs.map(function(tb) {
+    return '<span class="origen-tab' + (tb.key===origenActivo?' active':'') + (tb.n===0?' disabled':'') + '" ' + (tb.n>0 ? 'onclick="cambiarOrigenTecnicos(\'' + tb.key + '\')"' : '') + '>' + tb.label + ' (' + tb.n + ')</span>';
+  }).join('') + '</div>';
 
+  html += '<div class="tech-list" id="techList">';
+  const tecnicos = vistas[origenActivo] || [];
+  if (!tecnicos.length) {
+    html += '<div style="text-align:center;padding:1.5rem;color:#bbb;font-size:0.85rem;">Sin técnicos en esta vista.</div>';
+  }
   tecnicos.forEach(t => {
     const ini = t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const cargaFinal = t.cargaTeorica + cargaNueva;
     const isOver = cargaFinal > 100;
     const barColor = isOver ? 'bar-over' : '';
-    html += '<div class="tech-option" id="opt_' + t.name.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.name.replace(/'/g,"\\'") + '\')">'
+    const selected = tecnicoSeleccionado === t.name ? ' selected' : '';
+    html += '<div class="tech-option' + selected + '" id="opt_' + t.name.replace(/\s/g,'_') + '" onclick="seleccionarTecnico(\'' + t.name.replace(/'/g,"\\'") + '\')">'
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-info">'
       + '<div class="tech-name">' + escH(t.name) + '</div>'
-      + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
+      + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% \u2192 con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
       + '<div class="bar-bg"><div class="bar-fill ' + barColor + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
       + '</div>'
-      + (isOver ? '<span style="font-size:0.7rem;color:#a32d2d;">⚠️ Sobrecarga</span>' : '')
+      + (isOver ? '<span style="font-size:0.7rem;color:#a32d2d;">\u26a0\ufe0f Sobrecarga</span>' : '')
       + '</div>';
   });
 
   html += '</div><div style="margin-top:1.25rem;display:flex;gap:8px;justify-content:flex-end;">'
     + '<button class="btn" onclick="closeModal()">Cancelar</button>'
-    + '<button class="btn btn-primary" id="btnConfirmar" onclick="confirmarAsignacion()" disabled>Confirmar asignación</button>'
+    + '<button class="btn btn-primary" id="btnConfirmar" onclick="confirmarAsignacion()"' + (tecnicoSeleccionado?'':' disabled') + '>Confirmar asignación</button>'
     + '</div>';
 
   document.getElementById('modalBody').innerHTML = html;
+}
+
+function cambiarOrigenTecnicos(key) {
+  origenActivo = key;
+  renderModalAsignar();
 }
 
 function seleccionarTecnico(nombre) {
