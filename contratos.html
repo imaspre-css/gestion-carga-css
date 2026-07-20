@@ -108,6 +108,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .baremo-preview td { padding: 4px 6px; border-bottom: 0.5px solid #e8e8e0; }
 .baremo-preview tr:last-child td { border-bottom: none; }
 .baremo-preview td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+
+/* Reasignación de técnico y pestañas de origen */
+.origen-tabs { display: flex; gap: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.origen-tab { font-size: 0.75rem; padding: 4px 11px; border-radius: 20px; border: 0.5px solid #d0d0c8; background: #fff; color: #888; cursor: pointer; transition: all 0.15s; }
+.origen-tab:hover { background: #f5f5f0; }
+.origen-tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.origen-tab.disabled { color: #ccc; cursor: not-allowed; opacity: 0.6; }
+.tech-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.tech-option { display: flex; align-items: center; gap: 10px; padding: 0.65rem; border: 0.5px solid #e8e8e0; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.tech-option:hover { border-color: #4a4a8a; background: #f8f8fe; }
+.tech-option.selected { border-color: #4a4a8a; background: #eeeefa; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 500; flex-shrink: 0; }
+.tech-info { flex: 1; }
+.tech-name { font-size: 0.82rem; font-weight: 500; }
+.tech-meta { font-size: 0.7rem; color: #aaa; margin-top: 1px; }
+.bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
+.bar-over { background: #e24b4a !important; }
 </style>
 </head>
 <body>
@@ -953,14 +971,23 @@ function abrirEditarObra(event, id) {
   const o = obras.find(x => x.id === id);
   if (!o) return;
   document.getElementById('eId').value = id;
+  document.getElementById('eCodObra').value = o.cod_obra || '';
+  document.getElementById('eProducto').value = o.producto || 'CSS';
   document.getElementById('eDescripcion').value = o.descripcion || '';
   document.getElementById('eCliente').value = o.cliente || '';
+  document.getElementById('eMunicipio').value = o.municipio || '';
   document.getElementById('eTerritorio').value = o.territorio || '';
   document.getElementById('eFechaInicio').value = o.fecha_inicio ? o.fecha_inicio.split('T')[0] : '';
   document.getElementById('eFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
   document.getElementById('eCarga').value = o.carga_teorica_semanal || '';
   document.getElementById('eEstado').value = o.estado || 'ACTIVA';
   document.getElementById('editStatus').innerHTML = '';
+  // Sección técnico: mostrar actual, cerrar el selector de reasignación si estaba abierto
+  nuevoTecnicoSeleccionado = null;
+  document.getElementById('tecnicoActualLabel').textContent = o.tecnico || '—';
+  document.getElementById('tecnicoPickerWrap').innerHTML = '';
+  document.getElementById('tecnicoPickerWrap').style.display = 'none';
+  document.getElementById('btnCambiarTecnico').style.display = '';
   document.getElementById('modalEditarObra').classList.add('open');
 }
 
@@ -968,17 +995,146 @@ function closeEditModal() {
   document.getElementById('modalEditarObra').classList.remove('open');
 }
 
+// ── REASIGNACIÓN DE TÉCNICO (dentro de Editar obra) ────────────
+var nuevoTecnicoSeleccionado = null;
+var vistasTecnicosObra = null;
+var origenActivoObra = 'todos';
+
+async function getPoolContrato(codContrato) {
+  if (!codContrato) return [];
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(codContrato) + '&select=tecnicos_preseleccionados', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    const rows = await res.json();
+    return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? rows[0].tecnicos_preseleccionados : [];
+  } catch(e) { return []; }
+}
+
+function construirFichaTecnico(nombres, excluirNombre) {
+  return nombres.filter(t => t !== excluirNombre).map(t => {
+    const obrasTec = obras.filter(o => o.tecnico === t);
+    const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
+    const email = obrasTec[0]?.email || '';
+    return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
+  });
+}
+
+async function abrirCambioTecnico() {
+  const id = document.getElementById('eId').value;
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('btnCambiarTecnico').style.display = 'none';
+  const wrap = document.getElementById('tecnicoPickerWrap');
+  wrap.style.display = '';
+  wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#888;font-size:0.82rem;">Cargando técnicos...</div>';
+
+  const poolEmails = await getPoolContrato(o.cod_contrato);
+  const todosNombres = [...new Set(obras.map(x => x.tecnico))].sort();
+  let poolNombres = [];
+  if (poolEmails.length) {
+    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
+    poolNombres = [...new Set(obras.filter(x => poolLower.includes((x.email||'').toLowerCase())).map(x => x.tecnico))].sort();
+  }
+  let territorioNombres = [];
+  if (o.territorio) {
+    const tUpper = o.territorio.toUpperCase();
+    territorioNombres = [...new Set(obras.filter(x => (x.territorio||'').toUpperCase() === tUpper).map(x => x.tecnico))].sort();
+  }
+  vistasTecnicosObra = {
+    pool: construirFichaTecnico(poolNombres, o.tecnico),
+    territorio: construirFichaTecnico(territorioNombres, o.tecnico),
+    todos: construirFichaTecnico(todosNombres, o.tecnico)
+  };
+  origenActivoObra = vistasTecnicosObra.pool.length ? 'pool' : vistasTecnicosObra.territorio.length ? 'territorio' : 'todos';
+  nuevoTecnicoSeleccionado = null;
+  renderTecnicoPicker(o);
+}
+
+function renderTecnicoPicker(o) {
+  const cargaObra = parseFloat(o.carga_teorica_semanal) || 0;
+  const vistas = vistasTecnicosObra;
+  const tabs = [
+    { key: 'pool', label: '⭐ Preseleccionados', n: vistas.pool.length },
+    { key: 'territorio', label: '📍 ' + (o.territorio || 'Territorio'), n: vistas.territorio.length },
+    { key: 'todos', label: 'Todos', n: vistas.todos.length }
+  ];
+  let html = '<div class="origen-tabs">' + tabs.map(tb =>
+    '<span class="origen-tab' + (tb.key===origenActivoObra?' active':'') + (tb.n===0?' disabled':'') + '" ' + (tb.n>0 ? 'onclick="cambiarOrigenTecnicoObra(\'' + tb.key + '\')"' : '') + '>' + tb.label + ' (' + tb.n + ')</span>'
+  ).join('') + '</div>';
+
+  html += '<div class="tech-list">';
+  const tecnicos = vistas[origenActivoObra] || [];
+  if (!tecnicos.length) html += '<div style="text-align:center;padding:1rem;color:#bbb;font-size:0.82rem;">Sin técnicos en esta vista.</div>';
+  tecnicos.forEach(t => {
+    const ini = t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const cargaFinal = t.cargaTeorica + cargaObra;
+    const isOver = cargaFinal > 100;
+    const selected = nuevoTecnicoSeleccionado === t.name ? ' selected' : '';
+    html += '<div class="tech-option' + selected + '" onclick="seleccionarNuevoTecnico(\'' + t.name.replace(/'/g,"\\'") + '\',this)">'
+      + '<div class="avatar">' + ini + '</div>'
+      + '<div class="tech-info">'
+      + '<div class="tech-name">' + escH(t.name) + '</div>'
+      + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
+      + '<div class="bar-bg"><div class="bar-fill' + (isOver?' bar-over':'') + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
+      + '</div>'
+      + (isOver ? '<span style="font-size:0.68rem;color:#a32d2d;">⚠️</span>' : '')
+      + '</div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;margin-top:0.75rem;">'
+    + '<button class="btn btn-sm" type="button" onclick="cancelarCambioTecnico()">Cancelar cambio</button>'
+    + '</div>';
+
+  document.getElementById('tecnicoPickerWrap').innerHTML = html;
+}
+
+function cambiarOrigenTecnicoObra(key) {
+  origenActivoObra = key;
+  const id = document.getElementById('eId').value;
+  const o = obras.find(x => x.id === id);
+  renderTecnicoPicker(o);
+}
+
+function seleccionarNuevoTecnico(nombre, el) {
+  nuevoTecnicoSeleccionado = nombre;
+  document.querySelectorAll('#tecnicoPickerWrap .tech-option').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function cancelarCambioTecnico() {
+  nuevoTecnicoSeleccionado = null;
+  document.getElementById('tecnicoPickerWrap').style.display = 'none';
+  document.getElementById('tecnicoPickerWrap').innerHTML = '';
+  document.getElementById('btnCambiarTecnico').style.display = '';
+}
+
 async function guardarObra() {
   const id = document.getElementById('eId').value;
+  const obraActual = obras.find(o => o.id === id);
   const payload = {
+    cod_obra: document.getElementById('eCodObra').value.trim(),
+    producto: document.getElementById('eProducto').value,
     descripcion: document.getElementById('eDescripcion').value.trim(),
     cliente: document.getElementById('eCliente').value.trim(),
+    municipio: document.getElementById('eMunicipio').value.trim() || null,
     territorio: document.getElementById('eTerritorio').value,
     fecha_inicio: document.getElementById('eFechaInicio').value || null,
     fecha_fin: document.getElementById('eFechaFin').value || null,
     carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null,
     estado: document.getElementById('eEstado').value
   };
+
+  // Reasignación de técnico (si se seleccionó uno nuevo)
+  if (nuevoTecnicoSeleccionado && nuevoTecnicoSeleccionado !== (obraActual ? obraActual.tecnico : null)) {
+    const tecnicoInfo = tecnicosDB.find(t => t.nombre === nuevoTecnicoSeleccionado);
+    const confirmMsg = '¿Reasignar esta obra de "' + (obraActual.tecnico||'—') + '" a "' + nuevoTecnicoSeleccionado + '"?';
+    if (!confirm(confirmMsg)) return;
+    payload.tecnico = nuevoTecnicoSeleccionado;
+    payload.email = tecnicoInfo ? tecnicoInfo.email : (obras.find(o => o.tecnico === nuevoTecnicoSeleccionado)?.email || null);
+    payload.reasignado_por = (localStorage.getItem('css_ms_email') || localStorage.getItem('css_rol') || '').toLowerCase();
+    payload.fecha_reasignacion = new Date().toISOString();
+  }
 
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
     method: 'PATCH',
@@ -996,7 +1152,7 @@ async function guardarObra() {
     const obra = obras.find(o => o.id === id);
     if (obra) Object.assign(obra, payload);
     closeEditModal();
-    showToast('Obra actualizada correctamente');
+    showToast(payload.tecnico ? 'Obra actualizada y reasignada a ' + payload.tecnico : 'Obra actualizada correctamente');
     renderStats();
     renderContratos();
   } else {
@@ -1028,14 +1184,37 @@ document.getElementById('modalRespuestasObra').addEventListener('click', e => {
 
 <!-- Modal editar obra -->
 <div class="modal-bg" id="modalEditarObra">
-  <div class="modal" style="max-width:580px;">
+  <div class="modal" style="max-width:600px;">
     <div class="modal-head">
       <h3>Editar obra</h3>
       <button class="close-btn" onclick="closeEditModal()">✕</button>
     </div>
     <div class="modal-body">
       <div id="editStatus"></div>
+
+      <div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+        <label style="font-size:0.72rem;color:#888;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px;">Técnico asignado</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span id="tecnicoActualLabel" style="font-weight:500;font-size:0.9rem;">—</span>
+          <button class="btn btn-sm" type="button" id="btnCambiarTecnico" onclick="abrirCambioTecnico()">🔄 Reasignar</button>
+        </div>
+        <div id="tecnicoPickerWrap" style="display:none;margin-top:0.75rem;"></div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Código de obra</label>
+          <input type="text" id="eCodObra" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Producto</label>
+          <select id="eProducto" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="CSS">CSS</option>
+            <option value="AUTOPROTECCION">Autoprotección</option>
+            <option value="CONSULTORIA">Consultoría</option>
+            <option value="CAE">CAE</option>
+          </select>
+        </div>
         <div style="grid-column:1/-1;">
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
           <input type="text" id="eDescripcion" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
@@ -1043,6 +1222,10 @@ document.getElementById('modalRespuestasObra').addEventListener('click', e => {
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
           <input type="text" id="eCliente" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Municipio</label>
+          <input type="text" id="eMunicipio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
         </div>
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
@@ -1076,6 +1259,7 @@ document.getElementById('modalRespuestasObra').addEventListener('click', e => {
           </select>
         </div>
       </div>
+      <div style="margin-top:0.75rem;font-size:0.7rem;color:#aaa;">El código de obra forma parte de la clave que la identifica junto al contrato, descripción y técnico. En obras multicoordinador es normal que varias filas compartan el mismo código.</div>
       <input type="hidden" id="eId">
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
         <button class="btn" onclick="closeEditModal()">Cancelar</button>
