@@ -121,11 +121,10 @@ input:checked + .slider:before { transform: translateX(16px); }
   <h1>👥 Técnicos</h1>
   <div class="nav">
     <a href="index.html">Inicio</a>
-    <a href="solicitudes.html">Solicitudes</a>
     <a href="dashboard.html">Dashboard</a>
     <a href="tecnicos.html" class="active">Técnicos</a>
     <a href="contratos.html">Contratos</a>
-    <a href="nueva-solicitud.html">+ Nueva solicitud</a>
+    <a href="nueva-solicitud.html">+ Nueva obra</a>
     <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
     <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
   </div>
@@ -669,8 +668,6 @@ async function init() {
   });
   renderTechGrid();
   renderTablaGestion();
-  const primero = [...new Set(obras.map(o => o.tecnico))].sort()[0];
-  if (primero) seleccionarTecnico(primero);
 }
 
 document.getElementById('modalTecnico').addEventListener('click', e => { if(e.target===document.getElementById('modalTecnico')) closeModal(); });
