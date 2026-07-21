@@ -139,6 +139,10 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
 </div>
 <div id="contratoStatus"></div>
 <div class="field">
+<label>Código de obra <span style="color:#aaa;">(opcional — se genera solo si lo dejas vacío)</span></label>
+<input type="text" id="fCodObra" placeholder="ej. 2647-030-24">
+</div>
+<div class="field">
 <label>Denominación de la obra *</label>
 <input type="text" id="fDenominacion" placeholder="Descripción de los trabajos">
 </div>
@@ -489,7 +493,7 @@ tecnico: tecnicoSeleccionado,
 email: email,
 cliente: cliente,
 cod_contrato: contrato,
-cod_obra: 'SOL-' + Date.now().toString(36).toUpperCase(),
+cod_obra: (document.getElementById('fCodObra').value.trim() || ('SOL-' + Date.now().toString(36).toUpperCase())),
 producto: producto,
 descripcion: denominacion.substring(0, 120),
 municipio: document.getElementById('fMunicipio').value || null,
