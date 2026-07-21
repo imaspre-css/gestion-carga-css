@@ -582,13 +582,14 @@ async function enviarConGraph(x) {
 const token = await getGraphToken();
 const nombrePila = (x.nombre||'').split(' ')[0];
 const tplUsado = x.tpl || MENSAJE_DEFECTO;
-const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+// Se envía directamente desde el buzón de operaciones@ (endpoint /users/{buzon}/sendMail),
+// no desde /me con un "from" simulado — así el enviado queda archivado en operaciones@, no en el tuyo.
+const res = await fetch('https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(REMITENTE_ENVIO) + '/sendMail', {
 method: 'POST',
 headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
 body: JSON.stringify({
 message: {
 subject: x.asunto,
-from: { emailAddress: { address: REMITENTE_ENVIO } },
 body: { contentType: 'HTML', content: cuerpoEmailHTML(tplUsado, nombrePila, x.ws, x.we, x.uri) },
 toRecipients: [{ emailAddress: { address: x.email } }]
 }
