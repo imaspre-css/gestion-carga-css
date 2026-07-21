@@ -132,6 +132,11 @@ if (rol !== 'staffer') { window.location.href = 'index.html'; }
 <label>Semana del</label><input type="date" id="weekStart">
 <label>al</label><input type="date" id="weekEnd">
 </div>
+<div style="margin-top:0.75rem;">
+<label style="font-size:0.82rem;color:#666;display:block;margin-bottom:4px;">Mensaje del envío <span style="color:#aaa;">(marcadores disponibles: {NOMBRE}, {SEMANA_INICIO}, {SEMANA_FIN}, {ENLACE})</span></label>
+<textarea id="mensajeTemplate" style="width:100%;min-height:150px;padding:0.6rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.82rem;font-family:monospace;resize:vertical;color:#1a1a1a;"></textarea>
+<button class="btn btn-sm" type="button" style="margin-top:6px;" onclick="restaurarMensajePorDefecto()">↺ Restaurar mensaje por defecto</button>
+</div>
 </div>
 <div class="card">
 <div class="card-title">👥 Técnicos con obras encuestables</div>
@@ -200,6 +205,20 @@ headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
 const rows = await r.json();
 (Array.isArray(rows) ? rows : []).forEach(x => respSemanaSupabase.add(x.tecnico));
 } catch(e) {}
+}
+
+var MENSAJE_DEFECTO = 'Estimado/a {NOMBRE},\n\nTe enviamos la encuesta semanal de obras (semana del {SEMANA_INICIO} al {SEMANA_FIN}). Para rellenar tu encuesta accede al siguiente enlace:\n\n{ENLACE}\n\nEl formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas". Gracias por tu colaboración.\n\nSaludos,\nDepartamento de Operaciones';
+
+function aplicarPlantillaBase(tpl, nombre, ws, we) {
+return tpl.replace(/\{NOMBRE\}/g, nombre).replace(/\{SEMANA_INICIO\}/g, ws).replace(/\{SEMANA_FIN\}/g, we);
+}
+
+function textoConEnlacePlano(tpl, nombre, ws, we, enlace) {
+return aplicarPlantillaBase(tpl, nombre, ws, we).replace(/\{ENLACE\}/g, enlace);
+}
+
+function restaurarMensajePorDefecto() {
+document.getElementById('mensajeTemplate').value = MENSAJE_DEFECTO;
 }
 
 const FORM_BASE_URL = 'https://imaspre-css.github.io/gestion-carga-css/encuesta.html';
@@ -319,6 +338,8 @@ return '<div class="tech-row">'
 }).join('');
 document.getElementById('selAll').checked=true;
 updateSelCount(); renderRespuestas();
+const mensajeEl = document.getElementById('mensajeTemplate');
+if (mensajeEl && !mensajeEl.value) mensajeEl.value = MENSAJE_DEFECTO;
 }
 
 function updateStats() {
@@ -346,6 +367,7 @@ const we=document.getElementById('weekEnd').value;
 const dest='';
 const sel=tecData.filter((_,i)=>document.getElementById('chk_'+i)?.checked);
 if (!sel.length) { alert('Selecciona al menos un técnico.'); return; }
+const tpl = (document.getElementById('mensajeTemplate').value || '').trim() || MENSAJE_DEFECTO;
 document.getElementById('modalEmailsBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Generando enlaces...</div>';
 document.getElementById('modalEmails').classList.add('open');
 const uris = await Promise.all(sel.map(t => buildDataURI(t, ws, we, dest)));
@@ -355,7 +377,8 @@ email: t.email || '',
 asunto: 'Encuesta semanal obras – ' + t.name + ' – semana ' + ws,
 uri: uris[idx],
 ws: ws,
-we: we
+we: we,
+tpl: tpl
 }));
 const cabeceraMasivo = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:0.5px solid #e8e8e0;">'
 + '<button class="btn btn-success" id="btnEnviarTodos" onclick="enviarTodosDirecto()">⚡ Enviar directo a todos (' + window._loteEnvio.filter(x=>x.email).length + ')</button>'
@@ -363,11 +386,7 @@ const cabeceraMasivo = '<div style="display:flex;align-items:center;gap:10px;fle
 + '</div>';
 document.getElementById('modalEmailsBody').innerHTML = cabeceraMasivo + sel.map((t, idx) => {
 const uri = uris[idx];
-const body='Estimado/a '+t.name.split(' ')[0]+',\n\n'
-+'Te enviamos la encuesta semanal de obras (semana del '+ws+' al '+we+'). Para rellenar tu encuesta accede al siguiente enlace:\n\n'
-+uri+'\n\n'
-+'El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas". Gracias por tu colaboración.\n\n'
-+'Saludos,\nDepartamento de Operaciones';
+const body = textoConEnlacePlano(tpl, t.name.split(' ')[0], ws, we, uri);
 const asunto='Encuesta semanal obras – '+t.name+' – semana '+ws;
 const mailto='mailto:'+encodeURIComponent(t.email||'')+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(body);
 return '<div style="margin-bottom:2rem;padding-bottom:2rem;border-bottom:0.5px solid #f0f0e8;">'
@@ -527,7 +546,7 @@ const MSAL_CONFIG = {
 auth: {
 clientId: '57ab0a98-8087-4167-816a-8252d8311e85',
 authority: 'https://login.microsoftonline.com/e55abdc2-666a-4057-a6e9-681e2220c6b4',
-redirectUri: 'https://imaspre-css.github.io/gestion-carga-css/login.html'
+redirectUri: window.location.origin + window.location.pathname
 },
 cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
 };
@@ -553,17 +572,16 @@ return popup.accessToken;
 
 const REMITENTE_ENVIO = 'operaciones@imaspre.net';
 
-function cuerpoEmailHTML(nombre, ws, we, enlace) {
-return '<p>Estimado/a ' + (nombre||'').split(' ')[0] + ',</p>'
-+ '<p>Te enviamos la encuesta semanal de obras (semana del ' + ws + ' al ' + we + '). Para rellenar tu encuesta accede al siguiente enlace:</p>'
-+ '<p><a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a></p>'
-+ '<p>El formulario ya tiene tus obras cargadas. Usa los botones + y - para introducir los datos y pulsa "Enviar respuestas". Gracias por tu colaboración.</p>'
-+ '<p>Saludos,</p>'
-+ '<p>Departamento de Operaciones</p>';
+function cuerpoEmailHTML(tpl, nombre, ws, we, enlace) {
+const botonHTML = '<a href="' + enlace + '" style="display:inline-block;padding:10px 20px;background:#1a1a2e;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;">Abrir encuesta</a>';
+const texto = aplicarPlantillaBase(tpl, nombre, ws, we).replace(/\{ENLACE\}/g, botonHTML);
+return texto.split(/\n\s*\n/).map(function(p){ return '<p>' + p.replace(/\n/g,'<br>') + '</p>'; }).join('');
 }
 
 async function enviarConGraph(x) {
 const token = await getGraphToken();
+const nombrePila = (x.nombre||'').split(' ')[0];
+const tplUsado = x.tpl || MENSAJE_DEFECTO;
 const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
 method: 'POST',
 headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -571,7 +589,7 @@ body: JSON.stringify({
 message: {
 subject: x.asunto,
 from: { emailAddress: { address: REMITENTE_ENVIO } },
-body: { contentType: 'HTML', content: cuerpoEmailHTML(x.nombre, x.ws, x.we, x.uri) },
+body: { contentType: 'HTML', content: cuerpoEmailHTML(tplUsado, nombrePila, x.ws, x.we, x.uri) },
 toRecipients: [{ emailAddress: { address: x.email } }]
 }
 })
