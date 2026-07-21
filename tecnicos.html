@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Técnicos — CSS</title>
+<script src="common.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -110,24 +111,13 @@ input:checked + .slider:before { transform: translateX(16px); }
 </head>
 <body>
 <script>
-(function() {
-  var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=tecnicos.html'; }
-})();
+cssRequireRole();
 </script>
 <div class="tooltip" id="tooltip"></div>
 
 <div class="header">
   <h1>👥 Técnicos</h1>
-  <div class="nav">
-    <a href="index.html">Inicio</a>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="tecnicos.html" class="active">Técnicos</a>
-    <a href="contratos.html">Contratos</a>
-    <a href="nueva-obra.html">+ Nueva obra</a>
-    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-    <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
-  </div>
+  <div class="nav" id="navContainer"></div>
 </div>
 
 <div class="container">
@@ -238,11 +228,13 @@ input:checked + .slider:before { transform: translateX(16px); }
 </div>
 
 <script>
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+// SUPABASE_URL y SUPABASE_KEY ahora viven en common.js (fuente única).
+// Se alias aquí para no tener que tocar las ~15 llamadas fetch de este archivo.
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var obras = [], tecnicosDB = [], tecSeleccionado = null;
-var isStaffer = localStorage.getItem('css_rol') === 'staffer';
+var isStaffer = cssEsStaffer();
 
 function getColor(pct) {
   if (!pct) return '#f0f0e8';
@@ -651,6 +643,7 @@ async function loadTecnicos() {
 }
 
 async function init() {
+  document.getElementById('navContainer').innerHTML = cssRenderNav('tecnicos.html');
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } });
   obras = await res.json();
   if (!Array.isArray(obras)) obras = [];
