@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nueva obra — CSS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; }
+.header a { color: #9090b0; font-size: 13px; text-decoration: none; }
+.header a:hover { color: #fff; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.container { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.field { margin-bottom: 0.75rem; }
+.field label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; color: #1a1a1a; background: #fff; }
+.field textarea { min-height: 80px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #4a4a8a; box-shadow: 0 0 0 2px rgba(74,74,138,0.1); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.field-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 0.5px solid #f5f5f0; }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-row label { font-size: 0.85rem; color: #333; }
+.toggle { position: relative; width: 36px; height: 20px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: #d0d0c8; border-radius: 20px; transition: 0.2s; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+input:checked + .slider { background: #4a4a8a; }
+input:checked + .slider:before { transform: translateX(16px); }
+.carga-box { background: #eeeefa; border-radius: 10px; padding: 1rem; text-align: center; margin-top: 0.75rem; }
+.carga-num { font-size: 2.5rem; font-weight: 500; color: #1a1a2e; }
+.carga-label { font-size: 0.72rem; color: #4a4a8a; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+.carga-detalle { font-size: 0.72rem; color: #888; margin-top: 6px; line-height: 1.6; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.btn-primary:hover { background: #2a2a4e; }
+.btn-primary:disabled { background: #888; cursor: not-allowed; }
+.btn-full { width: 100%; justify-content: center; }
+.notice { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+.notice-warn { background: #faeeda; color: #854f0b; border: 0.5px solid #fac775; }
+.notice-success { background: #e1f5ee; color: #0f6e56; border: 0.5px solid #9fe1cb; }
+.notice-info { background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; }
+.origen-tabs { display: flex; gap: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.origen-tab { font-size: 0.75rem; padding: 4px 11px; border-radius: 20px; border: 0.5px solid #d0d0c8; background: #fff; color: #888; cursor: pointer; transition: all 0.15s; }
+.origen-tab:hover { background: #f5f5f0; }
+.origen-tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.origen-tab.disabled { color: #ccc; cursor: not-allowed; opacity: 0.6; }
+.tech-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.tech-option { display: flex; align-items: center; gap: 10px; padding: 0.65rem; border: 0.5px solid #e8e8e0; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.tech-option:hover { border-color: #4a4a8a; background: #f8f8fe; }
+.tech-option.selected { border-color: #4a4a8a; background: #eeeefa; }
+.tech-info { flex: 1; }
+.tech-name { font-size: 0.85rem; font-weight: 500; }
+.tech-meta { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+.bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
+.bar-over { background: #e24b4a !important; }
+/* Wizard */
+.wizard { display: flex; flex-direction: column; height: 100%; }
+.wizard-progress { display: flex; gap: 4px; margin-bottom: 1.25rem; }
+.wp-step { flex: 1; height: 4px; border-radius: 2px; background: #e0e0d8; transition: background 0.3s; }
+.wp-step.active { background: #4a4a8a; }
+.wp-step.done { background: #1d9e75; }
+.wizard-phase { display: none; }
+.wizard-phase.active { display: block; }
+.phase-title { font-size: 0.9rem; font-weight: 500; color: #1a1a2e; margin-bottom: 0.25rem; }
+.phase-desc { font-size: 0.78rem; color: #888; margin-bottom: 1rem; line-height: 1.5; }
+.wfield { margin-bottom: 0.85rem; }
+.wfield label { font-size: 0.78rem; color: #555; display: block; margin-bottom: 4px; }
+.wfield input, .wfield select { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; }
+.wfield input:focus, .wfield select:focus { outline: none; border-color: #4a4a8a; }
+.wfield-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tipo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.75rem; }
+.tipo-card { border: 0.5px solid #e0e0d8; border-radius: 8px; padding: 0.75rem; cursor: pointer; transition: all 0.15s; }
+.tipo-card:hover { border-color: #4a4a8a; background: #f8f8fe; }
+.tipo-card.selected { border-color: #4a4a8a; background: #eeeefa; }
+.tipo-card-title { font-size: 0.82rem; font-weight: 500; margin-bottom: 2px; }
+.tipo-card-desc { font-size: 0.72rem; color: #888; }
+.baremo-preview { background: #f5f5f0; border-radius: 8px; padding: 0.9rem; font-size: 0.82rem; }
+.baremo-preview table { width: 100%; border-collapse: collapse; }
+.baremo-preview td { padding: 4px 6px; border-bottom: 0.5px solid #e8e8e0; }
+.baremo-preview tr:last-child td { border-bottom: none; }
+.baremo-preview td:last-child { text-align: right; font-weight: 500; color: #1a1a2e; }
+.wizard-nav { display: flex; justify-content: space-between; margin-top: 1.25rem; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+<script>
+(function() {
+var rol = localStorage.getItem('css_rol');
+if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
+})();
+</script>
+<script>
+if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMContentLoaded',function(){var e=document.getElementById('navEncuesta');if(e)e.style.display='';});}
+</script>
+
+<div class="header">
+<a href="contratos.html">← Contratos</a>
+<h1>Nueva obra</h1>
+<div class="nav">
+<a href="index.html">Inicio</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="tecnicos.html">Técnicos</a>
+<a href="contratos.html">Contratos</a>
+<a href="nueva-obra.html" class="active">+ Nueva obra</a>
+<a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
+<a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
+</div>
+</div>
+
+<div class="container">
+
+<!-- LEFT: Obra form -->
+<div>
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">📋 Datos de la obra</div>
+<div class="field">
+<label>Producto *</label>
+<select id="fProducto" onchange="onProductoChange()">
+<option value="CSS" selected>CSS — Coordinación de Seguridad y Salud</option>
+<option value="AUTOPROTECCION">Autoprotección</option>
+<option value="CONSULTORIA">Consultoría</option>
+<option value="CAE">CAE — Coordinación de Actividades Empresariales</option>
+</select>
+</div>
+<div class="field">
+<label>Contrato / Cliente *</label>
+<select id="fContrato" onchange="onContratoChange();actualizarPickerTecnico();">
+<option value="">Selecciona un contrato...</option>
+</select>
+</div>
+<div id="contratoStatus"></div>
+<div class="field">
+<label>Código de obra <span style="color:#aaa;">(opcional — se genera solo si lo dejas vacío)</span></label>
+<input type="text" id="fCodObra" placeholder="ej. 2647-030-24">
+</div>
+<div class="field">
+<label>Denominación de la obra *</label>
+<input type="text" id="fDenominacion" placeholder="Descripción de los trabajos">
+</div>
+<div class="field-row">
+<div class="field">
+<label>Municipio</label>
+<input type="text" id="fMunicipio" placeholder="Madrid">
+</div>
+<div class="field">
+<label>Territorio</label>
+<select id="fTerritorio" onchange="actualizarPickerTecnico()">
+<option value="">Selecciona...</option>
+<option>Centro</option><option>Este</option><option>Norte</option><option>Sur</option><option>Funcional</option>
+</select>
+</div>
+</div>
+<div class="field-row">
+<div class="field">
+<label>Fecha de inicio</label>
+<input type="date" id="fInicio">
+</div>
+<div class="field">
+<label>Plazo (meses)</label>
+<input type="number" id="fPlazo" placeholder="12" min="1">
+</div>
+</div>
+</div>
+
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">⚙️ Parámetros de la obra</div>
+<div id="paramsCSS">
+<div class="field-row">
+<div class="field">
+<label>Visitas / semana</label>
+<input type="number" id="fVisitas" value="1" min="0" max="7" oninput="calcularCarga();renderPickerTecnicoNueva();">
+</div>
+<div class="field">
+<label>Nº CSS</label>
+<input type="number" id="fNumCSS" value="1" min="1" oninput="calcularCarga();renderPickerTecnicoNueva();">
+</div>
+</div>
+<div class="toggle-row"><label>Nocturnidad</label><label class="toggle"><input type="checkbox" id="fNocturnidad" onchange="calcularCarga();renderPickerTecnicoNueva();"><span class="slider"></span></label></div>
+<div class="toggle-row"><label>MultiCSS</label><label class="toggle"><input type="checkbox" id="fMultiCSS" onchange="calcularCarga();renderPickerTecnicoNueva();"><span class="slider"></span></label></div>
+</div>
+<div class="field" style="margin-top:0.5rem;">
+<label>Prioridad</label>
+<select id="fPrioridad">
+<option value="MEDIA">Media</option>
+<option value="ALTA">Alta</option>
+<option value="URGENTE">Urgente</option>
+</select>
+</div>
+<div class="toggle-row"><label>Titulación requerida</label><label class="toggle"><input type="checkbox" id="fTitulacion"><span class="slider"></span></label></div>
+<div class="toggle-row"><label>Colegiación requerida</label><label class="toggle"><input type="checkbox" id="fColegiacion"><span class="slider"></span></label></div>
+<div class="field" style="margin-top:0.75rem;">
+<label>Experiencia mínima (años)</label>
+<input type="number" id="fExperiencia" value="0" min="0">
+</div>
+<div class="field">
+<label>Observaciones</label>
+<textarea id="fObservaciones" placeholder="Información adicional relevante..."></textarea>
+</div>
+</div>
+
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">📊 Carga teórica estimada</div>
+<div id="cargaBox"><div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div></div>
+<div class="field" id="cargaManualWrap" style="display:none;margin-top:0.5rem;">
+<label>Carga teórica semanal (%) — estimación manual</label>
+<input type="number" id="fCargaManual" min="0" max="100" step="1" placeholder="ej. 15" oninput="renderPickerTecnicoNueva()">
+</div>
+</div>
+
+<div class="card" style="margin-bottom:1.25rem;">
+<div class="card-title">👤 Técnico asignado</div>
+<div id="tecnicoPickerNueva"><div class="empty" style="padding:1rem;color:#bbb;font-size:0.82rem;">Selecciona un contrato para ver los técnicos disponibles.</div></div>
+</div>
+
+<button class="btn btn-primary btn-full" id="btnEnviar" onclick="enviarSolicitud()" disabled>✅ Crear obra y asignar técnico</button>
+<div id="envioStatus" style="margin-top:0.75rem;"></div>
+</div>
+
+<!-- RIGHT: Info de baremo (los baremos se gestionan en Contratos) -->
+<div class="card" id="wizardCard">
+<div class="card-title">⚙️ Baremo del contrato</div>
+<div id="baremoInfoWrap">
+<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">
+Selecciona un contrato.<br>Su baremo se cargará automáticamente.
+</div>
+</div>
+</div>
+
+</div>
+
+<script>
+var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+var baremoActual = null;
+var wizardPhase = 0;
+var wizardData = {};
+
+var isStaffer = localStorage.getItem('css_rol') === 'staffer';
+var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
+var misContratos = [];
+try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
+var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
+
+var tecnicoSeleccionado = null;
+var vistasTecnicosNueva = null;
+var origenActivoNueva = 'todos';
+var tecnicosDBGlobal = [];
+
+// ── PRODUCTO ──────────────────────────────────────────────────
+function onProductoChange() {
+const esCSS = document.getElementById('fProducto').value === 'CSS';
+document.getElementById('paramsCSS').style.display = esCSS ? '' : 'none';
+document.getElementById('cargaManualWrap').style.display = esCSS ? 'none' : '';
+document.getElementById('cargaBox').style.display = esCSS ? '' : 'none';
+document.getElementById('wizardCard').style.display = esCSS ? '' : 'none';
+if (esCSS) {
+// CSS requiere contrato con baremo configurado
+document.getElementById('btnEnviar').disabled = !baremoActual;
+if (baremoActual) calcularCarga();
+} else {
+// Otros productos: basta con tener contrato seleccionado (carga manual)
+document.getElementById('btnEnviar').disabled = !document.getElementById('fContrato').value;
+}
+}
+
+// ── LOAD CONTRATOS ────────────────────────────────────────────
+async function loadContratos() {
+const [rc, ro, rt] = await Promise.all([
+fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/obras?select=cod_contrato,cliente,tecnico,email,carga_teorica_semanal,territorio&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,email,activo&order=nombre', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+]);
+let contratos = Array.isArray(rc) ? rc : [];
+window._obrasGlobal = Array.isArray(ro) ? ro : [];
+tecnicosDBGlobal = (Array.isArray(rt) ? rt : []).filter(t => t.activo !== false);
+if (filtrarPorContrato) contratos = contratos.filter(c => misContratos.includes(c.cod_contrato));
+let obras = window._obrasGlobal;
+if (filtrarPorContrato) obras = obras.filter(o => misContratos.includes(o.cod_contrato));
+// Unir: contratos de la tabla + los que solo existen en obras (por si falta alguno), respetando el filtro del delegado
+const mapa = new Map();
+contratos.forEach(c => mapa.set(c.cod_contrato, { cod: c.cod_contrato, cliente: c.cliente||'', baremo: c.jornada_horas_mes != null ? c : null }));
+obras.forEach(o => { if (o.cod_contrato && !mapa.has(o.cod_contrato)) mapa.set(o.cod_contrato, { cod: o.cod_contrato, cliente: o.cliente||'', baremo: null }); });
+const lista = [...mapa.values()].sort((a,b) => a.cod.localeCompare(b.cod));
+window._contratosInfo = lista;
+const sel = document.getElementById('fContrato');
+sel.innerHTML = '<option value="">Selecciona un contrato...</option>';
+lista.forEach(c => {
+const op = document.createElement('option');
+op.value = c.cod;
+op.textContent = c.cod + (c.cliente ? ' — ' + c.cliente : '') + (c.baremo ? '' : ' (sin baremo)');
+sel.appendChild(op);
+});
+if (filtrarPorContrato && !lista.length) {
+sel.innerHTML = '<option value="">No tienes contratos asignados</option>';
+}
+}
+
+// ── ASIGNACIÓN DE TÉCNICO (pool contrato → territorio → todos) ────────
+async function getPoolContratoNueva(codContrato) {
+if (!codContrato) return [];
+try {
+const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(codContrato) + '&select=tecnicos_preseleccionados', {
+headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+});
+const rows = await res.json();
+return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? rows[0].tecnicos_preseleccionados : [];
+} catch(e) { return []; }
+}
+
+function construirFichaNueva(nombres) {
+const obrasG = window._obrasGlobal || [];
+return nombres.map(t => {
+const obrasTec = obrasG.filter(o => o.tecnico === t);
+const cargaTeorica = obrasTec.reduce((s,o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
+const email = obrasTec[0]?.email || (tecnicosDBGlobal.find(x => x.nombre === t)?.email) || '';
+return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
+});
+}
+
+async function actualizarPickerTecnico() {
+const cod = document.getElementById('fContrato').value;
+const territorio = document.getElementById('fTerritorio').value;
+tecnicoSeleccionado = null;
+document.getElementById('btnConfirmarSinTecnico') && (document.getElementById('btnConfirmarSinTecnico').style.display='');
+if (!cod) { document.getElementById('tecnicoPickerNueva').innerHTML = '<div class="empty" style="padding:1rem;color:#bbb;font-size:0.82rem;">Selecciona primero un contrato.</div>'; return; }
+document.getElementById('tecnicoPickerNueva').innerHTML = '<div style="text-align:center;padding:1rem;color:#888;font-size:0.82rem;">Cargando técnicos...</div>';
+
+const poolEmails = await getPoolContratoNueva(cod);
+const obrasG = window._obrasGlobal || [];
+const todosNombres = [...new Set(tecnicosDBGlobal.map(t => t.nombre))].sort();
+let poolNombres = [];
+if (poolEmails.length) {
+const poolLower = poolEmails.map(e => (e||'').toLowerCase());
+poolNombres = [...new Set(obrasG.filter(o => poolLower.includes((o.email||'').toLowerCase())).map(o => o.tecnico))].sort();
+if (!poolNombres.length) poolNombres = tecnicosDBGlobal.filter(t => poolLower.includes((t.email||'').toLowerCase())).map(t => t.nombre).sort();
+}
+let territorioNombres = [];
+if (territorio) {
+const tUpper = territorio.toUpperCase();
+territorioNombres = [...new Set(obrasG.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))].sort();
+}
+vistasTecnicosNueva = {
+pool: construirFichaNueva(poolNombres),
+territorio: construirFichaNueva(territorioNombres),
+todos: construirFichaNueva(todosNombres)
+};
+origenActivoNueva = vistasTecnicosNueva.pool.length ? 'pool' : vistasTecnicosNueva.territorio.length ? 'territorio' : 'todos';
+renderPickerTecnicoNueva();
+}
+
+function renderPickerTecnicoNueva() {
+const cargaNueva = parseFloat(document.getElementById('fCargaManual')?.value) || (baremoActual && baremoActual._carga_calculada) || 0;
+const vistas = vistasTecnicosNueva;
+const tabs = [
+{ key: 'pool', label: '⭐ Preseleccionados', n: vistas.pool.length },
+{ key: 'territorio', label: '📍 Territorio', n: vistas.territorio.length },
+{ key: 'todos', label: 'Todos', n: vistas.todos.length }
+];
+let html = '<div class="origen-tabs">' + tabs.map(tb =>
+'<span class="origen-tab' + (tb.key===origenActivoNueva?' active':'') + (tb.n===0?' disabled':'') + '" ' + (tb.n>0 ? 'onclick="cambiarOrigenNueva(\'' + tb.key + '\')"' : '') + '>' + tb.label + ' (' + tb.n + ')</span>'
+).join('') + '</div>';
+html += '<div class="tech-list">';
+const lista = vistas[origenActivoNueva] || [];
+if (!lista.length) html += '<div style="text-align:center;padding:1rem;color:#bbb;font-size:0.82rem;">Sin técnicos en esta vista.</div>';
+lista.forEach(t => {
+const ini = t.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+const cargaFinal = t.cargaTeorica + cargaNueva;
+const isOver = cargaFinal > 100;
+const selected = tecnicoSeleccionado === t.name ? ' selected' : '';
+html += '<div class="tech-option' + selected + '" onclick="seleccionarTecnicoNueva(\'' + t.name.replace(/'/g,"\\'") + '\',this)">'
++ '<div class="avatar">' + ini + '</div>'
++ '<div class="tech-info"><div class="tech-name">' + t.name + '</div>'
++ '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
++ '<div class="bar-bg"><div class="bar-fill' + (isOver?' bar-over':'') + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
++ '</div>'
++ (isOver ? '<span style="font-size:0.7rem;color:#a32d2d;">⚠️</span>' : '')
++ '</div>';
+});
+html += '</div>';
+document.getElementById('tecnicoPickerNueva').innerHTML = html;
+}
+
+function cambiarOrigenNueva(key) { origenActivoNueva = key; renderPickerTecnicoNueva(); }
+
+function seleccionarTecnicoNueva(nombre, el) {
+tecnicoSeleccionado = nombre;
+document.querySelectorAll('#tecnicoPickerNueva .tech-option').forEach(x => x.classList.remove('selected'));
+el.classList.add('selected');
+document.getElementById('btnEnviar').disabled = false;
+}
+
+function infoContrato(cod) {
+return (window._contratosInfo || []).find(c => c.cod === cod) || null;
+}
+
+function onContratoChange() {
+const val = document.getElementById('fContrato').value;
+const status = document.getElementById('contratoStatus');
+const info = val ? infoContrato(val) : null;
+baremoActual = (info && info.baremo) ? info.baremo : null;
+document.getElementById('cargaBox').innerHTML = '<div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div>';
+if (!val) {
+status.innerHTML = '';
+document.getElementById('baremoInfoWrap').innerHTML = '<div style="text-align:center;padding:2rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato.<br>Su baremo se cargará automáticamente.</div>';
+onProductoChange();
+return;
+}
+if (baremoActual) {
+status.innerHTML = '<div class="notice notice-success">✅ Baremo cargado — ' + val + '</div>';
+mostrarBaremoInfo(baremoActual);
+calcularCarga();
+} else {
+status.innerHTML = '';
+mostrarBaremoInfo(null, val);
+}
+onProductoChange();
+}
+
+function mostrarBaremoInfo(b, codSinBaremo) {
+const wrap = document.getElementById('baremoInfoWrap');
+if (!b) {
+wrap.innerHTML = '<div class="notice notice-warn">⚠️ El contrato <strong>' + codSinBaremo + '</strong> no tiene baremo configurado.<br><br>'
++ 'El baremo es necesario para calcular la carga de las solicitudes <strong>CSS</strong>. Se configura desde la página de Contratos (botón ⚙️ del contrato).<br><br>'
++ '<a href="contratos.html" class="btn btn-primary" style="text-decoration:none;">Ir a Contratos</a></div>';
+return;
+}
+wrap.innerHTML =
+'<div class="notice notice-success" style="margin-bottom:0.75rem;">✅ Baremo configurado</div>'
++ '<div class="baremo-preview"><table>'
++ '<tr><td style="color:#888;">Desplazamiento</td><td>' + b.t_desplazamiento + 'h</td></tr>'
++ '<tr><td style="color:#888;">Visita</td><td>' + b.t_visita + 'h</td></tr>'
++ '<tr><td style="color:#888;">Acta</td><td>' + b.t_acta + 'h</td></tr>'
++ '<tr><td style="color:#888;">Informe mensual</td><td>' + b.t_informe + 'h</td></tr>'
++ '<tr><td style="color:#888;">Reunión mensual</td><td>' + b.t_reunion + 'h</td></tr>'
++ '<tr><td style="color:#888;">Jornada</td><td>' + b.jornada_horas_mes + 'h/mes</td></tr>'
++ '</table></div>'
++ '<div style="margin-top:0.75rem;font-size:0.72rem;color:#888;">Los baremos se editan en la página de Contratos (botón ⚙️).</div>';
+}
+
+// ── CARGA TEÓRICA ─────────────────────────────────────────────
+function calcularCarga() {
+if (!baremoActual) return;
+const b = baremoActual;
+const visitas_semana = parseFloat(document.getElementById('fVisitas').value)||1;
+const visitas_mes = visitas_semana * 4;
+const num_css = parseInt(document.getElementById('fNumCSS').value)||1;
+const nocturnidad = document.getElementById('fNocturnidad').checked;
+const multi_css = document.getElementById('fMultiCSS').checked;
+const t_desp = nocturnidad ? b.t_desplazamiento * 1.5 : b.t_desplazamiento;
+let horas = ((t_desp*2) + b.t_visita + b.t_acta) * visitas_mes + b.t_informe + b.t_reunion;
+if (multi_css && num_css > 1) horas = horas / num_css;
+const pct = Math.round((horas / b.jornada_horas_mes) * 100);
+const color = pct > 90 ? '#a32d2d' : pct > 70 ? '#854f0b' : '#0f6e56';
+document.getElementById('cargaBox').innerHTML =
+'<div class="carga-box">'
++ '<div class="carga-num" style="color:' + color + ';">' + pct + '%</div>'
++ '<div class="carga-label">Carga teórica semanal estimada</div>'
++ '<div class="carga-detalle">' + horas.toFixed(1) + 'h/mes · ' + visitas_mes + ' visitas/mes'
++ (nocturnidad ? ' · nocturnidad +50%' : '')
++ (multi_css && num_css > 1 ? ' · MultiCSS ÷' + num_css : '')
++ '</div></div>';
+if (baremoActual) baremoActual._carga_calculada = pct;
+}
+
+// ── CREAR OBRA Y ASIGNAR TÉCNICO DIRECTAMENTE (sin tabla solicitudes) ──
+async function enviarSolicitud() {
+const contrato = document.getElementById('fContrato').value;
+const denominacion = document.getElementById('fDenominacion').value.trim();
+if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
+if (!tecnicoSeleccionado) { alert('Selecciona un técnico.'); return; }
+const btn = document.getElementById('btnEnviar');
+btn.disabled = true; btn.textContent = '⏳ Creando...';
+const producto = document.getElementById('fProducto').value;
+const cargaCalculada = producto === 'CSS'
+? (baremoActual?._carga_calculada||null)
+: (parseFloat(document.getElementById('fCargaManual').value)||null);
+const cliente = document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'';
+const tecInfo = tecnicosDBGlobal.find(t => t.nombre === tecnicoSeleccionado);
+const email = tecInfo ? tecInfo.email : ((window._obrasGlobal||[]).find(o => o.tecnico === tecnicoSeleccionado)?.email || null);
+
+const obraPayload = {
+tecnico: tecnicoSeleccionado,
+email: email,
+cliente: cliente,
+cod_contrato: contrato,
+cod_obra: (document.getElementById('fCodObra').value.trim() || ('SOL-' + Date.now().toString(36).toUpperCase())),
+producto: producto,
+descripcion: denominacion.substring(0, 120),
+municipio: document.getElementById('fMunicipio').value || null,
+territorio: document.getElementById('fTerritorio').value || null,
+estado: 'ACTIVA',
+fecha_inicio: document.getElementById('fInicio').value || null,
+plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
+fecha_fin: null,
+carga_teorica_semanal: cargaCalculada
+};
+
+const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+body: JSON.stringify(obraPayload)
+});
+
+if (res.ok) {
+document.getElementById('envioStatus').innerHTML = '<div class="notice notice-success">✅ Obra creada y asignada a ' + escHtmlLocal(tecnicoSeleccionado) + '.</div>';
+btn.textContent = '✅ Obra creada';
+} else {
+btn.disabled = false; btn.textContent = '✅ Crear obra y asignar técnico';
+const errTxt = await res.text();
+console.error('Error creando obra:', errTxt);
+document.getElementById('envioStatus').innerHTML = '<div class="notice" style="background:#fcebeb;color:#a32d2d;border:0.5px solid #f7c1c1;">❌ Error al crear la obra.</div>';
+}
+}
+
+function escHtmlLocal(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadContratos();
+</script>
+</body>
+</html>
