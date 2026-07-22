@@ -95,27 +95,14 @@ input:checked + .slider:before { transform: translateX(16px); }
 </style>
 </head>
 <body>
+<script src="common.js"></script>
 <script>
-(function() {
-var rol = localStorage.getItem('css_rol');
-if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
-})();
-</script>
-<script>
-if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMContentLoaded',function(){var e=document.getElementById('navEncuesta');if(e)e.style.display='';});}
+cssRequireRole(['staffer','delegado']);
 </script>
 
 <div class="header">
 <h1>➕ Nueva obra</h1>
-<div class="nav">
-<a href="index.html">Inicio</a>
-<a href="dashboard.html">Dashboard</a>
-<a href="tecnicos.html">Técnicos</a>
-<a href="contratos.html">Contratos</a>
-<a href="nueva-obra.html" class="active">+ Nueva obra</a>
-<a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-<a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
-</div>
+<div class="nav" id="navContainer"></div>
 </div>
 
 <div class="container">
@@ -218,12 +205,12 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
 </div>
 </div>
 
-<div class="card" style="margin-bottom:1.25rem;">
+<div class="card" style="margin-bottom:1.25rem;" id="cardTecnico">
 <div class="card-title">👤 Técnico asignado</div>
 <div id="tecnicoPickerNueva"><div class="empty" style="padding:1rem;color:#bbb;font-size:0.82rem;">Selecciona un contrato para ver los técnicos disponibles.</div></div>
 </div>
 
-<button class="btn btn-primary btn-full" id="btnEnviar" onclick="enviarSolicitud()" disabled>✅ Crear obra y asignar técnico</button>
+<button class="btn btn-primary btn-full" id="btnEnviar" onclick="enviarSolicitud()" disabled></button>
 <div id="envioStatus" style="margin-top:0.75rem;"></div>
 </div>
 
@@ -240,20 +227,31 @@ Selecciona un contrato.<br>Su baremo se cargará automáticamente.
 </div>
 
 <script>
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+// SUPABASE_URL/KEY y helpers de rol/permiso ahora vienen de common.js (fuente única)
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var baremoActual = null;
 var wizardPhase = 0;
 var wizardData = {};
 
-var isStaffer = localStorage.getItem('css_rol') === 'staffer';
-var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
-var misContratos = [];
-try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
-var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
+var isStaffer = cssEsStaffer();
+var isDelegadoRol = cssEsDelegado();
+var misContratos = cssGetContratos();
+var filtrarPorContrato = cssFiltraPorContrato();
 
 var tecnicoSeleccionado = null;
+
+// Delegado solicita (sin técnico); staffer crea y asigna directo, como hoy.
+function aplicarUIPorRol() {
+if (isDelegadoRol) {
+document.getElementById('cardTecnico').style.display = 'none';
+document.getElementById('btnEnviar').textContent = '📤 Enviar solicitud al staffer';
+} else {
+document.getElementById('btnEnviar').textContent = '✅ Crear obra y asignar técnico';
+}
+}
+aplicarUIPorRol();
 var vistasTecnicosNueva = null;
 var origenActivoNueva = 'todos';
 var tecnicosDBGlobal = [];
@@ -474,19 +472,51 @@ document.getElementById('cargaBox').innerHTML =
 if (baremoActual) baremoActual._carga_calculada = pct;
 }
 
-// ── CREAR OBRA Y ASIGNAR TÉCNICO DIRECTAMENTE (sin tabla solicitudes) ──
-async function enviarSolicitud() {
-const contrato = document.getElementById('fContrato').value;
-const denominacion = document.getElementById('fDenominacion').value.trim();
-if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
-if (!tecnicoSeleccionado) { alert('Selecciona un técnico.'); return; }
+// ── DELEGADO: crea una SOLICITUD (sin técnico) para que el staffer la asigne ──
+async function enviarComoSolicitud(contrato, denominacion, producto, cargaCalculada, cliente) {
 const btn = document.getElementById('btnEnviar');
-btn.disabled = true; btn.textContent = '⏳ Creando...';
-const producto = document.getElementById('fProducto').value;
-const cargaCalculada = producto === 'CSS'
-? (baremoActual?._carga_calculada||null)
-: (parseFloat(document.getElementById('fCargaManual').value)||null);
-const cliente = document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'';
+const payload = {
+delegado: cssGetEmail() || null,
+producto: producto,
+cod_contrato: contrato,
+cliente: cliente,
+denominacion: denominacion,
+municipio: document.getElementById('fMunicipio').value || null,
+territorio: document.getElementById('fTerritorio').value || null,
+fecha_inicio: document.getElementById('fInicio').value || null,
+plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
+visitas_semana: parseInt(document.getElementById('fVisitas').value) || 1,
+num_css: parseInt(document.getElementById('fNumCSS').value) || 1,
+nocturnidad: document.getElementById('fNocturnidad').checked,
+multi_css: document.getElementById('fMultiCSS').checked,
+titulacion_requerida: document.getElementById('fTitulacion').checked,
+colegiacion_requerida: document.getElementById('fColegiacion').checked,
+experiencia_anios: parseInt(document.getElementById('fExperiencia').value) || 0,
+prioridad: document.getElementById('fPrioridad').value,
+observaciones: document.getElementById('fObservaciones').value,
+carga_teorica_calculada: cargaCalculada,
+estado: 'PENDIENTE'
+};
+const res = await fetch(SUPABASE_URL + '/rest/v1/solicitudes', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+body: JSON.stringify(payload)
+});
+if (res.ok) {
+document.getElementById('envioStatus').innerHTML = '<div class="notice notice-success">✅ Solicitud enviada. El staffer la verá en Solicitudes.</div>';
+btn.textContent = '✅ Solicitud enviada';
+} else {
+btn.disabled = false; btn.textContent = '📤 Enviar solicitud al staffer';
+const errTxt = await res.text();
+console.error('Error creando solicitud:', errTxt);
+document.getElementById('envioStatus').innerHTML = '<div class="notice" style="background:#fcebeb;color:#a32d2d;border:0.5px solid #f7c1c1;">❌ Error al enviar la solicitud.</div>';
+}
+}
+
+// ── STAFFER: crea la obra y asigna técnico directamente (como hoy) ──
+async function enviarComoObraDirecta(contrato, denominacion, producto, cargaCalculada, cliente) {
+const btn = document.getElementById('btnEnviar');
+if (!tecnicoSeleccionado) { alert('Selecciona un técnico.'); btn.disabled = false; btn.textContent = '✅ Crear obra y asignar técnico'; return; }
 const tecInfo = tecnicosDBGlobal.find(t => t.nombre === tecnicoSeleccionado);
 const email = tecInfo ? tecInfo.email : ((window._obrasGlobal||[]).find(o => o.tecnico === tecnicoSeleccionado)?.email || null);
 
@@ -521,6 +551,26 @@ btn.disabled = false; btn.textContent = '✅ Crear obra y asignar técnico';
 const errTxt = await res.text();
 console.error('Error creando obra:', errTxt);
 document.getElementById('envioStatus').innerHTML = '<div class="notice" style="background:#fcebeb;color:#a32d2d;border:0.5px solid #f7c1c1;">❌ Error al crear la obra.</div>';
+}
+}
+
+// ── Punto de entrada del botón: bifurca según rol ──
+async function enviarSolicitud() {
+const contrato = document.getElementById('fContrato').value;
+const denominacion = document.getElementById('fDenominacion').value.trim();
+if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
+const btn = document.getElementById('btnEnviar');
+btn.disabled = true; btn.textContent = '⏳ Enviando...';
+const producto = document.getElementById('fProducto').value;
+const cargaCalculada = producto === 'CSS'
+? (baremoActual?._carga_calculada||null)
+: (parseFloat(document.getElementById('fCargaManual').value)||null);
+const cliente = document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'';
+
+if (isDelegadoRol) {
+await enviarComoSolicitud(contrato, denominacion, producto, cargaCalculada, cliente);
+} else {
+await enviarComoObraDirecta(contrato, denominacion, producto, cargaCalculada, cliente);
 }
 }
 
