@@ -153,6 +153,7 @@ async function processMsalResponse(response) {
 
   localStorage.setItem('css_rol', rol.rol);
   localStorage.setItem('css_contratos', JSON.stringify(rol.contratos || []));
+  localStorage.setItem('css_admin_total', rol.admin_total ? 'true' : 'false');
   if (rol.rol === 'tecnico') {
     localStorage.setItem('css_tecnico', nombre);
     window.location.href = 'mis-obras.html';
