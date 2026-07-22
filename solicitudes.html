@@ -84,28 +84,14 @@ tr:hover td { background: #fafaf8; }
 </style>
 </head>
 <body>
+<script src="common.js"></script>
 <script>
-(function() {
-  var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
-})();
-</script>
-<script>
-if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMContentLoaded',function(){var e=document.getElementById('navEncuesta');if(e)e.style.display='';});}
+cssRequireRole(['staffer','delegado']);
 </script>
 
 <div class="header">
   <h1>📋 Gestión de carga CSS</h1>
-    <div class="nav">
-    <a href="index.html">Inicio</a>
-    <a href="solicitudes.html" class="active">Solicitudes</a>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="tecnicos.html">Técnicos</a>
-    <a href="contratos.html">Contratos</a>
-    <a href="nueva-solicitud.html">+ Nueva solicitud</a>
-    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-    <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
-  </div>
+  <div class="nav" id="navContainer"></div>
 </div>
 
 <div class="container">
@@ -133,7 +119,7 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
             <option value="MEDIA">Media</option>
           </select>
         </div>
-        <a href="nueva-solicitud.html" class="btn btn-primary btn-sm">+ Nueva solicitud</a>
+        <a href="nueva-obra.html" class="btn btn-primary btn-sm">+ Nueva obra</a>
       </div>
     </div>
     <div id="tablaWrap">
@@ -154,17 +140,16 @@ if(localStorage.getItem('css_rol')==='staffer'){document.addEventListener('DOMCo
 </div>
 
 <script>
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+// SUPABASE_URL/KEY y helpers de rol/permiso ahora vienen de common.js (fuente única)
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var solicitudes = [], obras = [], tecnicoSeleccionado = null, solicitudActual = null;
-var isStaffer = localStorage.getItem('css_rol') === 'staffer';
-var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
-var misContratos = [];
-try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
-var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
-
-function escH(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+var isStaffer = cssEsStaffer();
+var isDelegadoRol = cssEsDelegado();
+var misContratos = cssGetContratos();
+var filtrarPorContrato = cssFiltraPorContrato();
+// escH() ahora la provee common.js (misma implementación)
 
 async function fetchAll() {
   const [s, o] = await Promise.all([
@@ -303,50 +288,9 @@ async function confirmarResolucion(estadoDestino) {
   }
 }
 
-async function getPoolContrato(codContrato) {
-  if (!codContrato) return [];
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(codContrato) + '&select=tecnicos_preseleccionados', {
-      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-    });
-    const rows = await res.json();
-    return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? rows[0].tecnicos_preseleccionados : [];
-  } catch(e) { return []; }
-}
-
-function construirFicha(nombres) {
-  return nombres.map(t => {
-    const obrasTec = obras.filter(o => o.tecnico === t);
-    const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
-    const email = obrasTec[0]?.email || '';
-    return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
-  });
-}
-
-function getVistasTecnicos(territorio, poolEmails) {
-  const todosNombres = [...new Set(obras.map(o => o.tecnico))].sort();
-
-  let poolNombres = [];
-  if (poolEmails && poolEmails.length) {
-    const poolLower = poolEmails.map(e => (e||'').toLowerCase());
-    poolNombres = [...new Set(obras.filter(o => poolLower.includes((o.email||'').toLowerCase())).map(o => o.tecnico))].sort();
-  }
-
-  let territorioNombres = [];
-  if (territorio) {
-    const tUpper = territorio.toUpperCase();
-    territorioNombres = [...new Set(obras.filter(o => (o.territorio||'').toUpperCase() === tUpper).map(o => o.tecnico))].sort();
-  }
-
-  const vistas = {
-    pool: construirFicha(poolNombres),
-    territorio: construirFicha(territorioNombres),
-    todos: construirFicha(todosNombres)
-  };
-
-  const defecto = vistas.pool.length ? 'pool' : vistas.territorio.length ? 'territorio' : 'todos';
-  return { vistas, defecto };
-}
+// getPoolContrato / construirFicha / getVistasTecnicos ahora viven en common.js
+// (cssGetPoolContrato / cssConstruirFichaTecnico / cssGetVistasTecnicos) — eran una
+// de las tres copias triplicadas del selector de técnico; esta es la que se elimina aquí.
 
 var vistasActuales = null;
 var origenActivo = 'todos';
@@ -360,8 +304,8 @@ async function abrirAsignar(id) {
   document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Cargando técnicos...</div>';
   document.getElementById('modalAsignar').classList.add('open');
 
-  const poolEmails = await getPoolContrato(solicitudActual.cod_contrato);
-  const { vistas, defecto } = getVistasTecnicos(solicitudActual.territorio, poolEmails);
+  const poolEmails = await cssGetPoolContrato(solicitudActual.cod_contrato);
+  const { vistas, defecto } = cssGetVistasTecnicos(solicitudActual.territorio, poolEmails, obras, null, null);
   vistasActuales = vistas;
   origenActivo = defecto;
 
@@ -542,6 +486,7 @@ function closeModal() {
 }
 
 async function init() {
+  document.getElementById('navContainer').innerHTML = cssRenderNav('solicitudes.html');
   await fetchAll();
   renderStats();
   renderTabla();
