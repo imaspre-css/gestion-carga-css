@@ -302,8 +302,12 @@ document.getElementById('proponerStatus').innerHTML = '<div style="background:#f
 }
 }
 
+// Se difiere a DOMContentLoaded: el <div id="modalProponer"> está definido más abajo
+// en el HTML, después de este script, así que aún no existe en el DOM en este punto.
+document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('modalProponer').addEventListener('click', e => {
 if (e.target === document.getElementById('modalProponer')) closeProponerModal();
+});
 });
 </script>
 
