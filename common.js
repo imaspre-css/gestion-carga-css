@@ -11,11 +11,11 @@
 //   <script src="common.js"></script>
 //   ... antes que el resto de scripts de la página ...
 // ═══════════════════════════════════════════════════════════════
- 
+
 // ── CONEXIÓN A SUPABASE ─────────────────────────────────────────
 const CSS_SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 const CSS_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
- 
+
 /**
  * Fetch genérico contra Supabase con los headers de autenticación ya puestos.
  * options acepta lo mismo que fetch() normal (method, headers extra, body...).
@@ -29,7 +29,7 @@ async function cssFetch(path, options) {
   );
   return fetch(CSS_SUPABASE_URL + path, Object.assign({}, options, { headers: headers }));
 }
- 
+
 /**
  * Igual que cssFetch, pero ya parsea el JSON y garantiza devolver un array
  * (nunca null/undefined), que es lo que casi todas las páginas necesitan
@@ -45,27 +45,27 @@ async function cssFetchJSON(path, options) {
     return [];
   }
 }
- 
+
 // ── SESIÓN Y ROLES ──────────────────────────────────────────────
 function cssGetRol() { return localStorage.getItem('css_rol'); }
 function cssGetEmail() { return (localStorage.getItem('css_ms_email') || '').toLowerCase(); }
 function cssGetNombreTecnico() { return localStorage.getItem('css_tecnico') || ''; }
- 
+
 function cssGetContratos() {
   try { return JSON.parse(localStorage.getItem('css_contratos') || '[]'); }
   catch (e) { return []; }
 }
- 
+
 function cssEsStaffer() { return cssGetRol() === 'staffer'; }
 function cssEsDelegado() { return cssGetRol() === 'delegado'; }
 function cssEsTecnico() { return cssGetRol() === 'tecnico'; }
- 
+
 // true si el usuario es delegado Y tiene contratos asignados (el patrón que
 // se repite en solicitudes/contratos/dashboard/index para filtrar por sus obras)
 function cssFiltraPorContrato() {
   return cssEsDelegado() && cssGetContratos().length > 0;
 }
- 
+
 /**
  * Guard de sesión. Llamar al principio de cada página, dentro de un <script>
  * colocado antes que el resto del contenido (igual que se hace hoy).
@@ -89,12 +89,12 @@ function cssRequireRole(rolesPermitidos) {
   }
   return true;
 }
- 
+
 function cssLogout() {
   localStorage.clear();
   window.location.href = 'login.html';
 }
- 
+
 // ── ESTADOS CANÓNICOS DE OBRA ───────────────────────────────────
 const CSS_ESTADOS = [
   'PDTE. DESIG. CSS', 'PDTE. INICIO', 'ACTIVA', 'SIN ACTIVIDAD',
@@ -103,7 +103,7 @@ const CSS_ESTADOS = [
 const CSS_ESTADOS_ENCUESTABLES = ['PDTE. INICIO', 'ACTIVA', 'EN PROCESO DE FINALIZACIÓN'];
 const CSS_ESTADOS_EN_CURSO = ['ACTIVA', 'PDTE. INICIO', 'EN PROCESO DE FINALIZACIÓN'];
 const CSS_ESTADOS_EN_PAUSA = ['PDTE. DESIG. CSS', 'SIN ACTIVIDAD', 'SUSPENDIDA'];
- 
+
 function cssGetEstadoClass(estado) {
   if (!estado) return 'estado-SUSPENDIDA';
   const e = estado.toUpperCase();
@@ -115,10 +115,10 @@ function cssGetEstadoClass(estado) {
   if (e === 'FINALIZADA') return 'estado-FINALIZADA';
   return 'estado-SUSPENDIDA';
 }
- 
+
 // ── PRODUCTOS ────────────────────────────────────────────────────
 const CSS_PRODUCTOS_VALIDOS = ['CSS', 'AUTOPROTECCION', 'CONSULTORIA', 'CAE'];
- 
+
 // ── ESCAPE HTML (evita inyección al pintar texto libre en innerHTML) ──
 function escH(s) {
   return String(s == null ? '' : s)
@@ -126,12 +126,12 @@ function escH(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
- 
+
 // ── SELECTOR DE TÉCNICO: pool del contrato → territorio → todos ─
 // Esta es la pieza que hoy está triplicada (nueva-obra, reasignación en
 // contratos, añadir coordinador) con nombres distintos en cada copia.
 // A partir de aquí, una sola implementación para las tres.
- 
+
 /** Devuelve el array de emails preseleccionados de un contrato (o []). */
 async function cssGetPoolContrato(codContrato) {
   if (!codContrato) return [];
@@ -142,7 +142,7 @@ async function cssGetPoolContrato(codContrato) {
     return (rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? rows[0].tecnicos_preseleccionados : [];
   } catch (e) { return []; }
 }
- 
+
 /**
  * Construye la "ficha" de carga de una lista de nombres de técnico a partir
  * de las obras ya cargadas en memoria (obrasArr). excluir puede ser un string
@@ -158,7 +158,7 @@ function cssConstruirFichaTecnico(nombres, obrasArr, excluir) {
     return { name: t, email: email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
   });
 }
- 
+
 /**
  * Calcula las 3 vistas (pool / territorio / todos) y cuál conviene mostrar
  * por defecto (la primera que tenga resultados). Necesita las obras y los
@@ -168,7 +168,7 @@ function cssConstruirFichaTecnico(nombres, obrasArr, excluir) {
  */
 function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, excluir) {
   const todosNombres = Array.from(new Set((tecnicosDBArr && tecnicosDBArr.length ? tecnicosDBArr.map(function(t){return t.nombre;}) : obrasArr.map(function (o) { return o.tecnico; })))).sort();
- 
+
   let poolNombres = [];
   if (poolEmails && poolEmails.length) {
     const poolLower = poolEmails.map(function (e) { return (e || '').toLowerCase(); });
@@ -177,13 +177,13 @@ function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, e
       poolNombres = tecnicosDBArr.filter(function (t) { return poolLower.indexOf((t.email || '').toLowerCase()) !== -1; }).map(function (t) { return t.nombre; }).sort();
     }
   }
- 
+
   let territorioNombres = [];
   if (territorio) {
     const tUpper = territorio.toUpperCase();
     territorioNombres = Array.from(new Set(obrasArr.filter(function (o) { return (o.territorio || '').toUpperCase() === tUpper; }).map(function (o) { return o.tecnico; }))).sort();
   }
- 
+
   const vistas = {
     pool: cssConstruirFichaTecnico(poolNombres, obrasArr, excluir),
     territorio: cssConstruirFichaTecnico(territorioNombres, obrasArr, excluir),
@@ -192,7 +192,7 @@ function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, e
   const defecto = vistas.pool.length ? 'pool' : (vistas.territorio.length ? 'territorio' : 'todos');
   return { vistas: vistas, defecto: defecto };
 }
- 
+
 // ── MENÚ SUPERIOR SEGÚN ROL ──────────────────────────────────────
 // Esto es lo más rentable de todo el archivo: un cambio de menú (añadir,
 // quitar o renombrar una página) pasa a ser una edición en un solo sitio,
@@ -206,7 +206,7 @@ const CSS_NAV_ITEMS = [
   { href: 'encuesta_semanal.html', label: 'Encuesta', roles: ['staffer'] },
   { href: 'carga-masiva.html', label: 'Carga masiva', roles: ['staffer'] }
 ];
- 
+
 /**
  * Genera el HTML de los enlaces del menú (sin el contenedor <div class="nav">,
  * que cada página ya tiene con su propio estilo). paginaActual es el nombre
@@ -215,11 +215,20 @@ const CSS_NAV_ITEMS = [
  * Uso típico en una página migrada:
  *   document.querySelector('.nav').innerHTML = cssRenderNav('contratos.html');
  */
-function cssRenderNav(paginaActual) {
+/**
+ * salirOnClick (opcional): código JS a ejecutar en el "Salir" en vez del
+ * cssLogout() por defecto. Úsalo cuando una página necesite preservar algo
+ * de localStorage al cerrar sesión (p.ej. encuesta_semanal.html conserva el
+ * respaldo local de respuestas importadas por email antes de limpiar todo).
+ */
+function cssRenderNav(paginaActual, salirOnClick) {
   const rol = cssGetRol();
   const items = CSS_NAV_ITEMS.filter(function (it) { return !it.roles || it.roles.indexOf(rol) !== -1; });
   const links = items.map(function (it) {
     return '<a href="' + it.href + '"' + (it.href === paginaActual ? ' class="active"' : '') + '>' + escH(it.label) + '</a>';
   }).join('');
-  return links + '<a href="#" onclick="cssLogout()" style="color:#ff8888;">Salir</a>';
+  const salir = salirOnClick
+    ? '<a href="#" onclick="' + salirOnClick + '" style="color:#ff8888;">Salir</a>'
+    : '<a href="#" onclick="cssLogout()" style="color:#ff8888;">Salir</a>';
+  return links + salir;
 }
