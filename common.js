@@ -59,11 +59,13 @@ function cssGetContratos() {
 function cssEsStaffer() { return cssGetRol() === 'staffer'; }
 function cssEsDelegado() { return cssGetRol() === 'delegado'; }
 function cssEsTecnico() { return cssGetRol() === 'tecnico'; }
+function cssEsAdmin() { return localStorage.getItem('css_admin_total') === 'true'; }
 
-// true si el usuario es delegado Y tiene contratos asignados (el patrón que
-// se repite en solicitudes/contratos/dashboard/index para filtrar por sus obras)
+// true si el usuario debe ver solo sus contratos asignados: delegado siempre,
+// o staffer sin el permiso de administración total. Admin_total nunca se filtra.
 function cssFiltraPorContrato() {
-  return cssEsDelegado() && cssGetContratos().length > 0;
+  if (cssEsAdmin()) return false;
+  return (cssEsDelegado() || cssEsStaffer()) && cssGetContratos().length > 0;
 }
 
 /**
@@ -202,9 +204,10 @@ const CSS_NAV_ITEMS = [
   { href: 'dashboard.html', label: 'Dashboard' },
   { href: 'tecnicos.html', label: 'Técnicos' },
   { href: 'contratos.html', label: 'Contratos' },
+  { href: 'solicitudes.html', label: 'Solicitudes', roles: ['staffer', 'delegado'] },
   { href: 'nueva-obra.html', label: '+ Nueva obra', roles: ['staffer', 'delegado'] },
-  { href: 'encuesta_semanal.html', label: 'Encuesta', roles: ['staffer'] },
-  { href: 'carga-masiva.html', label: 'Carga masiva', roles: ['staffer'] }
+  { href: 'encuesta_semanal.html', label: 'Encuesta', adminOnly: true },
+  { href: 'carga-masiva.html', label: 'Carga masiva', adminOnly: true }
 ];
 
 /**
@@ -223,7 +226,11 @@ const CSS_NAV_ITEMS = [
  */
 function cssRenderNav(paginaActual, salirOnClick) {
   const rol = cssGetRol();
-  const items = CSS_NAV_ITEMS.filter(function (it) { return !it.roles || it.roles.indexOf(rol) !== -1; });
+  const esAdmin = cssEsAdmin();
+  const items = CSS_NAV_ITEMS.filter(function (it) {
+    if (it.adminOnly) return esAdmin;
+    return !it.roles || it.roles.indexOf(rol) !== -1;
+  });
   const links = items.map(function (it) {
     return '<a href="' + it.href + '"' + (it.href === paginaActual ? ' class="active"' : '') + '>' + escH(it.label) + '</a>';
   }).join('');
