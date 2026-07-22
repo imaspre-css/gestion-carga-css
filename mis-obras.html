@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mis obras — CSS</title>
+<script src="common.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -89,7 +90,7 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 <h1 id="headerNombre">Mis obras</h1>
 <div class="header-sub" id="headerEmail"></div>
 </div>
-<div class="nav"><a href="#" class="logout" onclick="localStorage.clear();window.location.href='login.html'">Salir</a></div>
+<div class="nav"><a href="#" class="logout" onclick="cssLogout()">Salir</a></div>
 </div>
 
 <div class="container">
@@ -112,8 +113,9 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 </div>
 
 <script>
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+// SUPABASE_URL/KEY ahora vienen de common.js (fuente única)
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var tecnicoNombre = localStorage.getItem('css_tecnico');
 var tecnicoEmail = (localStorage.getItem('css_ms_email') || '').toLowerCase();
