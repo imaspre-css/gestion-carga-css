@@ -201,7 +201,7 @@ cssRequireRole(['staffer','delegado']);
 <div id="cargaBox"><div style="text-align:center;padding:1.5rem;color:#aaa;font-size:0.85rem;">Selecciona un contrato para calcular la carga</div></div>
 <div class="field" id="cargaManualWrap" style="display:none;margin-top:0.5rem;">
 <label>Carga teórica semanal (%) — estimación manual</label>
-<input type="number" id="fCargaManual" min="0" max="100" step="1" placeholder="ej. 15" oninput="renderPickerTecnicoNueva()">
+<input type="number" id="fCargaManual" min="0" max="100" step="1" placeholder="ej. 15" oninput="renderPickerTecnicoNueva();actualizarBotonEnvio();">
 </div>
 </div>
 
@@ -244,6 +244,7 @@ var tecnicoSeleccionado = null;
 
 // Delegado solicita (sin técnico); staffer crea y asigna directo, como hoy.
 function aplicarUIPorRol() {
+document.getElementById('navContainer').innerHTML = cssRenderNav('nueva-obra.html');
 if (isDelegadoRol) {
 document.getElementById('cardTecnico').style.display = 'none';
 document.getElementById('btnEnviar').textContent = '📤 Enviar solicitud al staffer';
@@ -260,17 +261,23 @@ var tecnicosDBGlobal = [];
 function onProductoChange() {
 const esCSS = document.getElementById('fProducto').value === 'CSS';
 document.getElementById('paramsCSS').style.display = esCSS ? '' : 'none';
-document.getElementById('cargaManualWrap').style.display = esCSS ? 'none' : '';
 document.getElementById('cargaBox').style.display = esCSS ? '' : 'none';
 document.getElementById('wizardCard').style.display = esCSS ? '' : 'none';
-if (esCSS) {
-// CSS requiere contrato con baremo configurado
-document.getElementById('btnEnviar').disabled = !baremoActual;
-if (baremoActual) calcularCarga();
-} else {
-// Otros productos: basta con tener contrato seleccionado (carga manual)
-document.getElementById('btnEnviar').disabled = !document.getElementById('fContrato').value;
+document.getElementById('cargaManualWrap').style.display = (!esCSS || !baremoActual) ? '' : 'none';
+if (esCSS && baremoActual) calcularCarga();
+actualizarBotonEnvio();
 }
+
+// La carga teórica es obligatoria siempre — pero puede venir del baremo (si el
+// contrato ya lo tiene configurado) o de una estimación manual (mientras tanto).
+// Cuando el baremo esté generalizado, se podrá retirar la vía manual.
+function actualizarBotonEnvio() {
+const hayContrato = !!document.getElementById('fContrato').value;
+const esCSS = document.getElementById('fProducto').value === 'CSS';
+const hayCarga = esCSS ? (!!baremoActual || !!document.getElementById('fCargaManual').value) : !!document.getElementById('fCargaManual').value;
+// El delegado no elige técnico (esa tarjeta está oculta para él); el staffer sí debe elegir uno.
+const hayTecnico = isDelegadoRol || !!tecnicoSeleccionado;
+document.getElementById('btnEnviar').disabled = !(hayContrato && hayCarga && hayTecnico);
 }
 
 // ── LOAD CONTRATOS ────────────────────────────────────────────
@@ -396,7 +403,7 @@ function seleccionarTecnicoNueva(nombre, el) {
 tecnicoSeleccionado = nombre;
 document.querySelectorAll('#tecnicoPickerNueva .tech-option').forEach(x => x.classList.remove('selected'));
 el.classList.add('selected');
-document.getElementById('btnEnviar').disabled = false;
+actualizarBotonEnvio();
 }
 
 function infoContrato(cod) {
@@ -424,13 +431,14 @@ status.innerHTML = '';
 mostrarBaremoInfo(null, val);
 }
 onProductoChange();
+actualizarBotonEnvio();
 }
 
 function mostrarBaremoInfo(b, codSinBaremo) {
 const wrap = document.getElementById('baremoInfoWrap');
 if (!b) {
 wrap.innerHTML = '<div class="notice notice-warn">⚠️ El contrato <strong>' + codSinBaremo + '</strong> no tiene baremo configurado.<br><br>'
-+ 'El baremo es necesario para calcular la carga de las solicitudes <strong>CSS</strong>. Se configura desde la página de Contratos (botón ⚙️ del contrato).<br><br>'
++ 'Mientras tanto, puedes introducir una <strong>estimación manual</strong> de la carga en la tarjeta de la izquierda. En cuanto el contrato tenga baremo (botón ⚙️ en Contratos), pasará a calcularse automáticamente.<br><br>'
 + '<a href="contratos.html" class="btn btn-primary" style="text-decoration:none;">Ir a Contratos</a></div>';
 return;
 }
@@ -563,7 +571,7 @@ const btn = document.getElementById('btnEnviar');
 btn.disabled = true; btn.textContent = '⏳ Enviando...';
 const producto = document.getElementById('fProducto').value;
 const cargaCalculada = producto === 'CSS'
-? (baremoActual?._carga_calculada||null)
+? (baremoActual?._carga_calculada || parseFloat(document.getElementById('fCargaManual').value) || null)
 : (parseFloat(document.getElementById('fCargaManual').value)||null);
 const cliente = document.getElementById('fContrato').selectedOptions[0]?.textContent?.split('—')[1]?.trim()||'';
 
