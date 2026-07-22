@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Carga CSS</title>
+<script src="common.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -73,12 +74,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 </head>
 <body>
 <script>
-(function() {
-  var rol = localStorage.getItem('css_rol');
-  if (!rol) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop()); }
-})();
+cssRequireRole();
 </script>
-<script>if(localStorage.getItem("css_rol")==="staffer"){document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("navEncuesta");if(e)e.style.display="";});}</script>
 
 <div class="header">
   <div>
@@ -90,15 +87,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     <select id="filtroContrato" onchange="renderAll()"><option value="">Todos los contratos</option></select>
     <select id="filtroTerritorio" onchange="renderAll()"><option value="">Todos los territorios</option></select>
   </div>
-    <div class="nav">
-    <a href="index.html">Inicio</a>
-    <a href="dashboard.html" class="active">Dashboard</a>
-    <a href="tecnicos.html">Técnicos</a>
-    <a href="contratos.html">Contratos</a>
-    <a href="nueva-obra.html">+ Nueva obra</a>
-    <a href="encuesta_semanal.html" id="navEncuesta" style="display:none;">Encuesta</a>
-    <a href="#" onclick="localStorage.clear();window.location.href='login.html'" style="color:#ff8888;">Salir</a>
-  </div>
+    <div class="nav" id="navContainer"></div>
 </div>
 </div>
 
@@ -153,14 +142,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 </div>
 
 <script>
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+// SUPABASE_URL/KEY y helpers de rol ahora vienen de common.js (fuente única)
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var obras = [], respuestas = [];
-var isDelegadoRol = localStorage.getItem('css_rol') === 'delegado';
-var misContratos = [];
-try { misContratos = JSON.parse(localStorage.getItem('css_contratos') || '[]'); } catch(e) {}
-var filtrarPorContrato = isDelegadoRol && misContratos.length > 0;
+var isDelegadoRol = cssEsDelegado();
+var misContratos = cssGetContratos();
+var filtrarPorContrato = cssFiltraPorContrato();
 var chartContrato = null, chartTerritorio = null;
 
 async function fetchAll() {
@@ -381,7 +370,7 @@ function renderDetalle(resp) {
   document.getElementById('detalleTabla').innerHTML = html;
 }
 
-function escH(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// escH() ahora la provee common.js (misma implementación, evita duplicarla aquí)
 
 // ── MODAL: RESPUESTAS DE UN TÉCNICO (semana seleccionada) ──────
 function abrirRespTecnico(nombre) {
@@ -448,6 +437,7 @@ function renderAll() {
 }
 
 async function init() {
+  document.getElementById('navContainer').innerHTML = cssRenderNav('dashboard.html');
   await fetchAll();
   populateFilters();
   document.getElementById('loadingDiv').style.display = 'none';
