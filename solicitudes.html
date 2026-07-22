@@ -164,7 +164,11 @@ async function fetchAll() {
   obras = Array.isArray(o) ? o : [];
   if (filtrarPorContrato) {
   solicitudes = solicitudes.filter(s => misContratos.includes(s.cod_contrato));
-  obras = obras.filter(o => misContratos.includes(o.cod_contrato));
+  // obras NO se filtra: el universo de técnicos y su carga real deben verse
+  // completos siempre (staffer admin o no) — el filtro solo decide qué
+  // solicitudes puedes ver/gestionar, nunca a quién puedes asignar ni con
+  // qué carga real. Filtrar obras aquí ocultaba técnicos con obras en otros
+  // contratos y falseaba su carga hacia abajo.
 }
 }
 
