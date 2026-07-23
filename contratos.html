@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contratos — CSS</title>
+<script src="common.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -360,7 +361,8 @@ function renderContratos() {
             + (puedeEditar ? '<td style="white-space:nowrap;" onclick="event.stopPropagation()">'
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> ')
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> ')
-                + '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirAnadirCoordinadorBtn(event)" title="Añadir coordinador">+👥</button>'
+                + '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirAnadirCoordinadorBtn(event)" title="Añadir coordinador">+👥</button> '
+                + (!esGrupo && cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + first.id + '" onclick="eliminarObraBtn(event)" title="Eliminar obra">🗑️</button>' : '')
                 + '</td>' : '')
             + '</tr>');
           if (esGrupo && abierto) {
@@ -403,6 +405,7 @@ function renderContratos() {
       + '<div class="contrato-stat"><div class="contrato-stat-num">' + cargaTotal + '%</div><div class="contrato-stat-label">Carga total</div></div>'
       + '</div>'
       + (puedeEditar ? '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirBaremoBtn(event)" title="Configurar / editar baremo">⚙️</button><button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirEditarContratoBtn(event)" title="Editar contrato">✏️</button>' : '')
+      + (cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-cod="' + escH(cont.cod) + '" onclick="eliminarContratoBtn(event)" title="Eliminar contrato">🗑️</button>' : '')
       + '<span class="chevron' + (isOpen?' open':'') + '">▼</span>'
       + '</div>'
       + (isOpen ? obrasHTML : '<div class="obras-wrap"></div>')
@@ -1347,6 +1350,66 @@ function quitarCoordinadorBtn(event) {
   event.stopPropagation();
   const id = event.currentTarget.dataset.id;
   quitarCoordinador(id);
+}
+
+// Solo admin_total. Borra la obra por completo (no solo "quitar coordinador" —
+// esto es para obras sin agrupar, la única fila de esa obra). Irreversible.
+function eliminarObraBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  eliminarObra(id);
+}
+
+async function eliminarObra(id) {
+  if (!cssEsAdmin()) return;
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  const etiqueta = (o.cod_obra||'—') + ' — ' + (o.descripcion||'sin descripción').substring(0,50);
+  if (!confirm('¿Eliminar definitivamente la obra "' + etiqueta + '"? Esta acción no se puede deshacer.')) return;
+  if (!confirm('Confirmación final: se eliminará la obra y su historial de propuestas de cambio asociado. ¿Continuar?')) return;
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' }
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    alert('Error al eliminar la obra: ' + errTxt);
+    return;
+  }
+  obras = obras.filter(x => x.id !== id);
+  renderContratos();
+}
+
+// Solo admin_total. Bloquea el borrado si el contrato aún tiene obras — hay que
+// eliminarlas o reasignarlas a otro contrato primero (evita huérfanos silenciosos).
+function eliminarContratoBtn(event) {
+  event.stopPropagation();
+  const cod = event.currentTarget.dataset.cod;
+  eliminarContrato(cod);
+}
+
+async function eliminarContrato(cod) {
+  if (!cssEsAdmin()) return;
+  const obrasDelContrato = obras.filter(o => o.cod_contrato === cod);
+  if (obrasDelContrato.length > 0) {
+    alert('Este contrato todavía tiene ' + obrasDelContrato.length + ' obra' + (obrasDelContrato.length>1?'s':'') + '. Elimínalas (🗑️ en cada fila) o reasígnalas a otro contrato antes de borrar el contrato.');
+    return;
+  }
+  if (!confirm('¿Eliminar definitivamente el contrato "' + cod + '"? Esta acción no se puede deshacer.')) return;
+  if (!confirm('Confirmación final: se eliminará el contrato "' + cod + '" (baremo y configuración incluidos). ¿Continuar?')) return;
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/contratos?cod_contrato=eq.' + encodeURIComponent(cod), {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' }
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    alert('Error al eliminar el contrato: ' + errTxt);
+    return;
+  }
+  contratosDB = contratosDB.filter(c => c.cod_contrato !== cod);
+  renderContratos();
 }
 
 async function quitarCoordinador(id) {
