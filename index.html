@@ -197,9 +197,9 @@ document.getElementById('alertList').innerHTML = alerts.map(a =>
 
 }
 
-// Show staffer-only modules (tarjetas del panel — fuera del alcance de esta migración)
+// Show admin-only modules (Encuesta y Carga masiva exigen admin_total, no solo ser staffer)
 
-if (cssEsStaffer()) {
+if (cssEsAdmin()) {
 
 const m = document.getElementById('moduleEncuesta');
 
