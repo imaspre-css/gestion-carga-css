@@ -123,14 +123,16 @@ async function loginMicrosoft() {
   btn.disabled = true;
   btn.textContent = 'Conectando...';
   try {
-    const response = await msalInstance.loginPopup({ scopes: SCOPES });
-    processMsalResponse(response);
+    // loginRedirect en vez de loginPopup: navega a Microsoft en la misma pestaña
+    // (no abre una ventana emergente) y vuelve sola aquí al terminar. Evita el
+    // problema de comunicación entre ventanas que fallaba con loginPopup en
+    // algunos navegadores/perfiles. El resultado se recoge más abajo, en
+    // handleRedirectPromise(), cuando Microsoft nos devuelva a esta página.
+    await msalInstance.loginRedirect({ scopes: SCOPES });
   } catch(e) {
     btn.disabled = false;
     btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="0" y="0" width="10" height="10" fill="#f25022"/><rect x="11" y="0" width="10" height="10" fill="#7fba00"/><rect x="0" y="11" width="10" height="10" fill="#00a4ef"/><rect x="11" y="11" width="10" height="10" fill="#ffb900"/></svg> Entrar con Microsoft 365';
-    if (e.errorCode !== 'user_cancelled') {
-      showNotice('Error al conectar con Microsoft. Usa el PIN temporal.', 'error');
-    }
+    showNotice('Error al conectar con Microsoft. Usa el PIN temporal.', 'error');
   }
 }
 
