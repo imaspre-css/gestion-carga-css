@@ -639,13 +639,13 @@ async function guardarNuevoContrato() {
     return;
   }
 
-  // Asignar el contrato a los delegados seleccionados (BD + sesión si aplica)
+  // Actualizar la sesión local inmediatamente para que el creador vea su propio
+  // contrato sin tener que cerrar sesión — aplica a cualquiera con contratos
+  // acotados (delegado, o staffer sin admin_total), nunca a un admin (que ya lo ve todo).
   const delegadosSel = getDelegadosSeleccionados('ncDelList');
-  if (isDelegadoRol) {
-    // Actualiza la sesión local inmediatamente para que el creador vea su contrato
+  if (filtrarPorContrato) {
     if (!misContratos.includes(cod)) misContratos.push(cod);
     localStorage.setItem('css_contratos', JSON.stringify(misContratos));
-    filtrarPorContrato = cssFiltraPorContrato();
   }
   try { await sincronizarDelegadosContrato(cod, delegadosSel); } catch(e) {}
 
