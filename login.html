@@ -16,24 +16,6 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
 .btn-microsoft { width: 100%; padding: 0.75rem; background: #0078d4; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: background 0.15s; margin-bottom: 1rem; }
 .btn-microsoft:hover { background: #106ebe; }
 .btn-microsoft:disabled { background: #aaa; cursor: not-allowed; }
-.divider { display: flex; align-items: center; gap: 10px; margin: 1rem 0; color: #ccc; font-size: 0.78rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 0.5px; background: #e0e0d8; }
-.pin-section { text-align: left; }
-.role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
-.role-btn { border: 1.5px solid #e0e0d8; border-radius: 10px; padding: 0.75rem 0.5rem; cursor: pointer; transition: all 0.15s; background: #fff; text-align: center; }
-.role-btn:hover { border-color: #4a4a8a; background: #f8f8fe; }
-.role-btn.selected { border-color: #4a4a8a; background: #eeeefa; }
-.role-icon { font-size: 1.3rem; display: block; margin-bottom: 4px; }
-.role-name { font-size: 0.78rem; font-weight: 500; }
-.role-desc { font-size: 0.65rem; color: #888; margin-top: 1px; }
-.pin-wrap { margin-bottom: 1rem; }
-.pin-label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 6px; }
-.pin-input { width: 100%; padding: 0.65rem 0.9rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 1.1rem; letter-spacing: 0.3em; text-align: center; }
-.pin-input:focus { outline: none; border-color: #4a4a8a; }
-.tecnico-select { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; margin-bottom: 1rem; }
-.btn-acceder { width: 100%; padding: 0.75rem; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; }
-.btn-acceder:disabled { background: #aaa; cursor: not-allowed; }
-.error { color: #a32d2d; font-size: 0.8rem; margin-top: 0.5rem; display: none; }
 .notice { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; display: none; }
 </style>
 </head>
@@ -56,42 +38,6 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
     Entrar con Microsoft 365
   </button>
 
-  <div class="divider">o acceso temporal por PIN</div>
-
-  <!-- PIN login -->
-  <div class="pin-section">
-    <div class="role-grid">
-      <div class="role-btn" onclick="selectRole('staffer')" id="btn_staffer">
-        <span class="role-icon">🎯</span>
-        <div class="role-name">Staffer</div>
-        <div class="role-desc">Gestión completa</div>
-      </div>
-      <div class="role-btn" onclick="selectRole('delegado')" id="btn_delegado">
-        <span class="role-icon">📋</span>
-        <div class="role-name">Delegado</div>
-        <div class="role-desc">Solicitudes</div>
-      </div>
-      <div class="role-btn" onclick="selectRole('tecnico')" id="btn_tecnico">
-        <span class="role-icon">👷</span>
-        <div class="role-name">Técnico</div>
-        <div class="role-desc">Mis obras</div>
-      </div>
-    </div>
-
-    <div id="tecnicoSelectWrap" style="display:none;">
-      <select id="tecnicoSelect" class="tecnico-select" onchange="checkReady()">
-        <option value="">Selecciona tu nombre...</option>
-      </select>
-    </div>
-
-    <div class="pin-wrap">
-      <label class="pin-label">PIN de acceso</label>
-      <input type="password" class="pin-input" id="pinInput" placeholder="••••" maxlength="4" oninput="onPinInput()" onkeydown="if(event.key==='Enter')accederPin()">
-    </div>
-
-    <button class="btn-acceder" id="btnAcceder" onclick="accederPin()" disabled>Acceder</button>
-    <div class="error" id="errorMsg">PIN incorrecto. Inténtalo de nuevo.</div>
-  </div>
 </div>
 
 <script>
@@ -246,69 +192,6 @@ function showNotice(msg, type) {
   if (type === 'error') { n.style.background = '#fcebeb'; n.style.color = '#a32d2d'; n.style.borderColor = '#f7c1c1'; }
 }
 
-// ── PIN LOGIN ────────────────────────────────────────────────
-var PINS = { staffer: '1627', delegado: '1997', tecnico: '0000' };
-var SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
-var rolSeleccionado = null;
-
-async function loadTecnicos() {
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=tecnico&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
-    const rows = await res.json();
-    const tecnicos = [...new Set(rows.map(r => r.tecnico).filter(Boolean))].sort();
-    const sel = document.getElementById('tecnicoSelect');
-    sel.innerHTML = '<option value="">Selecciona tu nombre...</option>' + tecnicos.map(t => '<option value="' + t + '">' + t + '</option>').join('');
-  } catch(e) {}
-}
-loadTecnicos();
-
-function selectRole(rol) {
-  rolSeleccionado = rol;
-  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
-  document.getElementById('btn_' + rol).classList.add('selected');
-  document.getElementById('tecnicoSelectWrap').style.display = rol === 'tecnico' ? 'block' : 'none';
-  if (rol !== 'tecnico') document.getElementById('pinInput').focus();
-  checkReady();
-}
-
-function onPinInput() {
-  document.getElementById('errorMsg').style.display = 'none';
-  checkReady();
-}
-
-function checkReady() {
-  const pin = document.getElementById('pinInput').value;
-  if (rolSeleccionado === 'tecnico') {
-    const tecnico = document.getElementById('tecnicoSelect').value;
-    document.getElementById('btnAcceder').disabled = !(tecnico && pin.length === 4);
-  } else {
-    document.getElementById('btnAcceder').disabled = !(rolSeleccionado && pin.length === 4);
-  }
-}
-
-function accederPin() {
-  const pin = document.getElementById('pinInput').value;
-  if (!rolSeleccionado || !pin) return;
-  if (pin === PINS[rolSeleccionado]) {
-    localStorage.setItem('css_rol', rolSeleccionado);
-    if (rolSeleccionado === 'tecnico') {
-      localStorage.removeItem('css_ms_token');
-      localStorage.removeItem('css_ms_email');
-      localStorage.removeItem('css_ms_nombre');
-      const tecnico = document.getElementById('tecnicoSelect').value;
-      localStorage.setItem('css_tecnico', tecnico);
-      window.location.href = 'mis-obras.html';
-      return;
-    }
-    const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
-    window.location.href = redirect;
-  } else {
-    document.getElementById('errorMsg').style.display = 'block';
-    document.getElementById('pinInput').value = '';
-    checkReady();
-  }
-}
 </script>
 </body>
 </html>
