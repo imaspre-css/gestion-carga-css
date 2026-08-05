@@ -36,15 +36,27 @@ if (cssSupabaseClient && !window._cssFetchPatched) {
     options = options || {};
     var urlStr = (typeof url === 'string') ? url : ((url && url.url) || '');
     var headers = options.headers || {};
-    var esLlamadaConAnonKey = urlStr.indexOf(CSS_SUPABASE_URL) === 0 && headers.Authorization === 'Bearer ' + CSS_SUPABASE_KEY;
+    var esUrlSupabase = urlStr.indexOf(CSS_SUPABASE_URL) === 0;
+    var authActual = headers.Authorization;
+    var authEsperada = 'Bearer ' + CSS_SUPABASE_KEY;
+    var esLlamadaConAnonKey = esUrlSupabase && authActual === authEsperada;
+    console.log('[cssFetch-debug]', urlStr.slice(0,80), '| esUrlSupabase:', esUrlSupabase, '| coincideAuth:', authActual === authEsperada);
+    if (esUrlSupabase && !esLlamadaConAnonKey) {
+      console.log('[cssFetch-debug] auth recibida  :', authActual ? authActual.slice(0,40) : authActual);
+      console.log('[cssFetch-debug] auth esperada  :', authEsperada.slice(0,40));
+    }
     if (esLlamadaConAnonKey) {
       try {
         var sesion = await cssSupabaseClient.auth.getSession();
+        console.log('[cssFetch-debug] ¿sesión encontrada dentro del parche?', !!sesion.data.session);
         if (sesion.data.session) {
           headers = Object.assign({}, headers, { Authorization: 'Bearer ' + sesion.data.session.access_token });
           options = Object.assign({}, options, { headers: headers });
+          console.log('[cssFetch-debug] ✅ token sustituido');
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('[cssFetch-debug] ❌ error en getSession():', e.message);
+      }
     }
     return _cssFetchOriginal(url, options);
   };
