@@ -16,6 +16,40 @@
 const CSS_SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 const CSS_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
 
+// ── SESIÓN REAL DE SUPABASE AUTH (Bloque 5) ───────────────────────
+// Si la página TAMBIÉN carga el SDK de Supabase antes de este archivo:
+//   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+// ... entonces cualquier fetch() a Supabase que use la anon key como Bearer
+// se sustituye aquí, de forma transparente, por el token de la sesión real
+// (si existe) — sin tener que tocar ninguna de las llamadas fetch existentes
+// una por una, estén donde estén. Si la página no carga el SDK, o si no hay
+// sesión real (p.ej. entrada por PIN), el comportamiento es exactamente el
+// de siempre: se sigue usando la anon key, sin ningún cambio.
+var cssSupabaseClient = (typeof supabase !== 'undefined')
+  ? supabase.createClient(CSS_SUPABASE_URL, CSS_SUPABASE_KEY)
+  : null;
+
+if (cssSupabaseClient && !window._cssFetchPatched) {
+  window._cssFetchPatched = true;
+  var _cssFetchOriginal = window.fetch.bind(window);
+  window.fetch = async function(url, options) {
+    options = options || {};
+    var urlStr = (typeof url === 'string') ? url : ((url && url.url) || '');
+    var headers = options.headers || {};
+    var esLlamadaConAnonKey = urlStr.indexOf(CSS_SUPABASE_URL) === 0 && headers.Authorization === 'Bearer ' + CSS_SUPABASE_KEY;
+    if (esLlamadaConAnonKey) {
+      try {
+        var sesion = await cssSupabaseClient.auth.getSession();
+        if (sesion.data.session) {
+          headers = Object.assign({}, headers, { Authorization: 'Bearer ' + sesion.data.session.access_token });
+          options = Object.assign({}, options, { headers: headers });
+        }
+      } catch (e) {}
+    }
+    return _cssFetchOriginal(url, options);
+  };
+}
+
 /**
  * Fetch genérico contra Supabase con los headers de autenticación ya puestos.
  * options acepta lo mismo que fetch() normal (method, headers extra, body...).
