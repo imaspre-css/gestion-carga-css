@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Acceso — Gestión de Carga CSS</title>
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -94,7 +95,9 @@ h1 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.25rem; }
 </div>
 
 <script>
-// ── MSAL CONFIGURATION ────────────────────────────────────────
+// ── MSAL (OBSOLETO) — se conserva comentado para poder revertir al instante
+// si algo fallara con la migración a Supabase Auth. No se ejecuta nada de esto.
+/*
 const MSAL_CONFIG = {
   auth: {
     clientId: '57ab0a98-8087-4167-816a-8252d8311e85',
@@ -103,31 +106,21 @@ const MSAL_CONFIG = {
   },
   cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
 };
-
 const SCOPES = ['User.Read', 'Mail.Send'];
 var msalInstance = null;
 try {
   msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
   msalInstance.handleRedirectPromise().then(response => {
     if (response) processMsalResponse(response);
-  }).catch(err => {
-    console.error('MSAL redirect error:', err);
-  });
-} catch(e) {
-  console.warn('MSAL no disponible:', e.message);
-}
+  }).catch(err => { console.error('MSAL redirect error:', err); });
+} catch(e) { console.warn('MSAL no disponible:', e.message); }
 
-async function loginMicrosoft() {
+async function loginMicrosoft_MSAL_OBSOLETO() {
   if (!msalInstance) { showNotice('Microsoft login no disponible. Usa el PIN temporal.', 'error'); return; }
   const btn = document.getElementById('btnMicrosoft');
   btn.disabled = true;
   btn.textContent = 'Conectando...';
   try {
-    // loginRedirect en vez de loginPopup: navega a Microsoft en la misma pestaña
-    // (no abre una ventana emergente) y vuelve sola aquí al terminar. Evita el
-    // problema de comunicación entre ventanas que fallaba con loginPopup en
-    // algunos navegadores/perfiles. El resultado se recoge más abajo, en
-    // handleRedirectPromise(), cuando Microsoft nos devuelva a esta página.
     await msalInstance.loginRedirect({ scopes: SCOPES });
   } catch(e) {
     btn.disabled = false;
@@ -139,20 +132,11 @@ async function loginMicrosoft() {
 async function processMsalResponse(response) {
   const email = response.account.username.toLowerCase();
   const nombre = response.account.name;
-
-  // Store token for Graph API (email sending)
   localStorage.setItem('css_ms_token', response.accessToken);
   localStorage.setItem('css_ms_email', email);
   localStorage.setItem('css_ms_nombre', nombre);
-
-  // Check role from usuarios table
   const rol = await getRolFromSupabase(email);
-
-  if (!rol) {
-    showNotice('Tu cuenta no tiene acceso configurado. Contacta con el administrador.', 'error');
-    return;
-  }
-
+  if (!rol) { showNotice('Tu cuenta no tiene acceso configurado. Contacta con el administrador.', 'error'); return; }
   localStorage.setItem('css_rol', rol.rol);
   localStorage.setItem('css_contratos', JSON.stringify(rol.contratos || []));
   localStorage.setItem('css_admin_total', rol.admin_total ? 'true' : 'false');
@@ -164,17 +148,94 @@ async function processMsalResponse(response) {
     window.location.href = redirect;
   }
 }
+*/
+
+// ── SUPABASE AUTH (NUEVO) ──────────────────────────────────────
+// Sustituye a MSAL para el botón de "Entrar con Microsoft 365". El MSAL de
+// encuesta_semanal.html (envío de correos vía Graph) es independiente y no
+// se ve afectado por este cambio.
+const supabaseClient = supabase.createClient(
+  'https://niwnyoxsesbesotumolm.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s'
+);
+
+var sesionYaProcesada = false;
+
+async function loginMicrosoft() {
+  const btn = document.getElementById('btnMicrosoft');
+  btn.disabled = true;
+  btn.textContent = 'Conectando...';
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'azure',
+    options: {
+      scopes: 'email',
+      // Conserva ?redirect=xxx (si lo hay) a través de todo el ida y vuelta con Microsoft
+      redirectTo: window.location.origin + window.location.pathname + window.location.search
+    }
+  });
+  if (error) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="0" y="0" width="10" height="10" fill="#f25022"/><rect x="11" y="0" width="10" height="10" fill="#7fba00"/><rect x="0" y="11" width="10" height="10" fill="#00a4ef"/><rect x="11" y="11" width="10" height="10" fill="#ffb900"/></svg> Entrar con Microsoft 365';
+    showNotice('Error al conectar con Microsoft. Usa el PIN temporal.', 'error');
+  }
+  // Si no hay error, la página navega fuera de aquí inmediatamente.
+}
+
+async function procesarSesionSupabase(session) {
+  if (sesionYaProcesada || !session) return;
+  sesionYaProcesada = true;
+
+  const email = (session.user.email || '').toLowerCase();
+  const nombre = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email;
+
+  localStorage.setItem('css_ms_email', email);
+  localStorage.setItem('css_ms_nombre', nombre);
+
+  const rol = await getRolFromSupabase(email);
+
+  if (!rol) {
+    showNotice('Tu cuenta no tiene acceso configurado. Contacta con el administrador.', 'error');
+    return;
+  }
+
+  localStorage.setItem('css_rol', rol.rol);
+  localStorage.setItem('css_contratos', JSON.stringify(rol.contratos || []));
+  localStorage.setItem('css_admin_total', rol.admin_total ? 'true' : 'false');
+  if (rol.rol === 'tecnico') {
+    localStorage.setItem('css_tecnico', rol.nombre || nombre);
+    window.location.href = 'mis-obras.html';
+  } else {
+    const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+    window.location.href = redirect;
+  }
+}
+
+// Si ya hay sesión al cargar (p.ej. justo al volver de Microsoft), procesarla.
+supabaseClient.auth.getSession().then(({ data }) => {
+  if (data.session) procesarSesionSupabase(data.session);
+});
+// Y por si el evento llega después de esa primera comprobación.
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  if (session) procesarSesionSupabase(session);
+});
 
 async function getRolFromSupabase(email) {
-  try {1
-    const res = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/usuarios?email=eq.' + encodeURIComponent(email) + '&activo=eq.true&select=*', {
-      headers: {
-        apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s',
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s'
-      }
-    });
+  const headers = {
+    apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s',
+    Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s'
+  };
+  try {
+    const res = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/usuarios?email=eq.' + encodeURIComponent(email) + '&activo=eq.true&select=*', { headers });
     const rows = await res.json();
-    return rows && rows.length > 0 ? rows[0] : null;
+    if (rows && rows.length > 0) return rows[0];
+
+    // No está en usuarios -> puede ser un técnico (entran por Microsoft 365 sin PIN previo)
+    const resTec = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/tecnicos?email=eq.' + encodeURIComponent(email) + '&activo=eq.true&select=*', { headers });
+    const rowsTec = await resTec.json();
+    if (rowsTec && rowsTec.length > 0) {
+      return { rol: 'tecnico', admin_total: false, contratos: [], nombre: rowsTec[0].nombre, email: rowsTec[0].email };
+    }
+    return null;
   } catch(e) { return null; }
 }
 
