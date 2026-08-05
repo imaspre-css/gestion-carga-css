@@ -30,8 +30,10 @@ h1 { font-size: 1.05rem; font-weight: 500; margin-bottom: 0.5rem; }
 
 <button class="btn btn-azure" onclick="entrarConAzure()">Iniciar sesión con Azure</button>
 <button class="btn btn-logout" onclick="salir()">Cerrar sesión</button>
+<button class="btn" style="background:#f5f5f0;color:#1a1a1a;border:0.5px solid #d0d0c8;" onclick="probarRLS()">🧪 Probar rls_test_only (con tu sesión real)</button>
 
 <div id="resultado" class="result result-none">Sin sesión activa todavía.</div>
+<div id="resultadoRLS" class="result result-none" style="display:none;"></div>
 
 <p class="step">
 1. Sube este archivo como <code>test-auth.html</code> a la raíz del repo (junto a los demás .html)<br>
@@ -60,6 +62,24 @@ async function entrarConAzure() {
 async function salir() {
   await client.auth.signOut();
   mostrar('none', 'Sesión cerrada. Sin sesión activa.');
+}
+
+// Usa la sesión real (no la anon key) — el cliente de Supabase la aplica solo
+// una vez que has iniciado sesión, así que esto se ejecuta como 'authenticated'.
+async function probarRLS() {
+  const el = document.getElementById('resultadoRLS');
+  el.style.display = 'block';
+  el.className = 'result result-none';
+  el.textContent = 'Consultando...';
+  const { data, error } = await client.from('rls_test_only').select('*');
+  if (error) {
+    el.className = 'result result-error';
+    el.textContent = '❌ Error: ' + error.message;
+    return;
+  }
+  el.className = 'result result-ok';
+  el.textContent = '✅ Filas visibles para ti (' + data.length + '):\n\n' +
+    data.map(r => '- [' + r.visible_para + '] ' + r.descripcion).join('\n');
 }
 
 function mostrar(tipo, texto) {
