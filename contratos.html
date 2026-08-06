@@ -459,7 +459,7 @@ async function init() {
     fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,email,activo&order=nombre', {
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     }).then(r => r.json()),
-    fetch(SUPABASE_URL + '/rest/v1/usuarios?rol=eq.delegado&activo=eq.true&select=nombre,email,contratos&order=nombre', {
+    fetch(SUPABASE_URL + '/rest/v1/usuarios?rol=in.(delegado,staffer)&admin_total=eq.false&activo=eq.true&select=nombre,email,contratos,rol&order=nombre', {
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
     }).then(r => r.json())
   ]);
@@ -532,10 +532,10 @@ function renderDelegadosInto(listId, preseleccion) {
     ? delegadosDB.map(u =>
       '<label class="pool-item">'
       + '<input type="checkbox" class="del-chk" value="' + escH((u.email||'').toLowerCase()) + '"' + (seleccionados.includes((u.email||'').toLowerCase()) ? ' checked' : '') + '>'
-      + '<span>' + escH(u.nombre) + '</span>'
+      + '<span>' + escH(u.nombre) + (u.rol === 'staffer' ? ' <span style="color:#4a4a8a;font-weight:400;">(staffer)</span>' : '') + '</span>'
       + '<span class="pool-email">' + escH(u.email) + '</span>'
       + '</label>').join('')
-    : '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">No hay delegados dados de alta en usuarios</div>';
+    : '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">No hay delegados ni staffers no-admin dados de alta</div>';
 }
 
 function getDelegadosSeleccionados(listId) {
@@ -579,8 +579,9 @@ async function sincronizarDelegadosContrato(cod, emailsSeleccionados) {
     if (email === miEmail) afectaSesion = true;
   }
 
-  // Si el cambio afecta al delegado en sesión: actualizar localStorage y recargar para re-filtrar
-  if (isDelegadoRol && afectaSesion) {
+  // Si el cambio afecta a quien está en sesión (delegado, o staffer no-admin):
+  // actualizar localStorage y recargar para re-filtrar
+  if (filtrarPorContrato && afectaSesion) {
     const yo = delegadosDB.find(x => (x.email||'').toLowerCase() === miEmail);
     localStorage.setItem('css_contratos', JSON.stringify((yo && yo.contratos) || []));
     setTimeout(() => location.reload(), 900);
@@ -1633,7 +1634,7 @@ document.getElementById('modalAnadirCoordinador').addEventListener('click', e =>
         <div id="ncPoolCount" style="font-size:0.72rem;color:#888;margin-top:4px;">0 técnicos preseleccionados</div>
       </div>
       <div style="margin-top:1rem;">
-        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Delegado(s) del contrato <span style="color:#aaa;">(pueden ser varios: co-responsables, vacaciones...)</span></label>
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Delegado(s) y staffer(s) del contrato <span style="color:#aaa;">(pueden ser varios: co-responsables, vacaciones...)</span></label>
         <div class="pool-list" id="ncDelList" style="max-height:160px;"></div>
       </div>
       <div style="margin-top:0.75rem;font-size:0.75rem;color:#888;background:#f5f5f0;border-radius:8px;padding:0.6rem 0.8rem;">El baremo (solo para obras CSS) se configura después con el botón ⚙️ del contrato. Las obras del contrato se crearán al asignar sus solicitudes.</div>
@@ -1675,7 +1676,7 @@ document.getElementById('modalAnadirCoordinador').addEventListener('click', e =>
         <div id="ecPoolCount" style="font-size:0.72rem;color:#888;margin-top:4px;">0 técnicos preseleccionados</div>
       </div>
       <div style="margin-top:1rem;">
-        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Delegado(s) del contrato <span style="color:#aaa;">(marcar añade el contrato al delegado; desmarcar se lo quita)</span></label>
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Delegado(s) y staffer(s) del contrato <span style="color:#aaa;">(marcar añade el contrato a la persona; desmarcar se lo quita)</span></label>
         <div class="pool-list" id="ecDelList" style="max-height:160px;"></div>
       </div>
       <div style="margin-top:0.75rem;font-size:0.72rem;color:#aaa;">El código de contrato no es editable: es el identificador que vincula las obras.</div>
