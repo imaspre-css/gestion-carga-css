@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carga masiva — CSS</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -113,6 +114,32 @@ input[type="file"] { display: none; }
 <script>
 const SUPABASE_URL = 'https://niwnyoxsesbesotumolm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
+
+// Parche aislado de fetch (mismo mecanismo que common.js, sin arrastrar el resto
+// de ese archivo aquí): sustituye la anon key por el token de sesión real cuando
+// existe, para que esta página siga pudiendo escribir en usuarios/tecnicos/etc.
+// una vez que sus políticas RLS dejen de aceptar anon sin identidad.
+(function() {
+  if (typeof supabase === 'undefined' || window._cssFetchPatched) return;
+  window._cssFetchPatched = true;
+  const _clienteAuth = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const _fetchOriginal = window.fetch.bind(window);
+  window.fetch = async function(url, options) {
+    options = options || {};
+    const urlStr = (typeof url === 'string') ? url : ((url && url.url) || '');
+    let headers = options.headers || {};
+    if (urlStr.indexOf(SUPABASE_URL) === 0 && headers.Authorization === 'Bearer ' + SUPABASE_KEY) {
+      try {
+        const sesion = await _clienteAuth.auth.getSession();
+        if (sesion.data.session) {
+          headers = Object.assign({}, headers, { Authorization: 'Bearer ' + sesion.data.session.access_token });
+          options = Object.assign({}, options, { headers });
+        }
+      } catch(e) {}
+    }
+    return _fetchOriginal(url, options);
+  };
+})();
 
 const ESTADOS_VALIDOS = ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'];
 const PRODUCTOS_VALIDOS = ['CSS','AUTOPROTECCION','CONSULTORIA','CAE'];
