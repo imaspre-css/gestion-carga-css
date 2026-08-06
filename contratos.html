@@ -1285,7 +1285,8 @@ async function confirmarAnadirCoordinador() {
 
   if (!res.ok) {
     btn.disabled = false; btn.textContent = 'Añadir coordinador';
-    alert('Error al añadir el coordinador. Inténtalo de nuevo.');
+    const errTxt = await res.text();
+    alert('Error al añadir el coordinador: ' + errTxt);
     return;
   }
 
