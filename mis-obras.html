@@ -100,11 +100,6 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 
 <div class="stats-row" id="statsRow"></div>
 
-<div class="card" id="propuestasCard" style="display:none;">
-<div class="card-title">📅 Tus propuestas de cambio de fecha</div>
-<div id="propuestasWrap"></div>
-</div>
-
 <div class="card">
 <div class="card-title">Mis obras</div>
 <div id="obrasWrap"></div>
@@ -200,7 +195,7 @@ return '<div class="obra-card">'
 + (o.fecha_inicio ? 'Inicio: ' + new Date(o.fecha_inicio).toLocaleDateString('es-ES') : 'Sin fecha inicio')
 + ' · ' + (o.fecha_fin ? 'Fin: ' + new Date(o.fecha_fin).toLocaleDateString('es-ES') : 'Sin fecha fin')
 + '</div>'
-+ '<button class="btn btn-sm" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" data-id="' + o.id + '" onclick="abrirProponer(event)">📅 Proponer cambio de fecha</button>'
++ '<button class="btn btn-sm" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" data-id="' + o.id + '" onclick="abrirEditarObra(event)">✏️ Editar fechas y estado</button>'
 + '</div>';
 }).join('');
 }
@@ -230,113 +225,105 @@ document.getElementById('loadingDiv').style.display = 'none';
 document.getElementById('mainContent').style.display = 'block';
 renderStats();
 renderObras();
-cargarPropuestas();
-}
-
-async function cargarPropuestas() {
-if (!tecnicoNombre) return;
-try {
-const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio?tecnico=eq.' + encodeURIComponent(tecnicoNombre) + '&order=created_at.desc&limit=10', {
-headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-});
-const rows = await res.json();
-const propuestas = Array.isArray(rows) ? rows : [];
-if (!propuestas.length) return;
-document.getElementById('propuestasCard').style.display = 'block';
-document.getElementById('propuestasWrap').innerHTML = propuestas.map(p => {
-const o = obras.find(x => x.id === p.obra_id);
-const cod = o ? o.cod_obra : (p.obra_id||'').toString().slice(0,8);
-const estadoClass = p.estado === 'APROBADA' ? 'prop-aprobada' : p.estado === 'RECHAZADA' ? 'prop-rechazada' : 'prop-pendiente';
-const estadoTxt = p.estado === 'APROBADA' ? '✅ Aprobada' : p.estado === 'RECHAZADA' ? '✕ Rechazada' : '⏳ Pendiente';
-const fechaProp = p.valor_propuesto ? new Date(p.valor_propuesto).toLocaleDateString('es-ES') : '—';
-return '<div class="prop-row">'
-+ '<span><span class="obra-cod" style="margin-right:6px;">' + (cod||'—') + '</span>Nueva fecha: <strong>' + fechaProp + '</strong></span>'
-+ '<span class="prop-tag ' + estadoClass + '">' + estadoTxt + '</span>'
-+ '</div>';
-}).join('');
-} catch(e) {}
 }
 
 init();
 
-function abrirProponer(event) {
+function abrirEditarObra(event) {
 const id = event.currentTarget.dataset.id;
 const o = obras.find(x => x.id === id);
 if (!o) return;
-document.getElementById('pObraId').value = id;
-document.getElementById('proponerObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
-document.getElementById('pFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
-document.getElementById('pMotivo').value = '';
-document.getElementById('proponerStatus').innerHTML = '';
-document.getElementById('modalProponer').classList.add('open');
+document.getElementById('eObraId').value = id;
+document.getElementById('editarObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
+document.getElementById('eFechaInicio').value = o.fecha_inicio ? o.fecha_inicio.split('T')[0] : '';
+document.getElementById('eFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
+document.getElementById('eEstado').value = o.estado || 'ACTIVA';
+document.getElementById('editarObraStatus').innerHTML = '';
+document.getElementById('modalEditarObra').classList.add('open');
 }
 
-function closeProponerModal() {
-document.getElementById('modalProponer').classList.remove('open');
+function closeEditarObraModal() {
+document.getElementById('modalEditarObra').classList.remove('open');
 }
 
-async function enviarPropuesta() {
-const obraId = document.getElementById('pObraId').value;
-const nuevaFecha = document.getElementById('pFechaFin').value;
-const motivo = document.getElementById('pMotivo').value.trim();
-const o = obras.find(x => x.id === obraId);
-if (!nuevaFecha) { alert('Introduce la nueva fecha propuesta.'); return; }
-const payload = {
-obra_id: obraId,
-tecnico: tecnicoNombre,
-campo: 'fecha_fin',
-valor_actual: o?.fecha_fin || '',
-valor_propuesto: nuevaFecha,
-motivo: motivo,
-estado: 'PENDIENTE'
-};
-const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio', {
-method: 'POST',
+async function guardarEdicionObra() {
+const obraId = document.getElementById('eObraId').value;
+const fechaInicio = document.getElementById('eFechaInicio').value || null;
+const fechaFin = document.getElementById('eFechaFin').value || null;
+const estado = document.getElementById('eEstado').value;
+if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+document.getElementById('editarObraStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">La fecha de fin no puede ser anterior a la de inicio.</div>';
+return;
+}
+// Solo estos 3 campos: aunque se mandara cualquier otro, un trigger de la base
+// de datos lo ignoraría igualmente para cualquier técnico — esto es solo para
+// mandar lo mínimo necesario, no la barrera de seguridad en sí.
+const payload = { fecha_inicio: fechaInicio, fecha_fin: fechaFin, estado: estado };
+const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + obraId, {
+method: 'PATCH',
 headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
 body: JSON.stringify(payload)
 });
 if (res.ok) {
-document.getElementById('proponerStatus').innerHTML = '<div style="background:#e1f5ee;color:#0f6e56;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">✅ Propuesta enviada. El delegado del contrato la revisará.</div>';
-setTimeout(closeProponerModal, 1500);
+const o = obras.find(x => x.id === obraId);
+if (o) { o.fecha_inicio = fechaInicio; o.fecha_fin = fechaFin; o.estado = estado; }
+closeEditarObraModal();
+renderStats();
+renderObras();
 } else {
-document.getElementById('proponerStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar.</div>';
+document.getElementById('editarObraStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar.</div>';
 }
 }
 
-// Se difiere a DOMContentLoaded: el <div id="modalProponer"> está definido más abajo
-// en el HTML, después de este script, así que aún no existe en el DOM en este punto.
+// Se difiere a DOMContentLoaded: el <div id="modalEditarObra"> está definido más
+// abajo en el HTML, después de este script, así que aún no existe en el DOM aquí.
 document.addEventListener('DOMContentLoaded', function() {
-document.getElementById('modalProponer').addEventListener('click', e => {
-if (e.target === document.getElementById('modalProponer')) closeProponerModal();
+document.getElementById('modalEditarObra').addEventListener('click', e => {
+if (e.target === document.getElementById('modalEditarObra')) closeEditarObraModal();
 });
 });
 </script>
 
-<!-- Modal proponer cambio -->
-<div class="modal-bg" id="modalProponer">
+<!-- Modal editar obra (directo, sin aprobación) -->
+<div class="modal-bg" id="modalEditarObra">
 <div class="modal">
 <div class="modal-head">
-<h3>Proponer cambio de fecha</h3>
-<button class="close-btn" onclick="closeProponerModal()">✕</button>
+<h3>Editar fechas y estado</h3>
+<button class="close-btn" onclick="closeEditarObraModal()">✕</button>
 </div>
 <div class="modal-body">
-<div id="proponerStatus"></div>
+<div id="editarObraStatus"></div>
 <div style="margin-bottom:0.75rem;">
 <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Obra</label>
-<div id="proponerObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
+<div id="editarObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0.75rem;">
+<div>
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Fecha de inicio</label>
+<input type="date" id="eFechaInicio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+</div>
+<div>
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Fecha de fin</label>
+<input type="date" id="eFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+</div>
 </div>
 <div style="margin-bottom:0.75rem;">
-<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Nueva fecha de fin propuesta</label>
-<input type="date" id="pFechaFin" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Estado</label>
+<select id="eEstado" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+<option value="PDTE. DESIG. CSS">PDTE. DESIG. CSS</option>
+<option value="PDTE. INICIO">PDTE. INICIO</option>
+<option value="ACTIVA">ACTIVA</option>
+<option value="SIN ACTIVIDAD">SIN ACTIVIDAD</option>
+<option value="SUSPENDIDA">SUSPENDIDA</option>
+<option value="EN PROCESO DE FINALIZACIÓN">EN PROCESO DE FINALIZACIÓN</option>
+<option value="FINALIZADA">FINALIZADA</option>
+</select>
 </div>
-<div style="margin-bottom:0.75rem;">
-<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo</label>
-<textarea id="pMotivo" placeholder="Explica brevemente por qué propones este cambio..." style="width:100%;min-height:70px;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;resize:vertical;"></textarea>
-</div>
-<input type="hidden" id="pObraId">
+<input type="hidden" id="eObraId">
+<div style="font-size:0.7rem;color:#aaa;margin-bottom:0.5rem;">Los cambios se guardan directamente, sin necesidad de aprobación.</div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
-<button class="btn" onclick="closeProponerModal()">Cancelar</button>
-<button class="btn btn-primary" onclick="enviarPropuesta()">Enviar propuesta</button>
+<button class="btn" onclick="closeEditarObraModal()">Cancelar</button>
+<button class="btn btn-primary" onclick="guardarEdicionObra()">Guardar cambios</button>
 </div>
 </div>
 </div>
