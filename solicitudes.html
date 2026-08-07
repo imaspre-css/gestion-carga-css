@@ -288,8 +288,9 @@ async function confirmarResolucion(estadoDestino) {
     closeModal();
     await init();
   } else {
+    const errTxt = await res.text();
     btn.disabled = false; btn.textContent = estadoDestino === 'RECHAZADA' ? 'Rechazar solicitud' : 'Cancelar solicitud';
-    document.getElementById('resolucionStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar. ¿Ejecutaste el ALTER TABLE de las columnas nuevas?</div>';
+    document.getElementById('resolucionStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al guardar: ' + escH(errTxt) + '</div>';
   }
 }
 
