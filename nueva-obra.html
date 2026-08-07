@@ -98,7 +98,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="common.js"></script>
 <script>
-cssRequireRole(['staffer','delegado']);
+cssRequireRole(['staffer','delegado','representante']);
 </script>
 
 <div class="header">
@@ -236,7 +236,7 @@ var baremoActual = null;
 var wizardPhase = 0;
 var wizardData = {};
 
-var isStaffer = cssEsStaffer();
+var isStaffer = cssEsStaffer() || cssEsRepresentante();
 var isDelegadoRol = cssEsDelegado();
 var misContratos = cssGetContratos();
 var filtrarPorContrato = cssFiltraPorContrato();
