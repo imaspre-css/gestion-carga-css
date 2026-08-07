@@ -165,29 +165,27 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (session) procesarSesionSupabase(session);
 });
 
+// Llama directamente a current_usuario() — la misma función que usan las
+// políticas RLS — en vez de mantener aquí una segunda copia de "busca en
+// usuarios, si no está busca en tecnicos". Con una sola fuente de verdad,
+// un representante recibe aquí mismo su lista de contratos ya calculada
+// (la suma de quienes lo tengan como representante_email), sin que el
+// login tenga que saber nada de esa lógica por su cuenta.
 async function getRolFromSupabase(email) {
   const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pd255b3hzZXNiZXNvdHVtb2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzQ4NzAsImV4cCI6MjA5NjA1MDg3MH0.ScugENQtfGYuo5ZZKAuXhqOZLzOvLwEQXlr55XpMT5s';
-  // Usar el token de la sesión real (si existe) en vez de la anon key — necesario
-  // para que esta consulta funcione una vez que las políticas RLS de usuarios/
-  // tecnicos dejen de aceptar anon sin identidad. Si no hubiera sesión (no debería
-  // pasar aquí, pero por seguridad), cae de vuelta a la anon key de siempre.
   let token = ANON_KEY;
   try {
     const { data } = await supabaseClient.auth.getSession();
     if (data.session) token = data.session.access_token;
   } catch(e) {}
-  const headers = { apikey: ANON_KEY, Authorization: 'Bearer ' + token };
   try {
-    const res = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/usuarios?email=eq.' + encodeURIComponent(email) + '&activo=eq.true&select=*', { headers });
+    const res = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/rpc/current_usuario', {
+      method: 'POST',
+      headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
     const rows = await res.json();
-    if (rows && rows.length > 0) return rows[0];
-
-    // No está en usuarios -> puede ser un técnico (entran por Microsoft 365 sin PIN previo)
-    const resTec = await fetch('https://niwnyoxsesbesotumolm.supabase.co/rest/v1/tecnicos?email=eq.' + encodeURIComponent(email) + '&activo=eq.true&select=*', { headers });
-    const rowsTec = await resTec.json();
-    if (rowsTec && rowsTec.length > 0) {
-      return { rol: 'tecnico', admin_total: false, contratos: [], nombre: rowsTec[0].nombre, email: rowsTec[0].email };
-    }
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].rol) return rows[0];
     return null;
   } catch(e) { return null; }
 }
