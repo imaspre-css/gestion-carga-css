@@ -240,7 +240,7 @@ var SUPABASE_URL = CSS_SUPABASE_URL;
 var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var obras = [], tecnicosDB = [], tecSeleccionado = null;
-var isStaffer = cssEsStaffer();
+var isStaffer = cssEsStaffer() || cssEsRepresentante();
 
 function getColor(pct) {
   if (!pct) return '#f0f0e8';
