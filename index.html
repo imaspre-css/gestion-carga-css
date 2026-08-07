@@ -25,7 +25,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .module-tag { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; background: #eeeefa; color: #4a4a8a; margin-top: 0.25rem; align-self: flex-start; }
 .section-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; }
 .alert-list { display: flex; flex-direction: column; gap: 8px; }
-.alert-item { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; }
+.alert-item { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.75rem; justify-content: space-between; font-size: 0.85rem; }
 .alert-item.warn { border-color: #fac775; background: #faeeda; }
 .alert-item.ok { border-color: #9fe1cb; background: #e1f5ee; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.8rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
@@ -166,11 +166,32 @@ const alerts = [];
 if (conResp < tecnicos.length && ultimaSemana) alerts.push({ type: 'warn', text: (tecnicos.length - conResp) + ' técnico' + (tecnicos.length-conResp>1?'s':'') + ' sin responder la encuesta de la semana ' + ultimaSemana, link: 'dashboard.html', btn: 'Ver dashboard' });
 
 // Obras que su técnico ha actualizado en los últimos 7 días (dentro de tu alcance,
-// que ya viene acotado por filtrarPorContrato en el propio fetch de arriba)
+// que ya viene acotado por filtrarPorContrato en el propio fetch de arriba).
+// No solo el número: quién, qué obra y cuándo — para no tener que ir a buscarlo.
+function tiempoRelativo(fechaISO) {
+  const ms = Date.now() - new Date(fechaISO).getTime();
+  const horas = Math.floor(ms / 36e5);
+  if (horas < 1) return 'hace unos minutos';
+  if (horas < 24) return 'hace ' + horas + 'h';
+  const dias = Math.floor(horas / 24);
+  return 'hace ' + dias + ' día' + (dias>1?'s':'');
+}
 const haceUnaSemana = Date.now() - 7*864e5;
-const actualizadasPorTecnico = obras.filter(o => o.actualizado_por_tecnico_en && new Date(o.actualizado_por_tecnico_en).getTime() > haceUnaSemana);
+const actualizadasPorTecnico = obras
+  .filter(o => o.actualizado_por_tecnico_en && new Date(o.actualizado_por_tecnico_en).getTime() > haceUnaSemana)
+  .sort((a,b) => new Date(b.actualizado_por_tecnico_en) - new Date(a.actualizado_por_tecnico_en));
 if (actualizadasPorTecnico.length > 0) {
-  alerts.push({ type: 'warn', text: actualizadasPorTecnico.length + ' obra' + (actualizadasPorTecnico.length>1?'s':'') + ' actualizada' + (actualizadasPorTecnico.length>1?'s':'') + ' por su técnico en los últimos 7 días', link: 'contratos.html', btn: 'Ver contratos' });
+  const maxMostrar = 5;
+  const detalle = actualizadasPorTecnico.slice(0, maxMostrar).map(o =>
+    '<div style="font-size:0.78rem;color:#666;margin-top:3px;">' + escH(o.tecnico||'—') + ' — <span style="color:#4a4a8a;font-weight:500;">' + escH(o.cod_obra||'—') + '</span> <span style="color:#aaa;">(' + tiempoRelativo(o.actualizado_por_tecnico_en) + ')</span></div>'
+  ).join('');
+  const masTexto = actualizadasPorTecnico.length > maxMostrar ? '<div style="font-size:0.75rem;color:#888;margin-top:3px;">+ ' + (actualizadasPorTecnico.length - maxMostrar) + ' más</div>' : '';
+  alerts.push({
+    type: 'warn',
+    text: '<div>' + actualizadasPorTecnico.length + ' obra' + (actualizadasPorTecnico.length>1?'s':'') + ' actualizada' + (actualizadasPorTecnico.length>1?'s':'') + ' por su técnico en los últimos 7 días:</div>' + detalle + masTexto,
+    link: 'contratos.html',
+    btn: 'Ver contratos'
+  });
 }
 
 if (alerts.length === 0) alerts.push({ type: 'ok', text: '✅ Todo en orden — sin alertas pendientes', link: null });
