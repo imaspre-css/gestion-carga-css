@@ -147,11 +147,6 @@ cssRequireRole(['staffer','delegado','representante']);
 
     <div class="stats-grid" id="statsGrid"></div>
 
-    <div class="card" id="propuestasCard" style="display:none;">
-      <div class="card-title">📅 Propuestas de cambio de fecha pendientes</div>
-      <div id="propuestasWrap"></div>
-    </div>
-
     <div class="card">
       <div class="card-header">
         <div class="card-title">Contratos activos</div>
@@ -481,9 +476,7 @@ async function init() {
   renderContratos();
 }
 
-var propuestas = [];
-
-init().then(() => loadPropuestas());
+init();
 
 // ── NUEVO CONTRATO ─────────────────────────────────────────────
 function abrirNuevoContrato() {
@@ -894,69 +887,6 @@ async function bwGuardarBaremo() {
   } else {
     alert('Error al guardar el baremo. Inténtalo de nuevo.');
   }
-}
-
-// ── PROPUESTAS DE CAMBIO ───────────────────────────────────────
-async function loadPropuestas() {
-  if (!isDelegadoRol) return;
-  const res = await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio?select=*&estado=eq.PENDIENTE&order=created_at.desc', {
-    headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-  });
-  propuestas = await res.json();
-  if (!Array.isArray(propuestas)) propuestas = [];
-  if (filtrarPorContrato) propuestas = propuestas.filter(p => obras.some(o => o.id === p.obra_id));
-  renderPropuestas();
-}
-
-function renderPropuestas() {
-  const card = document.getElementById('propuestasCard');
-  if (!propuestas.length) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-
-  document.getElementById('propuestasWrap').innerHTML = propuestas.map(p => {
-    const obra = obras.find(o => o.id === p.obra_id);
-    const obraTxt = obra ? (obra.cod_obra + ' — ' + (obra.descripcion||'').substring(0,50)) : 'Obra no encontrada';
-    return '<div style="border:0.5px solid #fac775;background:#fdf8ef;border-radius:8px;padding:0.85rem;margin-bottom:8px;">'
-      + '<div style="font-size:0.82rem;font-weight:500;margin-bottom:4px;">' + escH(p.tecnico) + ' propone cambiar la fecha de fin</div>'
-      + '<div style="font-size:0.78rem;color:#666;margin-bottom:4px;">' + escH(obraTxt) + '</div>'
-      + '<div style="font-size:0.78rem;color:#888;margin-bottom:6px;">'
-      + 'Actual: <strong>' + (p.valor_actual ? new Date(p.valor_actual).toLocaleDateString('es-ES') : 'sin fecha') + '</strong>'
-      + ' → Propuesta: <strong style="color:#185fa5;">' + new Date(p.valor_propuesto).toLocaleDateString('es-ES') + '</strong>'
-      + '</div>'
-      + (p.motivo ? '<div style="font-size:0.78rem;color:#666;font-style:italic;margin-bottom:8px;">"' + escH(p.motivo) + '"</div>' : '')
-      + '<div style="display:flex;gap:6px;">'
-      + '<button class="btn btn-sm btn-primary" onclick="resolverPropuesta(\'' + p.id + '\',true)">✅ Aprobar</button>'
-      + '<button class="btn btn-sm" onclick="resolverPropuesta(\'' + p.id + '\',false)">✕ Rechazar</button>'
-      + '</div>'
-      + '</div>';
-  }).join('');
-}
-
-async function resolverPropuesta(id, aprobar) {
-  const p = propuestas.find(x => x.id === id);
-  if (!p) return;
-
-  if (aprobar) {
-    // Update the obra's fecha_fin
-    await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + p.obra_id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
-      body: JSON.stringify({ fecha_fin: p.valor_propuesto })
-    });
-    const obra = obras.find(o => o.id === p.obra_id);
-    if (obra) obra.fecha_fin = p.valor_propuesto;
-  }
-
-  await fetch(SUPABASE_URL + '/rest/v1/propuestas_cambio?id=eq.' + id, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
-    body: JSON.stringify({ estado: aprobar ? 'APROBADA' : 'RECHAZADA', revisado_por: localStorage.getItem('css_rol'), fecha_revision: new Date().toISOString() })
-  });
-
-  propuestas = propuestas.filter(x => x.id !== id);
-  renderPropuestas();
-  showToast(aprobar ? 'Propuesta aprobada' : 'Propuesta rechazada');
-  renderContratos();
 }
 
 
