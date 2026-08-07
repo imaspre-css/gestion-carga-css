@@ -132,7 +132,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 </head>
 <body>
 <script>
-cssRequireRole(['staffer','delegado']);
+cssRequireRole(['staffer','delegado','representante']);
 </script>
 
 <div class="header">
@@ -189,7 +189,7 @@ var obrasGlobal = [];
 var contratosDB = [];
 var tecnicosDB = [];
 var delegadosDB = [];
-var isStaffer = cssEsStaffer();
+var isStaffer = cssEsStaffer() || cssEsRepresentante();
 var isDelegadoRol = cssEsDelegado();
 var puedeEditar = isStaffer || isDelegadoRol;
 var misContratos = [];
