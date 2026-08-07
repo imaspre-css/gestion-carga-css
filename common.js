@@ -93,13 +93,16 @@ function cssGetContratos() {
 function cssEsStaffer() { return cssGetRol() === 'staffer'; }
 function cssEsDelegado() { return cssGetRol() === 'delegado'; }
 function cssEsTecnico() { return cssGetRol() === 'tecnico'; }
+function cssEsRepresentante() { return cssGetRol() === 'representante'; }
 function cssEsAdmin() { return localStorage.getItem('css_admin_total') === 'true'; }
 
 // true si el usuario debe ver solo sus contratos asignados: delegado siempre,
-// o staffer sin el permiso de administración total. Admin_total nunca se filtra.
+// o staffer/representante sin el permiso de administración total (un
+// representante nunca es admin_total, pero se deja la comprobación por
+// coherencia con el resto). Admin_total nunca se filtra.
 function cssFiltraPorContrato() {
   if (cssEsAdmin()) return false;
-  return (cssEsDelegado() || cssEsStaffer()) && cssGetContratos().length > 0;
+  return (cssEsDelegado() || cssEsStaffer() || cssEsRepresentante()) && cssGetContratos().length > 0;
 }
 
 /**
