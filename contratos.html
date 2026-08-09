@@ -1461,6 +1461,7 @@ async function enviarSolicitudSustitucion() {
   const payload = {
     tipo_solicitud: 'SUSTITUCION',
     obra_id: o.id,
+    cod_obra_resultante: o.cod_obra || null,
     motivo_sustitucion: motivo,
     denominacion: o.descripcion || o.cod_obra || '',
     producto: o.producto || 'CSS',
