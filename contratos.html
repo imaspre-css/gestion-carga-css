@@ -348,6 +348,7 @@ function renderContratos() {
             + (puedeEditar ? '<td style="white-space:nowrap;" onclick="event.stopPropagation()">'
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> ')
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> ')
+                + (esGrupo ? '' : (isDelegadoRol ? '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirSustitucionBtn(event)" title="Solicitar sustitución de técnico">🔄</button> ' : ''))
                 + '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirAnadirCoordinadorBtn(event)" title="Añadir coordinador">+👥</button> '
                 + (!esGrupo && cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + first.id + '" onclick="eliminarObraBtn(event)" title="Eliminar obra">🗑️</button>' : '')
                 + '</td>' : '')
@@ -365,6 +366,7 @@ function renderContratos() {
                 + (puedeEditar ? '<td style="white-space:nowrap;">'
                     + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> '
                     + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> '
+                    + (isDelegadoRol ? '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirSustitucionBtn(event)" title="Solicitar sustitución de técnico">🔄</button> ' : '')
                     + '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + r.id + '" onclick="quitarCoordinadorBtn(event)" title="Quitar coordinador">✕</button>'
                     + '</td>' : '')
                 + '</tr>');
@@ -1416,6 +1418,79 @@ async function guardarObra() {
   renderContratos();
 }
 
+// ── SOLICITAR SUSTITUCIÓN DE TÉCNICO (solo delegado) ────────────
+// El delegado no reasigna directamente sobre una obra existente — lo pide,
+// igual que con una obra nueva, y es el staffer quien decide con visión
+// completa de la carga de toda la plantilla. Reutiliza la tabla y el flujo
+// de solicitudes ya existente: al enviarla, copia los datos de la obra para
+// que la lista de Solicitudes y el selector de técnico funcionen igual que
+// con cualquier otra solicitud, sin ningún caso especial.
+function abrirSustitucionBtn(event) {
+  event.stopPropagation();
+  const id = event.currentTarget.dataset.id;
+  abrirSustitucion(id);
+}
+
+function abrirSustitucion(id) {
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('ssObraId').value = id;
+  document.getElementById('ssObraInfo').innerHTML = '<strong>' + escH(o.cod_obra||'') + '</strong> — ' + escH((o.descripcion||'').substring(0,60)) + '<br>Técnico actual: ' + escH(o.tecnico||'—');
+  document.getElementById('ssMotivo').value = 'VACACIONES';
+  document.getElementById('ssFechaDeseada').value = '';
+  document.getElementById('ssStatus').innerHTML = '';
+  const btn = document.getElementById('ssEnviarBtn');
+  btn.disabled = false; btn.textContent = 'Enviar solicitud';
+  document.getElementById('modalSustitucion').classList.add('open');
+}
+
+function closeSustitucionModal() {
+  document.getElementById('modalSustitucion').classList.remove('open');
+}
+
+async function enviarSolicitudSustitucion() {
+  const id = document.getElementById('ssObraId').value;
+  const o = obras.find(x => x.id === id);
+  if (!o) return;
+  const motivo = document.getElementById('ssMotivo').value;
+  const fechaDeseada = document.getElementById('ssFechaDeseada').value || null;
+  const btn = document.getElementById('ssEnviarBtn');
+  btn.disabled = true; btn.textContent = '⏳ Enviando...';
+
+  const miEmail = (localStorage.getItem('css_ms_email') || '').toLowerCase();
+  const payload = {
+    tipo_solicitud: 'SUSTITUCION',
+    obra_id: o.id,
+    motivo_sustitucion: motivo,
+    denominacion: o.descripcion || o.cod_obra || '',
+    producto: o.producto || 'CSS',
+    cod_contrato: o.cod_contrato || '',
+    cliente: o.cliente || '',
+    municipio: o.municipio || null,
+    territorio: o.territorio || '',
+    prioridad: 'MEDIA',
+    estado: 'PENDIENTE',
+    fecha_inicio: fechaDeseada,
+    carga_teorica_calculada: o.carga_teorica_semanal || null,
+    delegado: miEmail
+  };
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/solicitudes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    closeSustitucionModal();
+    showToast('Solicitud de sustitución enviada');
+  } else {
+    const errTxt = await res.text();
+    document.getElementById('ssStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar: ' + escH(errTxt) + '</div>';
+    btn.disabled = false; btn.textContent = 'Enviar solicitud';
+  }
+}
+
 // Se difiere a DOMContentLoaded: los <div id="modalXxx"> están definidos más abajo
 // en el HTML, después de este script, así que aún no existen en el DOM aquí.
 document.addEventListener('DOMContentLoaded', function() {
@@ -1441,6 +1516,10 @@ document.getElementById('modalRespuestasObra').addEventListener('click', e => {
 
 document.getElementById('modalAnadirCoordinador').addEventListener('click', e => {
   if (e.target === document.getElementById('modalAnadirCoordinador')) closeAnadirCoordinadorModal();
+});
+
+document.getElementById('modalSustitucion').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalSustitucion')) closeSustitucionModal();
 });
 });
 
@@ -1646,6 +1725,39 @@ document.getElementById('modalAnadirCoordinador').addEventListener('click', e =>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
         <button class="btn" onclick="closeAnadirCoordinadorModal()">Cancelar</button>
         <button class="btn btn-primary" id="acConfirmBtn" onclick="confirmarAnadirCoordinador()" disabled>Añadir coordinador</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal solicitar sustitución de técnico (delegado) -->
+<div class="modal-bg" id="modalSustitucion">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head">
+      <h3>🔄 Solicitar sustitución</h3>
+      <button class="close-btn" onclick="closeSustitucionModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ssStatus"></div>
+      <div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.85rem;" id="ssObraInfo"></div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Motivo</label>
+        <select id="ssMotivo" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+          <option value="VACACIONES">Vacaciones</option>
+          <option value="BAJA">Baja</option>
+          <option value="CAMBIO_CSS">Cambio de CSS</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Fecha deseada del cambio <span style="color:#aaa;">(opcional)</span></label>
+        <input type="date" id="ssFechaDeseada" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+      </div>
+      <input type="hidden" id="ssObraId">
+      <div style="font-size:0.72rem;color:#aaa;margin-bottom:0.5rem;">El staffer revisará esta solicitud y asignará al nuevo técnico, con visión de la carga de toda la plantilla.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn" onclick="closeSustitucionModal()">Cancelar</button>
+        <button class="btn btn-primary" id="ssEnviarBtn" onclick="enviarSolicitudSustitucion()">Enviar solicitud</button>
       </div>
     </div>
   </div>
