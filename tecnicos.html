@@ -33,14 +33,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .search-box .icon { position: absolute; left: 8px; font-size: 12px; color: #aaa; pointer-events: none; }
 
 /* Tech grid */
-.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-.tech-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; cursor: pointer; transition: all 0.15s; }
-.tech-card:hover { border-color: #4a4a8a; box-shadow: 0 2px 8px rgba(74,74,138,0.1); }
-.tech-card.selected { border-color: #4a4a8a; background: #f8f8fe; }
-.tech-card.inactivo { opacity: 0.5; }
-.avatar { width: 40px; height: 40px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.6rem; }
-.tech-card-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 2px; }
-.tech-card-meta { font-size: 0.72rem; color: #aaa; }
+.tech-row { cursor: pointer; transition: background 0.1s; }
+.tech-row:hover td { background: #f8f8fe; }
+.tech-row.selected td { background: #eeeefa; }
+.tech-row .avatar { width: 28px; height: 28px; font-size: 0.68rem; margin-bottom: 0; }
+.tech-row-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+.tech-th { cursor: pointer; user-select: none; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; }
 .bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 6px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
 .bar-warn { background: #ef9f27 !important; }
@@ -146,7 +145,7 @@ cssRequireRole();
             <button class="btn btn-sm" onclick="limpiarSeleccion()">Limpiar selección</button>
           </div>
         </div>
-        <div class="tech-grid" id="techGrid"></div>
+        <div style="overflow-x:auto;"><table class="obras-table"><thead><tr id="techTableHead"></tr></thead><tbody id="techGrid"></tbody></table></div>
       </div>
       <div class="detalle card" id="detalleWrap">
         <div id="detalleContent"></div>
@@ -310,26 +309,64 @@ function limpiarSeleccion() {
   document.getElementById('seleccionLabel').textContent = '';
 }
 
+var ordenEquipoColumna = 'nombre';
+var ordenEquipoAsc = true;
+
+function ordenarEquipoPor(campo) {
+  if (ordenEquipoColumna === campo) ordenEquipoAsc = !ordenEquipoAsc;
+  else { ordenEquipoColumna = campo; ordenEquipoAsc = true; }
+  renderTechGrid();
+}
+
+function renderTechTableHead() {
+  const flecha = campo => ordenEquipoColumna === campo ? (ordenEquipoAsc ? ' ▲' : ' ▼') : '';
+  const th = (campo, label) => '<th class="tech-th" onclick="ordenarEquipoPor(\'' + campo + '\')">' + label + flecha(campo) + '</th>';
+  document.getElementById('techTableHead').innerHTML =
+    th('nombre','Nombre') + th('territorio','Territorio') + th('obras','Obras') + th('carga','Carga');
+}
+
 function renderTechGrid() {
+  renderTechTableHead();
   const filtro = document.getElementById('filtroTerritorioEquipo')?.value || '';
   const busqueda = (document.getElementById('buscarEquipo')?.value || '').trim().toLowerCase();
   let tecnicos = getAllTecnicos();
   if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t).toUpperCase() === filtro.toUpperCase());
   if (busqueda) tecnicos = tecnicos.filter(t => t.toLowerCase().includes(busqueda));
-  document.getElementById('techGrid').innerHTML = tecnicos.map(t => {
-    const ini = t.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+
+  // Ficha completa de cada uno, calculada una sola vez, para poder ordenar por
+  // cualquier columna (no solo el nombre, que es lo único gratis en un array de strings)
+  let fichas = tecnicos.map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const carga = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
-    const barClass = carga >= 100 ? 'bar-over' : carga >= 85 ? 'bar-warn' : '';
-    const pctClass = carga >= 100 ? 'pct-over' : carga >= 85 ? 'pct-warn' : 'pct-ok';
-    const isSelected = tecSeleccionados.includes(t);
-    return '<div class="tech-card' + (isSelected ? ' selected' : '') + '" id="tc_' + t.replace(/\s/g,'_') + '" onclick="toggleSeleccion(\'' + t.replace(/'/g,"\\'") + '\')">'
-      + '<div class="avatar">' + ini + '</div>'
-      + '<div class="tech-card-name">' + t + '</div>'
-      + '<div class="tech-card-meta">' + (obrasTec.length ? obrasTec.length + ' obras activas' : 'Sin obras activas') + '</div>'
-      + '<div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(carga,100) + '%;"></div></div>'
-      + '<div class="pct ' + pctClass + '">' + carga + '% carga teórica</div>'
-      + '</div>';
+    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', obras: obrasTec.length, carga };
+  });
+
+  fichas.sort((a,b) => {
+    let va = a[ordenEquipoColumna], vb = b[ordenEquipoColumna];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return ordenEquipoAsc ? -1 : 1;
+    if (va > vb) return ordenEquipoAsc ? 1 : -1;
+    return 0;
+  });
+
+  if (!fichas.length) {
+    document.getElementById('techGrid').innerHTML = '<tr><td colspan="4" class="empty">Sin técnicos con estos filtros</td></tr>';
+    return;
+  }
+
+  document.getElementById('techGrid').innerHTML = fichas.map(f => {
+    const ini = f.nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const barClass = f.carga >= 100 ? 'bar-over' : f.carga >= 85 ? 'bar-warn' : '';
+    const isSelected = tecSeleccionados.includes(f.nombre);
+    return '<tr class="tech-row' + (isSelected ? ' selected' : '') + '" onclick="toggleSeleccion(\'' + f.nombre.replace(/'/g,"\\'") + '\')">'
+      + '<td><div class="tech-row-name"><div class="avatar">' + ini + '</div>' + f.nombre + '</div></td>'
+      + '<td style="font-size:0.8rem;color:#888;">' + f.territorio + '</td>'
+      + '<td style="font-size:0.8rem;">' + f.obras + '</td>'
+      + '<td style="min-width:110px;"><div style="display:flex;align-items:center;gap:8px;">'
+      + '<div class="bar-bg" style="flex:1;"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(f.carga,100) + '%;"></div></div>'
+      + '<span style="font-size:0.78rem;font-weight:500;min-width:32px;">' + f.carga + '%</span>'
+      + '</div></td>'
+      + '</tr>';
   }).join('');
 }
 
