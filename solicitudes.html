@@ -466,6 +466,38 @@ async function confirmarAsignacion() {
       }
     }
 
+    // Notificaciones dentro de la app (campanita) — al delegado que pidió la
+    // solicitud, y al propio técnico designado. Se insertan juntas en una sola
+    // llamada; cada una es independiente, así que si alguna de las dos no
+    // tuviera destinatario válido (raro, pero posible en datos antiguos),
+    // no bloquea a la otra.
+    const notifs = [];
+    if (solicitudActual.delegado) {
+      notifs.push({
+        destinatario_email: solicitudActual.delegado,
+        tipo: 'SOLICITUD_ASIGNADA',
+        titulo: (esSustitucion ? 'Sustitución realizada — ' : 'Solicitud asignada — ') + (solicitudActual.denominacion||''),
+        mensaje: 'Técnico: ' + tecnicoSeleccionado,
+        link: 'solicitudes.html'
+      });
+    }
+    if (nuevoEmail) {
+      notifs.push({
+        destinatario_email: nuevoEmail,
+        tipo: 'TECNICO_DESIGNADO',
+        titulo: (esSustitucion ? 'Nueva obra (sustitución) — ' : 'Nueva obra asignada — ') + (solicitudActual.denominacion||''),
+        mensaje: (solicitudActual.cod_contrato||'') + (solicitudActual.territorio ? ' · ' + solicitudActual.territorio : ''),
+        link: 'mis-obras.html'
+      });
+    }
+    if (notifs.length) {
+      fetch(SUPABASE_URL + '/rest/v1/notificaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+        body: JSON.stringify(notifs)
+      }).catch(function(){});
+    }
+
     // Aviso por mailto al delegado — texto ajustado según sea sustitución u obra nueva
     if (solicitudActual.delegado) {
       const asunto = (esSustitucion ? 'Sustitución realizada — ' : 'Obra asignada — ') + (solicitudActual.denominacion||'');
