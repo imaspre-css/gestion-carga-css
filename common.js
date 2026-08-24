@@ -276,3 +276,117 @@ function cssRenderNav(paginaActual, salirOnClick) {
     : '<a href="#" onclick="cssLogout()" style="color:#ff8888;">Salir</a>';
   return links + salir;
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICACIONES (campanita) — Bloque 8
+// Vive en su propio elemento, con posición fija, completamente al
+// margen del #navContainer de cada página. Esto es deliberado: cada
+// página reescribe su propio nav de forma asíncrona (tras cargar sus
+// datos), y si la campanita viviera ahí dentro, esa reescritura la
+// borraría en cuanto la página terminara de pintar su menú. Al vivir
+// aparte, ninguna página puede hacerla desaparecer sin querer, sea
+// cual sea su estructura interna — funciona igual en las 9 páginas
+// sin que ninguna tenga que llamarla ni saber que existe.
+// ═══════════════════════════════════════════════════════════════
+var cssNotifCache = [];
+
+async function cssCargarNotificaciones() {
+  const email = cssGetEmail();
+  if (!email) return;
+  try {
+    const res = await fetch(CSS_SUPABASE_URL + '/rest/v1/notificaciones?destinatario_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&limit=20', {
+      headers: { apikey: CSS_SUPABASE_KEY, Authorization: 'Bearer ' + CSS_SUPABASE_KEY }
+    });
+    const rows = await res.json();
+    cssNotifCache = Array.isArray(rows) ? rows : [];
+    cssRenderNotifBadge();
+  } catch(e) {}
+}
+
+function cssRenderNotifBadge() {
+  const noLeidas = cssNotifCache.filter(function(n) { return !n.leida; }).length;
+  const badge = document.getElementById('cssNotifBadge');
+  if (!badge) return;
+  if (noLeidas > 0) {
+    badge.textContent = noLeidas > 9 ? '9+' : noLeidas;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function cssTiempoRelativoNotif(fechaISO) {
+  const ms = Date.now() - new Date(fechaISO).getTime();
+  const horas = Math.floor(ms / 36e5);
+  if (horas < 1) return 'hace unos minutos';
+  if (horas < 24) return 'hace ' + horas + 'h';
+  const dias = Math.floor(horas / 24);
+  return 'hace ' + dias + ' día' + (dias>1?'s':'');
+}
+
+function cssRenderNotifPanel() {
+  const panel = document.getElementById('cssNotifPanel');
+  if (!panel) return;
+  if (!cssNotifCache.length) {
+    panel.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#bbb;font-size:0.82rem;">Sin notificaciones</div>';
+    return;
+  }
+  panel.innerHTML = cssNotifCache.map(function(n) {
+    return '<div onclick="cssAbrirNotificacion(\'' + n.id + '\')" style="padding:0.75rem 1rem;border-bottom:0.5px solid #f0f0e8;cursor:pointer;' + (n.leida ? '' : 'background:#f8f8fe;') + '">'
+      + '<div style="font-size:0.82rem;font-weight:' + (n.leida?'400':'500') + ';color:#1a1a2e;">' + escH(n.titulo) + '</div>'
+      + (n.mensaje ? '<div style="font-size:0.76rem;color:#888;margin-top:2px;">' + escH(n.mensaje) + '</div>' : '')
+      + '<div style="font-size:0.68rem;color:#aaa;margin-top:3px;">' + cssTiempoRelativoNotif(n.created_at) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function cssToggleNotifPanel(event) {
+  event.stopPropagation();
+  const panel = document.getElementById('cssNotifPanel');
+  if (!panel) return;
+  const abierto = panel.style.display === 'block';
+  if (abierto) {
+    panel.style.display = 'none';
+  } else {
+    cssRenderNotifPanel();
+    panel.style.display = 'block';
+  }
+}
+
+async function cssAbrirNotificacion(id) {
+  const n = cssNotifCache.find(function(x) { return x.id === id; });
+  if (!n) return;
+  if (!n.leida) {
+    n.leida = true;
+    cssRenderNotifBadge();
+    fetch(CSS_SUPABASE_URL + '/rest/v1/notificaciones?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: CSS_SUPABASE_KEY, Authorization: 'Bearer ' + CSS_SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify({ leida: true })
+    }).catch(function(){});
+  }
+  if (n.link) { window.location.href = n.link; }
+  else { cssRenderNotifPanel(); }
+}
+
+function cssInitNotificaciones() {
+  if (!cssGetRol() || document.getElementById('cssNotifBell')) return;
+  const bell = document.createElement('div');
+  bell.id = 'cssNotifBell';
+  bell.style.cssText = 'position:fixed;top:14px;right:20px;z-index:500;';
+  bell.innerHTML =
+    '<div onclick="cssToggleNotifPanel(event)" style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);border-radius:50%;font-size:1rem;cursor:pointer;">'
+    + '🔔'
+    + '<span id="cssNotifBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#e24b4a;color:#fff;font-size:0.6rem;font-weight:600;padding:1px 5px;border-radius:10px;min-width:15px;text-align:center;line-height:1.3;"></span>'
+    + '</div>'
+    + '<div id="cssNotifPanel" style="display:none;position:absolute;top:40px;right:0;background:#fff;color:#1a1a1a;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);width:320px;max-height:420px;overflow-y:auto;"></div>';
+  document.body.appendChild(bell);
+  document.addEventListener('click', function(e) {
+    const p = document.getElementById('cssNotifPanel');
+    if (p && p.style.display === 'block' && !bell.contains(e.target)) p.style.display = 'none';
+  });
+  cssCargarNotificaciones();
+}
+
+document.addEventListener('DOMContentLoaded', cssInitNotificaciones);
