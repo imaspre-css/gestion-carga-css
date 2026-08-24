@@ -372,16 +372,33 @@ async function cssAbrirNotificacion(id) {
 
 function cssInitNotificaciones() {
   if (!cssGetRol() || document.getElementById('cssNotifBell')) return;
+  const navContainer = document.getElementById('navContainer');
+  if (!navContainer) return; // página sin header estándar (login, encuesta) — sin campanita ahí
+
+  // En vez de flotar encima con position:fixed (que no sabe dónde termina el
+  // menú de cada página y puede solaparse con "Salir"), se envuelve el propio
+  // #navContainer junto a la campanita en un mismo grupo — así el header los
+  // trata como un solo bloque a la derecha, y nunca chocan entre sí, sea cual
+  // sea el número de opciones de menú de cada página. Como navContainer se
+  // MUEVE (no se recrea), su propio id sigue intacto: cuando la página haga
+  // más tarde su propio "getElementById('navContainer').innerHTML = ...",
+  // seguirá encontrándolo y actualizándolo con normalidad, sin ningún conflicto.
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;align-items:center;gap:14px;';
+  navContainer.parentNode.insertBefore(wrapper, navContainer);
+  wrapper.appendChild(navContainer);
+
   const bell = document.createElement('div');
   bell.id = 'cssNotifBell';
-  bell.style.cssText = 'position:fixed;top:14px;right:20px;z-index:500;';
+  bell.style.cssText = 'position:relative;flex-shrink:0;';
   bell.innerHTML =
-    '<div onclick="cssToggleNotifPanel(event)" style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);border-radius:50%;font-size:1rem;cursor:pointer;">'
+    '<div onclick="cssToggleNotifPanel(event)" style="position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);border-radius:50%;font-size:0.95rem;cursor:pointer;">'
     + '🔔'
     + '<span id="cssNotifBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#e24b4a;color:#fff;font-size:0.6rem;font-weight:600;padding:1px 5px;border-radius:10px;min-width:15px;text-align:center;line-height:1.3;"></span>'
     + '</div>'
-    + '<div id="cssNotifPanel" style="display:none;position:absolute;top:40px;right:0;background:#fff;color:#1a1a1a;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);width:320px;max-height:420px;overflow-y:auto;"></div>';
-  document.body.appendChild(bell);
+    + '<div id="cssNotifPanel" style="display:none;position:absolute;top:38px;right:0;background:#fff;color:#1a1a1a;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);width:320px;max-height:420px;overflow-y:auto;z-index:500;"></div>';
+  wrapper.appendChild(bell);
+
   document.addEventListener('click', function(e) {
     const p = document.getElementById('cssNotifPanel');
     if (p && p.style.display === 'block' && !bell.contains(e.target)) p.style.display = 'none';
