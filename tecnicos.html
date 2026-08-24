@@ -432,6 +432,7 @@ function renderDetalle(nombre) {
       + '" onmouseenter="showTip(event,\'S' + w + ' (' + dateStr + '): ' + pct + '%\')" onmouseleave="hideTip()"></div>';
   }
 
+  const puedeEditarObras = isStaffer || cssEsDelegado();
   const obrasHTML = obrasTec.length ? obrasTec.map(o => {
     const c = parseFloat(o.carga_teorica_semanal)||0;
     return '<tr><td><span class="pill pill-blue">' + o.cod_obra + '</span></td>'
@@ -441,8 +442,9 @@ function renderDetalle(nombre) {
       + '<td>' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td>' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td style="font-weight:500;">' + Math.round(c) + '%</td>'
+      + (puedeEditarObras ? '<td><a class="btn btn-sm" href="contratos.html?editar=' + encodeURIComponent(o.id) + '" title="Editar esta obra en Contratos">✏️</a></td>' : '')
       + '</tr>';
-  }).join('') : '<tr><td colspan="7" class="empty">Sin obras activas</td></tr>';
+  }).join('') : '<tr><td colspan="' + (puedeEditarObras ? 8 : 7) + '" class="empty">Sin obras activas</td></tr>';
 
   document.getElementById('detalleContent').innerHTML =
     '<div class="detalle-header">'
@@ -471,7 +473,7 @@ function renderDetalle(nombre) {
     + '</div>'
     + '<div class="card-title" style="margin-top:1.25rem;">Obras asignadas</div>'
     + '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
-    + '<th>Nº Obra</th><th>Descripción</th><th>Cliente</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th>'
+    + '<th>Nº Obra</th><th>Descripción</th><th>Cliente</th><th>Territorio</th><th>Inicio</th><th>Fin</th><th>Carga</th>' + (puedeEditarObras ? '<th></th>' : '')
     + '</tr></thead><tbody>' + obrasHTML + '</tbody></table></div>';
 }
 
