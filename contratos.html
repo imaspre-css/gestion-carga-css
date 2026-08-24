@@ -350,7 +350,7 @@ function renderContratos() {
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> ')
                 + (esGrupo ? '' : (isDelegadoRol ? '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirSustitucionBtn(event)" title="Solicitar sustitución de técnico">🔄</button> ' : ''))
                 + '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirAnadirCoordinadorBtn(event)" title="Añadir coordinador">+👥</button> '
-                + (!esGrupo && cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + first.id + '" onclick="eliminarObraBtn(event)" title="Eliminar obra">🗑️</button>' : '')
+                + (!esGrupo && isStaffer ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-id="' + first.id + '" onclick="eliminarObraBtn(event)" title="Eliminar obra">🗑️</button>' : '')
                 + '</td>' : '')
             + '</tr>');
           if (esGrupo && abierto) {
@@ -394,7 +394,7 @@ function renderContratos() {
       + '<div class="contrato-stat"><div class="contrato-stat-num"' + (pendientesDesig > 0 ? ' style="color:#854f0b;"' : '') + '>' + pendientesDesig + '</div><div class="contrato-stat-label">Pdte. designar</div></div>'
       + '</div>'
       + (puedeEditar ? '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirBaremoBtn(event)" title="Configurar / editar baremo">⚙️</button><button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirEditarContratoBtn(event)" title="Editar contrato">✏️</button>' : '')
-      + (cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-cod="' + escH(cont.cod) + '" onclick="eliminarContratoBtn(event)" title="Eliminar contrato">🗑️</button>' : '')
+      + (isStaffer ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-cod="' + escH(cont.cod) + '" onclick="eliminarContratoBtn(event)" title="Eliminar contrato">🗑️</button>' : '')
       + '<span class="chevron' + (isOpen?' open':'') + '">▼</span>'
       + '</div>'
       + (isOpen ? obrasHTML : '<div class="obras-wrap"></div>')
@@ -1258,8 +1258,11 @@ function eliminarObraBtn(event) {
   eliminarObra(id);
 }
 
+// Staffer (admin o no) y representante pueden borrar — no solo admin_total.
+// Las salvaguardas (bloqueo si el contrato aún tiene obras, doble confirmación
+// explícita) ya compensan razonablemente el riesgo de una acción irreversible.
 async function eliminarObra(id) {
-  if (!cssEsAdmin()) return;
+  if (!isStaffer) return;
   const o = obras.find(x => x.id === id);
   if (!o) return;
   const etiqueta = (o.cod_obra||'—') + ' — ' + (o.descripcion||'sin descripción').substring(0,50);
@@ -1288,7 +1291,7 @@ function eliminarContratoBtn(event) {
 }
 
 async function eliminarContrato(cod) {
-  if (!cssEsAdmin()) return;
+  if (!isStaffer) return;
   const obrasDelContrato = obras.filter(o => o.cod_contrato === cod);
   if (obrasDelContrato.length > 0) {
     alert('Este contrato todavía tiene ' + obrasDelContrato.length + ' obra' + (obrasDelContrato.length>1?'s':'') + '. Elimínalas (🗑️ en cada fila) o reasígnalas a otro contrato antes de borrar el contrato.');
