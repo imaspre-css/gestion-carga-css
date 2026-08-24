@@ -498,23 +498,9 @@ async function confirmarAsignacion() {
       }).catch(function(){});
     }
 
-    // Aviso por mailto al delegado — texto ajustado según sea sustitución u obra nueva
-    if (solicitudActual.delegado) {
-      const asunto = (esSustitucion ? 'Sustitución realizada — ' : 'Obra asignada — ') + (solicitudActual.denominacion||'');
-      const cuerpo = 'Hola,\n\n' + (esSustitucion
-          ? 'Te confirmamos la sustitucion de tecnico en la siguiente obra:\n\n'
-          : 'Te confirmamos la asignacion de la siguiente obra:\n\n')
-        + '* Obra: ' + (solicitudActual.denominacion||'') + '\n'
-        + '* Producto: ' + (solicitudActual.producto||'CSS') + '\n'
-        + '* Contrato: ' + (solicitudActual.cod_contrato||'') + '\n'
-        + '* Territorio: ' + (solicitudActual.territorio||'') + '\n'
-        + '* ' + (esSustitucion ? 'Nuevo tecnico' : 'Tecnico asignado') + ': ' + tecnicoSeleccionado + '\n'
-        + '* Carga teorica: ' + (solicitudActual.carga_teorica_calculada||'-') + '%\n\n'
-        + 'Por favor contacta con el tecnico para coordinar' + (esSustitucion ? ' el relevo.' : ' el inicio de la obra.') + '\n\nSaludos,\nEquipo de Staffing';
-      window.open('mailto:' + encodeURIComponent(solicitudActual.delegado)
-        + '?subject=' + encodeURIComponent(asunto)
-        + '&body=' + encodeURIComponent(cuerpo));
-    }
+    // El mailto que vivía aquí queda retirado — el aviso a delegado y técnico
+    // ahora llega por la campanita (arriba), sin depender de que el staffer
+    // recuerde pulsar "enviar" en un cliente de correo externo.
     closeModal();
     await init();
   } else {
