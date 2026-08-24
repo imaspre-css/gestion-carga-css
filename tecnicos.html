@@ -250,35 +250,43 @@ function getColor(pct) {
   return '#e1f5ee';
 }
 
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+// Ventana móvil, no año natural: 4 semanas de contexto reciente + 48 hacia
+// delante desde hoy mismo. Antes, el calendario se quedaba atado al año en
+// curso — en agosto ya solo enseñaba hasta diciembre, aunque hubiera obras con
+// fecha de fin en marzo del año siguiente que sabíamos con certeza que existían.
+// Al calcular fecha a fecha (no "semana X del año Y"), cruzar de un año a otro
+// no rompe nada.
+var SEMANAS_ATRAS = 4;
+var SEMANAS_ADELANTE = 48;
+var TOTAL_SEMANAS = SEMANAS_ATRAS + SEMANAS_ADELANTE;
+
+function getMondayInicioVentana() {
+  const hoy = new Date();
+  const dia = hoy.getDay() || 7;
+  const mondayActual = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - dia + 1);
+  const inicio = new Date(mondayActual);
+  inicio.setDate(mondayActual.getDate() - SEMANAS_ATRAS * 7);
+  return inicio;
 }
 
-function getMonday(year, week) {
-  const jan4 = new Date(year, 0, 4);
-  const startOfWeek1 = new Date(jan4);
-  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
-  const monday = new Date(startOfWeek1);
-  monday.setDate(startOfWeek1.getDate() + (week - 1) * 7);
+function getMondaySemana(w) {
+  const monday = new Date(getMondayInicioVentana());
+  monday.setDate(monday.getDate() + w * 7);
   return monday;
 }
 
-function calcCargaPorSemana(obrasTec, year) {
-  const semanas = new Array(53).fill(0);
+function calcCargaPorSemana(obrasTec) {
+  const semanas = new Array(TOTAL_SEMANAS).fill(0);
   obrasTec.forEach(o => {
     const carga = parseFloat(o.carga_teorica_semanal) || 0;
     if (!carga) return;
     const inicio = o.fecha_inicio ? new Date(o.fecha_inicio) : null;
     const fin = o.fecha_fin ? new Date(o.fecha_fin) : null;
-    for (let w = 1; w <= 52; w++) {
-      const monday = getMonday(year, w);
+    for (let w = 0; w < TOTAL_SEMANAS; w++) {
+      const monday = getMondaySemana(w);
       const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
-      const desde = inicio || new Date(year, 0, 1);
-      const hasta = fin || new Date(year, 11, 31);
+      const desde = inicio || new Date(2000, 0, 1);
+      const hasta = fin || new Date(2100, 0, 1);
       if (monday <= hasta && friday >= desde) semanas[w] += carga;
     }
   });
@@ -390,14 +398,13 @@ function seleccionarTecnico(nombre) { toggleSeleccion(nombre); }
 
 function renderDetalleMultiple(nombres) {
   if (nombres.length === 1) { renderDetalle(nombres[0]); return; }
-  var year = new Date().getFullYear();
-  var currentWeek = getWeekNumber(new Date());
+  var currentWeek = SEMANAS_ATRAS;
   var months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
 
   var monthLabels = '<div style="grid-column:1;"></div>';
   var lastMonth = -1;
-  for (var w = 1; w <= 52; w++) {
-    var monday = getMonday(year, w);
+  for (var w = 0; w < TOTAL_SEMANAS; w++) {
+    var monday = getMondaySemana(w);
     var m = monday.getMonth();
     monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
     lastMonth = m;
@@ -406,25 +413,27 @@ function renderDetalleMultiple(nombres) {
   var cals = '';
   nombres.forEach(function(nombre) {
     var obrasTec = obras.filter(function(o) { return o.tecnico === nombre; });
-    var cargas = calcCargaPorSemana(obrasTec, year);
+    var cargas = calcCargaPorSemana(obrasTec);
     var cargaTotal = Math.round(obrasTec.reduce(function(s,o) { return s+(parseFloat(o.carga_teorica_semanal)||0); }, 0));
     var pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
     var ini = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('');
     var cells = '<div class="cal-label" style="font-size:0.65rem;">' + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
-    for (var w = 1; w <= 52; w++) {
+    for (var w = 0; w < TOTAL_SEMANAS; w++) {
       var pct = Math.round(cargas[w]);
       var color = getColor(pct);
-      var tipText = nombre.split(' ')[0] + ' S' + w + ': ' + pct + '%';
+      var monday = getMondaySemana(w);
+      var dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+      var tipText = nombre.split(' ')[0] + ' ' + dateStr + ': ' + pct + '%';
       cells += '<div class="cal-cell" style="background:' + color + ';'
         + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
-        + (w > currentWeek ? 'opacity:0.55;' : '')
+        + (w < currentWeek ? 'opacity:0.55;' : '')
         + '" data-tip="' + tipText + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()"></div>';
     }
     cals += '<div class="cal-grid" style="margin-bottom:4px;">' + cells + '</div>';
   });
 
   document.getElementById('detalleContent').innerHTML =
-    '<div class="card-title">Horizonte comparativo ' + year + ' — ' + nombres.length + ' técnicos</div>'
+    '<div class="card-title">Horizonte comparativo — próximas ' + SEMANAS_ADELANTE + ' semanas — ' + nombres.length + ' técnicos</div>'
     + '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>' + cals + '</div>'
     + '<div class="cal-legend">'
     + '<span><div class="cal-legend-cell" style="background:#e1f5ee;"></div> 0-30%</span>'
@@ -441,32 +450,31 @@ function renderDetalle(nombre) {
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
   const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
   const email = obrasTec[0]?.email || '';
-  const year = new Date().getFullYear();
-  const cargas = calcCargaPorSemana(obrasTec, year);
-  const currentWeek = getWeekNumber(new Date());
+  const cargas = calcCargaPorSemana(obrasTec);
+  const currentWeek = SEMANAS_ATRAS;
   const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
 
   const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
   let monthLabels = '<div style="grid-column:1;"></div>';
   let lastMonth = -1;
-  for (let w = 1; w <= 52; w++) {
-    const monday = getMonday(year, w);
+  for (let w = 0; w < TOTAL_SEMANAS; w++) {
+    const monday = getMondaySemana(w);
     const m = monday.getMonth();
     monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
     lastMonth = m;
   }
 
-  let cells = '<div class="cal-label">' + year + '</div>';
-  for (let w = 1; w <= 52; w++) {
+  let cells = '<div class="cal-label"></div>';
+  for (let w = 0; w < TOTAL_SEMANAS; w++) {
     const pct = Math.round(cargas[w]);
     const color = getColor(pct);
-    const monday = getMonday(year, w);
+    const monday = getMondaySemana(w);
     const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
     const isCurrent = w === currentWeek;
     cells += '<div class="cal-cell" style="background:' + color + ';'
       + (isCurrent ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
-      + (w > currentWeek ? 'opacity:0.55;' : '')
-      + '" onmouseenter="showTip(event,\'S' + w + ' (' + dateStr + '): ' + pct + '%\')" onmouseleave="hideTip()"></div>';
+      + (w < currentWeek ? 'opacity:0.55;' : '')
+      + '" onmouseenter="showTip(event,\'' + dateStr + ': ' + pct + '%\')" onmouseleave="hideTip()"></div>';
   }
 
   const puedeEditarObras = isStaffer || cssEsDelegado();
@@ -498,7 +506,7 @@ function renderDetalle(nombre) {
     + '<div class="mini-stat"><div class="mini-stat-num">' + Math.max(0, 100-cargaTotal) + '%</div><div class="mini-stat-label">Disponibilidad</div></div>'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.filter(o=>o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>'
     + '</div>'
-    + '<div class="card-title">Horizonte de carga ' + year + '</div>'
+    + '<div class="card-title">Horizonte de carga — próximas ' + SEMANAS_ADELANTE + ' semanas</div>'
     + '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>'
     + '<div class="cal-grid">' + cells + '</div></div>'
     + '<div class="cal-legend">'
