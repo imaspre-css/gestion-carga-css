@@ -350,11 +350,12 @@ function renderTechGrid() {
   });
 
   fichas.sort((a,b) => {
-    let va = a[ordenEquipoColumna], vb = b[ordenEquipoColumna];
-    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
-    if (va < vb) return ordenEquipoAsc ? -1 : 1;
-    if (va > vb) return ordenEquipoAsc ? 1 : -1;
-    return 0;
+    const va = a[ordenEquipoColumna], vb = b[ordenEquipoColumna];
+    // localeCompare, no < / >: la comparación normal trata "Á" como si fuera
+    // posterior a "Z" (por su código interno), así que Álvaro/Ángel/Óscar
+    // acaban siempre al final por muy bien ordenado que esté el resto.
+    const cmp = (typeof va === 'string') ? va.localeCompare(vb, 'es', { sensitivity: 'base' }) : (va < vb ? -1 : va > vb ? 1 : 0);
+    return ordenEquipoAsc ? cmp : -cmp;
   });
 
   if (!fichas.length) {
