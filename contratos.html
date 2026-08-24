@@ -476,6 +476,20 @@ async function init() {
   renderStats();
   populateFilters();
   renderContratos();
+
+  // Si llegamos con ?editar=<id> (desde Técnicos, o desde un aviso de la
+  // campanita), abrir esa obra concreta directamente — sin obligar a nadie a
+  // buscarla a mano entre todos los contratos. Respeta el mismo permiso que
+  // ya decide si se ve el botón ✏️ en la tabla: si no puede editar, no pasa nada.
+  const idAEditar = new URLSearchParams(location.search).get('editar');
+  if (idAEditar && puedeEditar) {
+    const obraDestino = obras.find(o => o.id === idAEditar);
+    if (obraDestino) {
+      openContratos.add(obraDestino.cod_contrato);
+      renderContratos();
+      abrirEditarObra(null, idAEditar);
+    }
+  }
 }
 
 init();
@@ -960,7 +974,7 @@ function abrirEditarObraBtn(event) {
 }
 
 function abrirEditarObra(event, id) {
-  event.stopPropagation();
+  if (event) event.stopPropagation();
   const o = obras.find(x => x.id === id);
   if (!o) return;
   document.getElementById('eId').value = id;
