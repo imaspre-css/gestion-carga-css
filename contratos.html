@@ -1485,6 +1485,17 @@ async function enviarSolicitudSustitucion() {
   if (res.ok) {
     closeSustitucionModal();
     showToast('Solicitud de sustitución enviada');
+    // Avisar a quien deba actuar sobre esta solicitud (staffer/representante del contrato, y admin)
+    fetch(SUPABASE_URL + '/rest/v1/rpc/notificar_solicitud_nueva', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({
+        p_cod_contrato: o.cod_contrato || '',
+        p_titulo: 'Sustitución solicitada — ' + (o.cod_obra||''),
+        p_mensaje: 'Técnico actual: ' + (o.tecnico||'—') + ' · Motivo: ' + motivo,
+        p_link: 'solicitudes.html'
+      })
+    }).catch(function(){});
   } else {
     const errTxt = await res.text();
     document.getElementById('ssStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">❌ Error al enviar: ' + escH(errTxt) + '</div>';
@@ -1577,7 +1588,7 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
           <select id="eTerritorio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
             <option value="">Selecciona...</option>
-            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>CENTRO</option><option>FUNCIONAL</option><option>NACIONAL</option><option>ESTE</option><option>NORTE</option><option>SUR</option>
+            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>FUNCIONAL</option><option>NACIONAL</option><option>LEVANTE</option><option>NORTE</option><option>SUR</option>
           </select>
         </div>
         <div>
