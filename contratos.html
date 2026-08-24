@@ -304,7 +304,7 @@ function renderContratos() {
 
   document.getElementById('contratosWrap').innerHTML = contratos.map(cont => {
     const activas = cont.obras.filter(o => o.estado === 'ACTIVA').length;
-    const cargaTotal = Math.round(cont.obras.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const pendientesDesig = cont.obras.filter(o => o.estado === 'PDTE. DESIG. CSS').length;
     const tecnicos = [...new Set(cont.obras.map(o => o.tecnico).filter(Boolean))];
     const isOpen = openContratos.has(cont.cod);
 
@@ -391,7 +391,7 @@ function renderContratos() {
       + '</div>'
       + '<div class="contrato-stats">'
       + '<div class="contrato-stat"><div class="contrato-stat-num">' + activas + '</div><div class="contrato-stat-label">Activas</div></div>'
-      + '<div class="contrato-stat"><div class="contrato-stat-num">' + cargaTotal + '%</div><div class="contrato-stat-label">Carga total</div></div>'
+      + '<div class="contrato-stat"><div class="contrato-stat-num"' + (pendientesDesig > 0 ? ' style="color:#854f0b;"' : '') + '>' + pendientesDesig + '</div><div class="contrato-stat-label">Pdte. designar</div></div>'
       + '</div>'
       + (puedeEditar ? '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirBaremoBtn(event)" title="Configurar / editar baremo">⚙️</button><button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirEditarContratoBtn(event)" title="Editar contrato">✏️</button>' : '')
       + (cssEsAdmin() ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-cod="' + escH(cont.cod) + '" onclick="eliminarContratoBtn(event)" title="Eliminar contrato">🗑️</button>' : '')
