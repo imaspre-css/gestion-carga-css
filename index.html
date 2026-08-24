@@ -130,7 +130,7 @@ document.getElementById('navContainer').innerHTML = cssRenderNav('index.html');
 
 let [obras, respuestas] = await Promise.all([
 
-fetch(SUPABASE_URL + '/rest/v1/obras?select=id,tecnico,carga_teorica_semanal,cod_contrato,cod_obra,estado,actualizado_por_tecnico_en&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
+fetch(SUPABASE_URL + '/rest/v1/obras?select=id,tecnico,carga_teorica_semanal,cod_contrato,cod_obra,estado&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
 
 fetch(SUPABASE_URL + '/rest/v1/respuestas?select=tecnico,semana_inicio,cod_obra&limit=500&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
 
@@ -165,35 +165,9 @@ const alerts = [];
 
 if (conResp < tecnicos.length && ultimaSemana) alerts.push({ type: 'warn', text: (tecnicos.length - conResp) + ' técnico' + (tecnicos.length-conResp>1?'s':'') + ' sin responder la encuesta de la semana ' + ultimaSemana, link: 'dashboard.html', btn: 'Ver dashboard' });
 
-// Obras que su técnico ha actualizado en los últimos 7 días (dentro de tu alcance,
-// que ya viene acotado por filtrarPorContrato en el propio fetch de arriba).
-// No solo el número: quién, qué obra y cuándo — para no tener que ir a buscarlo.
-function tiempoRelativo(fechaISO) {
-  const ms = Date.now() - new Date(fechaISO).getTime();
-  const horas = Math.floor(ms / 36e5);
-  if (horas < 1) return 'hace unos minutos';
-  if (horas < 24) return 'hace ' + horas + 'h';
-  const dias = Math.floor(horas / 24);
-  return 'hace ' + dias + ' día' + (dias>1?'s':'');
-}
-const haceUnaSemana = Date.now() - 7*864e5;
-const actualizadasPorTecnico = obras
-  .filter(o => o.actualizado_por_tecnico_en && new Date(o.actualizado_por_tecnico_en).getTime() > haceUnaSemana)
-  .sort((a,b) => new Date(b.actualizado_por_tecnico_en) - new Date(a.actualizado_por_tecnico_en));
-if (actualizadasPorTecnico.length > 0) {
-  const maxMostrar = 5;
-  const detalle = actualizadasPorTecnico.slice(0, maxMostrar).map(o =>
-    '<div style="font-size:0.78rem;color:#666;margin-top:3px;">' + escH(o.tecnico||'—') + ' — <span style="color:#4a4a8a;font-weight:500;">' + escH(o.cod_obra||'—') + '</span> <span style="color:#aaa;">(' + tiempoRelativo(o.actualizado_por_tecnico_en) + ')</span></div>'
-  ).join('');
-  const masTexto = actualizadasPorTecnico.length > maxMostrar ? '<div style="font-size:0.75rem;color:#888;margin-top:3px;">+ ' + (actualizadasPorTecnico.length - maxMostrar) + ' más</div>' : '';
-  alerts.push({
-    type: 'warn',
-    text: '<div>' + actualizadasPorTecnico.length + ' obra' + (actualizadasPorTecnico.length>1?'s':'') + ' actualizada' + (actualizadasPorTecnico.length>1?'s':'') + ' por su técnico en los últimos 7 días:</div>' + detalle + masTexto,
-    link: 'contratos.html',
-    btn: 'Ver contratos'
-  });
-}
-
+// El aviso de "obras actualizadas por su técnico" que vivía aquí (Bloque 6.5)
+// queda retirado — ahora llega por la campanita en tiempo real (Bloque 8.5),
+// sin depender de que alguien entre al Índice para enterarse.
 if (alerts.length === 0) alerts.push({ type: 'ok', text: '✅ Todo en orden — sin alertas pendientes', link: null });
 
 document.getElementById('alertList').innerHTML = alerts.map(a =>
