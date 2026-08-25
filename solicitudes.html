@@ -436,6 +436,7 @@ async function confirmarAsignacion() {
         descripcion: (solicitudActual.denominacion || '').substring(0, 120),
         territorio: solicitudActual.territorio || '',
         municipio: solicitudActual.municipio || null,
+        cod_obra_cliente: solicitudActual.cod_obra_cliente || null,
         estado: 'ACTIVA',
         fecha_inicio: solicitudActual.fecha_inicio || null,
         plazo_meses: solicitudActual.plazo_meses || null,
