@@ -129,8 +129,12 @@ cssRequireRole(['staffer','delegado','representante']);
 </div>
 <div id="contratoStatus"></div>
 <div class="field">
-<label>Código de obra <span style="color:#aaa;">(opcional — se genera solo si lo dejas vacío)</span></label>
+<label>Código de obra *</label>
 <input type="text" id="fCodObra" placeholder="ej. 2647-030-24">
+</div>
+<div class="field">
+<label>Código de obra del cliente <span style="color:#aaa;">(opcional)</span></label>
+<input type="text" id="fCodObraCliente" placeholder="Referencia interna del cliente, si la tiene">
 </div>
 <div class="field">
 <label>Denominación de la obra *</label>
@@ -140,10 +144,6 @@ cssRequireRole(['staffer','delegado','representante']);
 <div class="field">
 <label>Municipio</label>
 <input type="text" id="fMunicipio" placeholder="Madrid">
-</div>
-<div class="field">
-<label>Código de obra del cliente <span style="color:#aaa;">(opcional)</span></label>
-<input type="text" id="fCodObraCliente" placeholder="Referencia interna del cliente, si la tiene">
 </div>
 <div class="field">
 <label>Territorio</label>
@@ -494,6 +494,7 @@ producto: producto,
 cod_contrato: contrato,
 cliente: cliente,
 denominacion: denominacion,
+cod_obra: document.getElementById('fCodObra').value.trim(),
 municipio: document.getElementById('fMunicipio').value || null,
 cod_obra_cliente: document.getElementById('fCodObraCliente').value.trim() || null,
 territorio: document.getElementById('fTerritorio').value || null,
@@ -550,7 +551,7 @@ tecnico: tecnicoSeleccionado,
 email: email,
 cliente: cliente,
 cod_contrato: contrato,
-cod_obra: (document.getElementById('fCodObra').value.trim() || ('SOL-' + Date.now().toString(36).toUpperCase())),
+cod_obra: document.getElementById('fCodObra').value.trim(),
 producto: producto,
 descripcion: denominacion.substring(0, 120),
 municipio: document.getElementById('fMunicipio').value || null,
@@ -584,7 +585,8 @@ document.getElementById('envioStatus').innerHTML = '<div class="notice" style="b
 async function enviarSolicitud() {
 const contrato = document.getElementById('fContrato').value;
 const denominacion = document.getElementById('fDenominacion').value.trim();
-if (!contrato || !denominacion) { alert('Completa al menos el contrato y la denominación.'); return; }
+const codObra = document.getElementById('fCodObra').value.trim();
+if (!contrato || !denominacion || !codObra) { alert('Completa al menos el contrato, el código de obra y la denominación.'); return; }
 const btn = document.getElementById('btnEnviar');
 btn.disabled = true; btn.textContent = '⏳ Enviando...';
 const producto = document.getElementById('fProducto').value;
