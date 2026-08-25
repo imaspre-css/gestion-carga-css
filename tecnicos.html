@@ -363,23 +363,44 @@ function quitarDeComparativa(nombre) {
 function renderComparativa() {
   const panel = document.getElementById('comparativaPanel');
   if (!tecComparando.length) {
-    panel.innerHTML = '<div style="font-size:0.78rem;color:#aaa;">Marca la casilla de un técnico para comparar su carga · pulsa un nombre para ver su detalle completo</div>';
+    panel.innerHTML = '<div style="font-size:0.78rem;color:#aaa;">Marca la casilla de un técnico para comparar su calendario · pulsa un nombre para ver su detalle completo</div>';
     return;
   }
-  panel.innerHTML = tecComparando.map(nombre => {
+  const currentWeek = SEMANAS_ATRAS;
+  const months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+  let monthLabels = '<div style="grid-column:1;"></div>';
+  let lastMonth = -1;
+  for (let w = 0; w < TOTAL_SEMANAS; w++) {
+    const monday = getMondaySemana(w);
+    const m = monday.getMonth();
+    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
+    lastMonth = m;
+  }
+
+  let cals = '';
+  tecComparando.forEach(nombre => {
     const obrasTec = obras.filter(o => o.tecnico === nombre);
-    const carga = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const cargas = calcCargaPorSemana(obrasTec);
+    const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
     const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-    const barClass = carga >= 100 ? 'bar-over' : carga >= 85 ? 'bar-warn' : '';
-    const pctClass = carga >= 100 ? 'pct-over' : carga >= 85 ? 'pct-warn' : 'pct-ok';
-    return '<div class="comparativa-item">'
-      + '<div class="avatar">' + ini + '</div>'
-      + '<span style="font-size:0.8rem;min-width:170px;">' + escH(nombre) + '</span>'
-      + '<div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(carga,100) + '%;"></div></div>'
-      + '<span class="pct ' + pctClass + '" style="min-width:38px;">' + carga + '%</span>'
+    let cells = '<div class="cal-label" style="font-size:0.65rem;display:flex;align-items:center;gap:4px;">'
       + '<span class="comparativa-quitar" onclick="quitarDeComparativa(\'' + nombre.replace(/'/g,"\\'") + '\')" title="Quitar de la comparativa">✕</span>'
-      + '</div>';
-  }).join('');
+      + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
+    for (let w = 0; w < TOTAL_SEMANAS; w++) {
+      const pct = Math.round(cargas[w]);
+      const color = getColor(pct);
+      const monday = getMondaySemana(w);
+      const dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
+      cells += '<div class="cal-cell" style="background:' + color + ';'
+        + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
+        + (w < currentWeek ? 'opacity:0.55;' : '')
+        + '" onmouseenter="showTip(event,\'' + escH(nombre.split(' ')[0]) + ' ' + dateStr + ': ' + pct + '%\')" onmouseleave="hideTip()"></div>';
+    }
+    cals += '<div class="cal-grid" style="margin-bottom:3px;">' + cells + '</div>';
+  });
+
+  panel.innerHTML = '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>' + cals + '</div>';
 }
 
 function renderTechGrid() {
