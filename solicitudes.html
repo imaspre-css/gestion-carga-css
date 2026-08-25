@@ -431,7 +431,7 @@ async function confirmarAsignacion() {
         email: nuevoEmail,
         cliente: solicitudActual.cliente || '',
         cod_contrato: solicitudActual.cod_contrato || '',
-        cod_obra: 'SOL-' + solicitudActual.id.slice(0,8).toUpperCase(),
+        cod_obra: solicitudActual.cod_obra || ('SOL-' + solicitudActual.id.slice(0,8).toUpperCase()),
         producto: solicitudActual.producto || 'CSS',
         descripcion: (solicitudActual.denominacion || '').substring(0, 120),
         territorio: solicitudActual.territorio || '',
