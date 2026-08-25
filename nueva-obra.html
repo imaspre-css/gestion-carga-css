@@ -142,6 +142,10 @@ cssRequireRole(['staffer','delegado','representante']);
 <input type="text" id="fMunicipio" placeholder="Madrid">
 </div>
 <div class="field">
+<label>Código de obra del cliente <span style="color:#aaa;">(opcional)</span></label>
+<input type="text" id="fCodObraCliente" placeholder="Referencia interna del cliente, si la tiene">
+</div>
+<div class="field">
 <label>Territorio</label>
 <select id="fTerritorio" onchange="actualizarPickerTecnico()">
 <option value="">Selecciona...</option>
@@ -491,6 +495,7 @@ cod_contrato: contrato,
 cliente: cliente,
 denominacion: denominacion,
 municipio: document.getElementById('fMunicipio').value || null,
+cod_obra_cliente: document.getElementById('fCodObraCliente').value.trim() || null,
 territorio: document.getElementById('fTerritorio').value || null,
 fecha_inicio: document.getElementById('fInicio').value || null,
 plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
@@ -549,6 +554,7 @@ cod_obra: (document.getElementById('fCodObra').value.trim() || ('SOL-' + Date.no
 producto: producto,
 descripcion: denominacion.substring(0, 120),
 municipio: document.getElementById('fMunicipio').value || null,
+cod_obra_cliente: document.getElementById('fCodObraCliente').value.trim() || null,
 territorio: document.getElementById('fTerritorio').value || null,
 estado: 'ACTIVA',
 fecha_inicio: document.getElementById('fInicio').value || null,
