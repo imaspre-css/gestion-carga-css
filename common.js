@@ -407,3 +407,19 @@ function cssInitNotificaciones() {
 }
 
 document.addEventListener('DOMContentLoaded', cssInitNotificaciones);
+
+
+// Color/etiqueta según el estado de una obra — antes vivía por separado en
+// contratos.html; se consolida aquí para que tecnicos.html use exactamente
+// el mismo criterio, en vez de mantener dos copias que puedan desincronizarse.
+function cssGetEstadoClass(estado) {
+  if (!estado) return 'estado-SUSPENDIDA';
+  const e = estado.toUpperCase();
+  if (e === 'ACTIVA') return 'estado-ACTIVA';
+  if (e === 'SIN ACTIVIDAD') return 'estado-SINACTIVIDAD';
+  if (e.includes('PENDIENTE')) return 'estado-PDTE';
+  if (e === 'SUSPENDIDA') return 'estado-SUSPENDIDA';
+  if (e.includes('PROCESO DE FINALIZACIÓN')) return 'estado-PROCESOFIN';
+  if (e === 'FINALIZADA') return 'estado-FINALIZADA';
+  return 'estado-SUSPENDIDA';
+}
