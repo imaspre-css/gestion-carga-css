@@ -39,6 +39,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .tech-row .avatar { width: 28px; height: 28px; font-size: 0.68rem; margin-bottom: 0; }
 .tech-row-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .tech-th { cursor: pointer; user-select: none; }
+.comparativa-panel { position: sticky; top: 0; background: #fff; z-index: 5; padding: 0.6rem 0; border-bottom: 0.5px solid #f0f0e8; margin-bottom: 4px; }
+.comparativa-item { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.comparativa-item .avatar { width: 24px; height: 24px; font-size: 0.62rem; flex-shrink: 0; }
+.comparativa-item .bar-bg { flex: 1; }
+.comparativa-quitar { cursor: pointer; color: #bbb; font-size: 0.85rem; padding: 0 4px; }
+.comparativa-quitar:hover { color: #a32d2d; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: #eeeefa; color: #4a4a8a; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500; }
 .bar-bg { height: 5px; background: #f0f0e8; border-radius: 3px; margin-top: 6px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 3px; background: #1d9e75; }
@@ -148,14 +154,10 @@ cssRequireRole();
             <select id="filtroTerritorioEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
               <option value="">Todos los territorios</option>
             </select>
-            <span style="font-size:0.75rem;color:#888;" id="seleccionLabel"></span>
-            <button class="btn btn-sm" onclick="limpiarSeleccion()">Limpiar selección</button>
           </div>
         </div>
+        <div id="comparativaPanel" class="comparativa-panel"></div>
         <div style="overflow-x:auto;"><table class="obras-table"><thead><tr id="techTableHead"></tr></thead><tbody id="techGrid"></tbody></table></div>
-      </div>
-      <div class="detalle card" id="detalleWrap">
-        <div id="detalleContent"></div>
       </div>
     </div>
   </div>
@@ -300,7 +302,8 @@ function calcCargaPorSemana(obrasTec) {
   return semanas;
 }
 
-var tecSeleccionados = [];
+var tecComparando = [];
+var tecExpandidos = [];
 
 function getAllTecnicos() {
   const nombresObras = [...new Set(obras.map(o => o.tecnico))];
@@ -317,13 +320,6 @@ function getTecnicoTerritorio(nombre) {
   return o?.territorio || '';
 }
 
-function limpiarSeleccion() {
-  tecSeleccionados = [];
-  renderTechGrid();
-  document.getElementById('detalleWrap').classList.remove('active');
-  document.getElementById('seleccionLabel').textContent = '';
-}
-
 var ordenEquipoColumna = 'nombre';
 var ordenEquipoAsc = true;
 
@@ -337,7 +333,53 @@ function renderTechTableHead() {
   const flecha = campo => ordenEquipoColumna === campo ? (ordenEquipoAsc ? ' ▲' : ' ▼') : '';
   const th = (campo, label) => '<th class="tech-th" onclick="ordenarEquipoPor(\'' + campo + '\')">' + label + flecha(campo) + '</th>';
   document.getElementById('techTableHead').innerHTML =
-    th('nombre','Nombre') + th('territorio','Territorio') + th('obras','Obras') + th('carga','Carga');
+    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('obras','Obras') + th('carga','Carga');
+}
+
+// Comparar (casilla) y desplegar detalle (nombre) son dos acciones
+// independientes entre sí — alguien puede estar comparándose sin tener el
+// detalle abierto, o viceversa. Antes vivían mezcladas en una sola selección,
+// lo que obligaba a elegir entre "ver la barra compacta" o "ver el calendario
+// completo" según cuántos hubiera marcados; separarlas evita esa disyuntiva.
+function toggleComparar(nombre) {
+  const idx = tecComparando.indexOf(nombre);
+  if (idx >= 0) tecComparando.splice(idx, 1);
+  else tecComparando.push(nombre);
+  renderTechGrid();
+}
+
+function toggleExpandir(nombre) {
+  const idx = tecExpandidos.indexOf(nombre);
+  if (idx >= 0) tecExpandidos.splice(idx, 1);
+  else tecExpandidos.push(nombre);
+  renderTechGrid();
+}
+
+function quitarDeComparativa(nombre) {
+  tecComparando = tecComparando.filter(n => n !== nombre);
+  renderTechGrid();
+}
+
+function renderComparativa() {
+  const panel = document.getElementById('comparativaPanel');
+  if (!tecComparando.length) {
+    panel.innerHTML = '<div style="font-size:0.78rem;color:#aaa;">Marca la casilla de un técnico para comparar su carga · pulsa un nombre para ver su detalle completo</div>';
+    return;
+  }
+  panel.innerHTML = tecComparando.map(nombre => {
+    const obrasTec = obras.filter(o => o.tecnico === nombre);
+    const carga = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+    const barClass = carga >= 100 ? 'bar-over' : carga >= 85 ? 'bar-warn' : '';
+    const pctClass = carga >= 100 ? 'pct-over' : carga >= 85 ? 'pct-warn' : 'pct-ok';
+    return '<div class="comparativa-item">'
+      + '<div class="avatar">' + ini + '</div>'
+      + '<span style="font-size:0.8rem;min-width:170px;">' + escH(nombre) + '</span>'
+      + '<div class="bar-bg"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(carga,100) + '%;"></div></div>'
+      + '<span class="pct ' + pctClass + '" style="min-width:38px;">' + carga + '%</span>'
+      + '<span class="comparativa-quitar" onclick="quitarDeComparativa(\'' + nombre.replace(/'/g,"\\'") + '\')" title="Quitar de la comparativa">✕</span>'
+      + '</div>';
+  }).join('');
 }
 
 function renderTechGrid() {
@@ -366,16 +408,22 @@ function renderTechGrid() {
   });
 
   if (!fichas.length) {
-    document.getElementById('techGrid').innerHTML = '<tr><td colspan="4" class="empty">Sin técnicos con estos filtros</td></tr>';
+    document.getElementById('techGrid').innerHTML = '<tr><td colspan="5" class="empty">Sin técnicos con estos filtros</td></tr>';
+    renderComparativa();
     return;
   }
 
   document.getElementById('techGrid').innerHTML = fichas.map(f => {
     const ini = f.nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const barClass = f.carga >= 100 ? 'bar-over' : f.carga >= 85 ? 'bar-warn' : '';
-    const isSelected = tecSeleccionados.includes(f.nombre);
-    return '<tr class="tech-row' + (isSelected ? ' selected' : '') + '" onclick="toggleSeleccion(\'' + f.nombre.replace(/'/g,"\\'") + '\')">'
-      + '<td><div class="tech-row-name"><div class="avatar">' + ini + '</div>' + f.nombre + '</div></td>'
+    const comparando = tecComparando.includes(f.nombre);
+    const expandido = tecExpandidos.includes(f.nombre);
+    const nombreEscapado = f.nombre.replace(/'/g,"\\'");
+    const filaPrincipal = '<tr class="tech-row' + (comparando ? ' selected' : '') + '">'
+      + '<td style="text-align:center;"><input type="checkbox" ' + (comparando?'checked':'') + ' onchange="toggleComparar(\'' + nombreEscapado + '\')" aria-label="Comparar ' + escH(f.nombre) + '"></td>'
+      + '<td onclick="toggleExpandir(\'' + nombreEscapado + '\')" style="cursor:pointer;">'
+      + '<div class="tech-row-name"><div class="avatar">' + ini + '</div>' + escH(f.nombre) + ' <span style="color:#aaa;font-size:0.68rem;">' + (expandido?'▲':'▼') + '</span></div>'
+      + '</td>'
       + '<td style="font-size:0.8rem;color:#888;">' + f.territorio + '</td>'
       + '<td style="font-size:0.8rem;">' + f.obras + '</td>'
       + '<td style="min-width:110px;"><div style="display:flex;align-items:center;gap:8px;">'
@@ -383,77 +431,19 @@ function renderTechGrid() {
       + '<span style="font-size:0.78rem;font-weight:500;min-width:32px;">' + f.carga + '%</span>'
       + '</div></td>'
       + '</tr>';
+    const filaDetalle = expandido
+      ? ('<tr><td colspan="5" style="padding:0;background:#fafaf8;border-bottom:0.5px solid #e8e8e0;"><div style="padding:1.25rem 1.5rem;">' + detalleTecnicoHTML(f.nombre) + '</div></td></tr>')
+      : '';
+    return filaPrincipal + filaDetalle;
   }).join('');
+
+  renderComparativa();
 }
 
-function toggleSeleccion(nombre) {
-  const idx = tecSeleccionados.indexOf(nombre);
-  if (idx >= 0) tecSeleccionados.splice(idx, 1);
-  else tecSeleccionados.push(nombre);
-  renderTechGrid();
-  if (tecSeleccionados.length > 0) {
-    renderDetalleMultiple(tecSeleccionados);
-    document.getElementById('detalleWrap').classList.add('active');
-    document.getElementById('detalleWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    document.getElementById('seleccionLabel').textContent = tecSeleccionados.length + ' seleccionado' + (tecSeleccionados.length > 1 ? 's' : '');
-  } else {
-    document.getElementById('detalleWrap').classList.remove('active');
-    document.getElementById('seleccionLabel').textContent = '';
-  }
-}
-
-function seleccionarTecnico(nombre) { toggleSeleccion(nombre); }
-
-function renderDetalleMultiple(nombres) {
-  if (nombres.length === 1) { renderDetalle(nombres[0]); return; }
-  var currentWeek = SEMANAS_ATRAS;
-  var months = ['E','F','M','A','M','J','J','A','S','O','N','D'];
-
-  var monthLabels = '<div style="grid-column:1;"></div>';
-  var lastMonth = -1;
-  for (var w = 0; w < TOTAL_SEMANAS; w++) {
-    var monday = getMondaySemana(w);
-    var m = monday.getMonth();
-    monthLabels += '<div class="cal-month-label">' + (m !== lastMonth ? months[m] : '') + '</div>';
-    lastMonth = m;
-  }
-
-  var cals = '';
-  nombres.forEach(function(nombre) {
-    var obrasTec = obras.filter(function(o) { return o.tecnico === nombre; });
-    var cargas = calcCargaPorSemana(obrasTec);
-    var cargaTotal = Math.round(obrasTec.reduce(function(s,o) { return s+(parseFloat(o.carga_teorica_semanal)||0); }, 0));
-    var pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
-    var ini = nombre.split(' ').filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('');
-    var cells = '<div class="cal-label" style="font-size:0.65rem;">' + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
-    for (var w = 0; w < TOTAL_SEMANAS; w++) {
-      var pct = Math.round(cargas[w]);
-      var color = getColor(pct);
-      var monday = getMondaySemana(w);
-      var dateStr = monday.toLocaleDateString('es-ES', {day:'2-digit',month:'short'});
-      var tipText = nombre.split(' ')[0] + ' ' + dateStr + ': ' + pct + '%';
-      cells += '<div class="cal-cell" style="background:' + color + ';'
-        + (w === currentWeek ? 'outline:2px solid #4a4a8a;outline-offset:1px;' : '')
-        + (w < currentWeek ? 'opacity:0.55;' : '')
-        + '" data-tip="' + tipText + '" onmouseenter="showTip(event,this.dataset.tip)" onmouseleave="hideTip()"></div>';
-    }
-    cals += '<div class="cal-grid" style="margin-bottom:4px;">' + cells + '</div>';
-  });
-
-  document.getElementById('detalleContent').innerHTML =
-    '<div class="card-title">Horizonte comparativo — próximas ' + SEMANAS_ADELANTE + ' semanas — ' + nombres.length + ' técnicos</div>'
-    + '<div class="cal-wrap"><div class="cal-month-row">' + monthLabels + '</div>' + cals + '</div>'
-    + '<div class="cal-legend">'
-    + '<span><div class="cal-legend-cell" style="background:#e1f5ee;"></div> 0-30%</span>'
-    + '<span><div class="cal-legend-cell" style="background:#5dcaa5;"></div> 30-60%</span>'
-    + '<span><div class="cal-legend-cell" style="background:#0f6e56;"></div> 60-85%</span>'
-    + '<span><div class="cal-legend-cell" style="background:#ef9f27;"></div> 85-100%</span>'
-    + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
-    + '</div>';
-}
-
-
-function renderDetalle(nombre) {
+// Calendario y tabla de obras completos de un técnico — antes se escribían
+// directamente en un contenedor fijo aparte; ahora se devuelven como HTML
+// para insertarse dentro de la fila desplegable de esa persona en concreto.
+function detalleTecnicoHTML(nombre) {
   const obrasTec = obras.filter(o => o.tecnico === nombre);
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
   const cargaTotal = Math.round(obrasTec.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
@@ -500,10 +490,9 @@ function renderDetalle(nombre) {
       + '</tr>';
   }).join('') : '<tr><td colspan="' + (puedeEditarObras ? 9 : 8) + '" class="empty">Sin obras activas</td></tr>';
 
-  document.getElementById('detalleContent').innerHTML =
-    '<div class="detalle-header">'
+  return '<div class="detalle-header">'
     + '<div class="avatar-lg">' + ini + '</div>'
-    + '<div><div class="detalle-name">' + nombre + '</div>'
+    + '<div><div class="detalle-name">' + escH(nombre) + '</div>'
     + '<div class="detalle-meta">' + (email||'sin email') + '</div></div>'
     + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
     + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
