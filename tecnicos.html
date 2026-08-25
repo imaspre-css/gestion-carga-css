@@ -81,6 +81,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .pill { display: inline-block; font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; }
 .pill-blue { background: #eeeefa; color: #4a4a8a; }
 .pill-green { background: #e1f5ee; color: #0f6e56; }
+.estado-ACTIVA { background: #e1f5ee; color: #0f6e56; }
+.estado-SUSTITUCION { background: #e6f1fb; color: #185fa5; }
+.estado-PDTE { background: #faeeda; color: #854f0b; }
+.estado-SUSPENDIDA { background: #f5f5f0; color: #666; }
+.estado-FINALIZADA { background: #fcebeb; color: #a32d2d; }
+.estado-SINACTIVIDAD { background: #f0f0e8; color: #888; }
+.estado-PROCESOFIN { background: #fde6e0; color: #c0532b; }
 .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.85rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -485,7 +492,7 @@ function renderDetalle(nombre) {
       + '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (o.descripcion||'') + '">' + (o.descripcion||'—') + '</td>'
       + '<td>' + (o.cliente||'—') + '</td>'
       + '<td>' + (o.territorio||'—') + '</td>'
-      + '<td><span class="pill">' + (o.estado||'—') + '</span></td>'
+      + '<td><span class="pill ' + cssGetEstadoClass(o.estado) + '">' + (o.estado||'—') + '</span></td>'
       + '<td>' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td>' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td style="font-weight:500;">' + Math.round(c) + '%</td>'
