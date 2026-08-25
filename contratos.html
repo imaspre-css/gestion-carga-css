@@ -206,18 +206,6 @@ if (isStaffer) {
   });
 }
 
-function getEstadoClass(estado) {
-  if (!estado) return 'estado-SUSPENDIDA';
-  const e = estado.toUpperCase();
-  if (e === 'ACTIVA') return 'estado-ACTIVA';
-  if (e === 'SIN ACTIVIDAD') return 'estado-SINACTIVIDAD';
-  if (e.includes('PENDIENTE')) return 'estado-PDTE';
-  if (e === 'SUSPENDIDA') return 'estado-SUSPENDIDA';
-  if (e.includes('PROCESO DE FINALIZACIÓN')) return 'estado-PROCESOFIN';
-  if (e === 'FINALIZADA') return 'estado-FINALIZADA';
-  return 'estado-SUSPENDIDA';
-}
-
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -344,7 +332,7 @@ function renderContratos() {
             + '<td style="font-size:0.78rem;">' + (first.fecha_inicio ? new Date(first.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (first.fecha_fin ? new Date(first.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
             + '<td style="font-weight:500;">' + (cargaTotal ? Math.round(cargaTotal) + '%' : '—') + '</td>'
-            + '<td><span class="pill ' + getEstadoClass(first.estado) + '">' + (first.estado||'—') + '</span></td>'
+            + '<td><span class="pill ' + cssGetEstadoClass(first.estado) + '">' + (first.estado||'—') + '</span></td>'
             + (puedeEditar ? '<td style="white-space:nowrap;" onclick="event.stopPropagation()">'
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> ')
                 + (esGrupo ? '' : '<button class="btn btn-sm" data-id="' + first.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> ')
@@ -362,7 +350,7 @@ function renderContratos() {
                 + '<td style="font-size:0.78rem;">' + (r.territorio||'—') + '</td>'
                 + '<td></td><td></td>'
                 + '<td style="font-weight:500;">' + (r.carga_teorica_semanal ? Math.round(parseFloat(r.carga_teorica_semanal)) + '%' : '—') + '</td>'
-                + '<td><span class="pill ' + getEstadoClass(r.estado) + '">' + (r.estado||'—') + '</span></td>'
+                + '<td><span class="pill ' + cssGetEstadoClass(r.estado) + '">' + (r.estado||'—') + '</span></td>'
                 + (puedeEditar ? '<td style="white-space:nowrap;">'
                     + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirRespuestasObraBtn(event)" title="Ver respuestas de encuesta">📊</button> '
                     + '<button class="btn btn-sm" data-id="' + r.id + '" onclick="abrirEditarObraBtn(event)">✏️</button> '
@@ -417,7 +405,7 @@ function toggleContrato(cod) {
 async function cambiarEstado(id, selectEl) {
   const nuevoEstado = selectEl.value;
   // Update select style immediately
-  selectEl.className = 'estado-select ' + getEstadoClass(nuevoEstado);
+  selectEl.className = 'estado-select ' + cssGetEstadoClass(nuevoEstado);
 
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + id, {
     method: 'PATCH',
