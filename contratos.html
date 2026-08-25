@@ -338,7 +338,7 @@ function renderContratos() {
           filas.push('<tr' + (esGrupo ? ' style="cursor:pointer;" onclick="toggleGrupo(\'' + g.key.replace(/'/g,"\\'") + '\')"' : '') + '>'
             + '<td><span class="pill pill-blue">' + (first.cod_obra||'—') + '</span></td>'
             + '<td><span class="pill" style="background:#eeeefa;color:#4a4a8a;">' + escH(first.producto||'CSS') + '</span></td>'
-            + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(first.descripcion) + '">' + (first.descripcion||'—') + '</td>'
+            + '<td style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(first.descripcion) + '">' + (first.descripcion||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (esGrupo ? '<span style="color:#4a4a8a;font-weight:500;">👥 ' + g.rows.length + ' técnicos ' + (abierto?'▲':'▼') + '</span>' : (first.tecnico||'—')) + '</td>'
             + '<td style="font-size:0.78rem;">' + (first.territorio||'—') + '</td>'
             + '<td style="font-size:0.78rem;">' + (first.fecha_inicio ? new Date(first.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
@@ -357,7 +357,7 @@ function renderContratos() {
             g.rows.forEach(r => {
               filas.push('<tr style="background:#fafaf8;">'
                 + '<td></td><td></td>'
-                + '<td style="font-size:0.76rem;color:#888;padding-left:1.5rem;" title="' + escH(r.descripcion||'') + '">↳ ' + escH((r.descripcion||'').substring(0,40)) + '</td>'
+                + '<td style="font-size:0.76rem;color:#888;padding-left:1.5rem;max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(r.descripcion||'') + '">↳ ' + escH(r.descripcion||'') + '</td>'
                 + '<td style="font-size:0.78rem;font-weight:500;">' + (r.tecnico||'—') + '</td>'
                 + '<td style="font-size:0.78rem;">' + (r.territorio||'—') + '</td>'
                 + '<td></td><td></td>'
@@ -983,6 +983,7 @@ function abrirEditarObra(event, id) {
   document.getElementById('eDescripcion').value = o.descripcion || '';
   document.getElementById('eCliente').value = o.cliente || '';
   document.getElementById('eMunicipio').value = o.municipio || '';
+  document.getElementById('eCodObraCliente').value = o.cod_obra_cliente || '';
   document.getElementById('eTerritorio').value = o.territorio || '';
   document.getElementById('eFechaInicio').value = o.fecha_inicio ? o.fecha_inicio.split('T')[0] : '';
   document.getElementById('eFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
@@ -1368,6 +1369,7 @@ async function guardarObra() {
     descripcion: document.getElementById('eDescripcion').value.trim(),
     cliente: document.getElementById('eCliente').value.trim(),
     municipio: document.getElementById('eMunicipio').value.trim() || null,
+    cod_obra_cliente: document.getElementById('eCodObraCliente').value.trim() || null,
     territorio: document.getElementById('eTerritorio').value,
     fecha_inicio: document.getElementById('eFechaInicio').value || null,
     fecha_fin: document.getElementById('eFechaFin').value || null,
@@ -1600,6 +1602,10 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Municipio</label>
           <input type="text" id="eMunicipio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Código de obra del cliente <span style="color:#aaa;">(opcional, solo dato)</span></label>
+          <input type="text" id="eCodObraCliente" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
         </div>
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
