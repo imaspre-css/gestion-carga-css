@@ -91,7 +91,7 @@ if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.h
 <h1 id="headerNombre">Mis obras</h1>
 <div class="header-sub" id="headerEmail"></div>
 </div>
-<div class="nav"><a href="#" class="logout" onclick="cssLogout()">Salir</a></div>
+<div class="nav" id="navContainer"><a href="#" class="logout" onclick="cssLogout()">Salir</a></div>
 </div>
 
 <div class="container">
@@ -114,7 +114,7 @@ var SUPABASE_URL = CSS_SUPABASE_URL;
 var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var tecnicoNombre = localStorage.getItem('css_tecnico');
-var tecnicoEmail = (localStorage.getItem('css_ms_email') || '').toLowerCase();
+var tecnicoEmail = cssGetEmail();
 var obras = [];
 
 function getColor(pct) {
