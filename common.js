@@ -243,6 +243,10 @@ const CSS_NAV_ITEMS = [
   { href: 'contratos.html', label: 'Contratos' },
   { href: 'solicitudes.html', label: 'Solicitudes', roles: ['staffer', 'delegado'] },
   { href: 'nueva-obra.html', label: '+ Nueva obra', roles: ['staffer', 'delegado'] },
+  // Sin restricción de roles a propósito: cualquiera puede tener obras propias
+  // como técnico (representante, delegado o staffer que también coordinan
+  // alguna obra), no solo quien inicia sesión con ese rol.
+  { href: 'mis-obras.html', label: 'Mis obras' },
   { href: 'encuesta_semanal.html', label: 'Encuesta', adminOnly: true },
   { href: 'carga-masiva.html', label: 'Carga masiva', adminOnly: true }
 ];
