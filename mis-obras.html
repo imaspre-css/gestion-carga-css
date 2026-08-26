@@ -78,10 +78,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 <body>
 <script>
 (function() {
+// Antes exigía rol==='tecnico' exactamente — por eso cualquier otro rol
+// rebotaba a login.html en bucle. Ahora solo comprueba que haya una sesión
+// real (algún rol + email), sin importar cuál sea: cualquiera puede tener
+// obras propias como técnico, no solo quien inicia sesión con ese rol.
 var rol = localStorage.getItem('css_rol');
-var tecnico = localStorage.getItem('css_tecnico');
 var email = localStorage.getItem('css_ms_email');
-if (rol !== 'tecnico' || (!tecnico && !email)) { window.location.href = 'login.html?redirect=mis-obras.html'; }
+if (!rol || !email) { window.location.href = 'login.html?redirect=mis-obras.html'; }
 })();
 </script>
 <div class="tooltip" id="tooltip"></div>
