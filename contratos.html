@@ -970,6 +970,7 @@ function abrirEditarObra(event, id) {
   btnAjuste.title = hayBaremo ? 'Editar campos de carga de trabajo' : 'Este contrato no tiene baremo configurado — complétalo primero desde ⚙️ en la tarjeta del contrato.';
   btnAjuste.style.opacity = hayBaremo ? '1' : '0.4';
   btnAjuste.style.cursor = hayBaremo ? 'pointer' : 'not-allowed';
+  document.getElementById('avisoSinBaremoBoton').style.display = hayBaremo ? 'none' : '';
 
   // ¿Esta obra ya tiene guardado algún valor propio, distinto del contrato?
   // Si nunca se toca el panel, se guarda null en los 8 campos al pulsar
@@ -1747,6 +1748,7 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
           <button type="button" class="btn btn-sm" id="eBtnAjuste" onclick="toggleAjusteObraE()" title="Editar campos de carga de trabajo">⚙️</button>
           <span style="font-size:0.82rem;color:#333;">Editar campos de carga de trabajo</span>
         </div>
+        <div id="avisoSinBaremoBoton" style="display:none;font-size:0.75rem;color:#854f0b;margin-top:6px;">Este contrato no tiene baremo configurado — no se pueden ajustar estos campos hasta que lo tenga (⚙️ en la tarjeta del contrato, en Contratos).</div>
         <div id="avisoAjustePropio" style="display:none;margin-top:6px;">
           <a href="#" onclick="event.preventDefault();abrirYDesplazarAjusteE();" style="font-size:0.78rem;color:#854f0b;background:#faeeda;padding:4px 10px;border-radius:20px;text-decoration:none;display:inline-block;">⚠️ Esta obra tiene carga de trabajo distinta al contrato</a>
         </div>
