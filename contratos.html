@@ -952,7 +952,8 @@ function abrirEditarObra(event, id) {
   document.getElementById('editStatus').innerHTML = '';
 
   // Panel de ajuste de tiempos: si la obra ya tiene su propio valor, se usa;
-  // si no, se precarga con el del baremo del contrato como punto de partida.
+  // si no, se precarga con el del baremo del contrato como punto de partida
+  // (solo para poder calcular con algo — ver ajusteObraTocado más abajo).
   const cont = contratosDB.find(c => c.cod_contrato === o.cod_contrato);
   document.getElementById('ajDesplazamientoE').value = o.t_desplazamiento ?? cont?.t_desplazamiento ?? '';
   document.getElementById('ajVisitaE').value = o.t_visita ?? cont?.t_visita ?? '';
@@ -963,7 +964,15 @@ function abrirEditarObra(event, id) {
   document.getElementById('ajNumCssE').value = o.num_css ?? 1;
   document.getElementById('ajNocturnidadE').checked = !!o.nocturnidad;
   document.getElementById('eAjusteWrap').style.display = 'none';
-  document.getElementById('eToggleAjuste').textContent = '⚙️ Esta obra tiene tiempos distintos al contrato';
+  document.getElementById('avisoSinBaremoAjuste').style.display = (cont && cont.jornada_horas_mes != null) ? 'none' : '';
+
+  // ¿Esta obra ya tiene guardado algún valor propio, distinto del contrato?
+  // Si nunca se toca el panel, se guarda null en los 8 campos al pulsar
+  // "Guardar" — así una obra sin ajuste nunca queda "fijada" al valor de hoy
+  // del contrato solo por haber abierto el modal una vez.
+  ajusteObraTocado = !!(o.t_desplazamiento != null || o.t_visita != null || o.t_acta != null || o.t_informe != null || o.t_reunion != null || o.nocturnidad || (o.visitas_semana != null && o.visitas_semana != 1) || (o.num_css != null && o.num_css != 1));
+  document.getElementById('avisoAjustePropio').style.display = ajusteObraTocado ? '' : 'none';
+
   verificarCoincidenciaCarga();
   // Sección técnico: mostrar actual, cerrar el selector de reasignación si estaba abierto
   nuevoTecnicoSeleccionado = null;
@@ -1335,10 +1344,39 @@ async function quitarCoordinador(id) {
   renderContratos();
 }
 
+var ajusteObraTocado = false;
+
 function toggleAjusteObraE() {
   const wrap = document.getElementById('eAjusteWrap');
   const abierto = wrap.style.display !== 'none';
   wrap.style.display = abierto ? 'none' : '';
+}
+
+function abrirYDesplazarAjusteE() {
+  document.getElementById('eAjusteWrap').style.display = '';
+  document.getElementById('eAjusteSeccion').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Vuelve a los valores del contrato, y "olvida" el ajuste propio de esta obra:
+// al guardar, los 8 campos se escriben como null, no como los números de hoy
+// del contrato — así, si el baremo del contrato cambia más adelante, esta
+// obra vuelve a seguirlo automáticamente en vez de quedarse anclada a un
+// número antiguo.
+function resetearAjusteObraE() {
+  const cont = obtenerBaremoContratoActualE();
+  document.getElementById('ajDesplazamientoE').value = cont?.t_desplazamiento ?? '';
+  document.getElementById('ajVisitaE').value = cont?.t_visita ?? '';
+  document.getElementById('ajActaE').value = cont?.t_acta ?? '';
+  document.getElementById('ajInformeE').value = cont?.t_informe ?? '';
+  document.getElementById('ajReunionE').value = cont?.t_reunion ?? '';
+  document.getElementById('ajVisitasSemanaE').value = 1;
+  document.getElementById('ajNumCssE').value = 1;
+  document.getElementById('ajNocturnidadE').checked = false;
+  ajusteObraTocado = false;
+  document.getElementById('avisoAjustePropio').style.display = 'none';
+  const pct = calcularCargaDesdeAjusteE();
+  if (pct != null) document.getElementById('eCarga').value = pct;
+  verificarCoincidenciaCarga();
 }
 
 function obtenerBaremoContratoActualE() {
@@ -1371,6 +1409,8 @@ function calcularCargaDesdeAjusteE() {
 // decisión (así lo pidió explícitamente el feedback que dio pie a esta pieza);
 // el aviso de "no coincide" está para dejar constancia de eso, no para impedirlo.
 function onAjusteObraChange() {
+  ajusteObraTocado = true;
+  document.getElementById('avisoAjustePropio').style.display = '';
   const pct = calcularCargaDesdeAjusteE();
   if (pct != null) document.getElementById('eCarga').value = pct;
   verificarCoincidenciaCarga();
@@ -1400,14 +1440,18 @@ async function guardarObra() {
     // Los 8 tiempos/parámetros de cálculo son de la obra en sí, no de cada
     // reparto — dos coordinadores de la misma obra viajan al mismo sitio y
     // tardan lo mismo, así que se comparten igual que municipio o territorio.
-    t_desplazamiento: parseFloat(document.getElementById('ajDesplazamientoE').value) || null,
-    t_visita: parseFloat(document.getElementById('ajVisitaE').value) || null,
-    t_acta: parseFloat(document.getElementById('ajActaE').value) || null,
-    t_informe: parseFloat(document.getElementById('ajInformeE').value) || null,
-    t_reunion: parseFloat(document.getElementById('ajReunionE').value) || null,
-    nocturnidad: document.getElementById('ajNocturnidadE').checked,
-    visitas_semana: parseFloat(document.getElementById('ajVisitasSemanaE').value) || null,
-    num_css: parseInt(document.getElementById('ajNumCssE').value) || null
+    // Solo se guardan de verdad si el panel se ha tocado — si nunca se abrió
+    // ni se cambió nada, se guarda null en los 8: la obra sigue flotando con
+    // el baremo del contrato, en vez de quedar fijada al valor de hoy solo
+    // por haber abierto el modal para cambiar otra cosa cualquiera.
+    t_desplazamiento: ajusteObraTocado ? (parseFloat(document.getElementById('ajDesplazamientoE').value) || null) : null,
+    t_visita: ajusteObraTocado ? (parseFloat(document.getElementById('ajVisitaE').value) || null) : null,
+    t_acta: ajusteObraTocado ? (parseFloat(document.getElementById('ajActaE').value) || null) : null,
+    t_informe: ajusteObraTocado ? (parseFloat(document.getElementById('ajInformeE').value) || null) : null,
+    t_reunion: ajusteObraTocado ? (parseFloat(document.getElementById('ajReunionE').value) || null) : null,
+    nocturnidad: ajusteObraTocado ? document.getElementById('ajNocturnidadE').checked : false,
+    visitas_semana: ajusteObraTocado ? (parseFloat(document.getElementById('ajVisitasSemanaE').value) || null) : null,
+    num_css: ajusteObraTocado ? (parseInt(document.getElementById('ajNumCssE').value) || null) : null
   };
   const payload = Object.assign({}, camposCompartidos, {
     carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null
@@ -1674,9 +1718,16 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
         </div>
       </div>
 
-      <div style="margin-top:0.5rem;">
-        <a href="#" id="eToggleAjuste" onclick="event.preventDefault();toggleAjusteObraE();" style="font-size:0.78rem;color:#4a4a8a;text-decoration:none;">⚙️ Esta obra tiene tiempos distintos al contrato</a>
+      <div style="margin-top:0.5rem;" id="eAjusteSeccion">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn btn-sm" onclick="toggleAjusteObraE()" title="Editar campos de carga de trabajo">⚙️</button>
+          <span style="font-size:0.82rem;color:#333;">Editar campos de carga de trabajo</span>
+        </div>
+        <div id="avisoAjustePropio" style="display:none;margin-top:6px;">
+          <a href="#" onclick="event.preventDefault();abrirYDesplazarAjusteE();" style="font-size:0.78rem;color:#854f0b;background:#faeeda;padding:4px 10px;border-radius:20px;text-decoration:none;display:inline-block;">⚠️ Esta obra tiene carga de trabajo distinta al contrato</a>
+        </div>
         <div id="eAjusteWrap" style="display:none;margin-top:0.75rem;background:#f8f8fe;border-radius:8px;padding:0.85rem;">
+          <div id="avisoSinBaremoAjuste" style="display:none;font-size:0.75rem;color:#854f0b;margin-bottom:0.6rem;">Este contrato no tiene baremo configurado — estos campos quedan guardados, pero la carga no se puede recalcular en vivo sin un baremo de referencia.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Desplazamiento (h)</label><input type="number" id="ajDesplazamientoE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
             <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Visita (h)</label><input type="number" id="ajVisitaE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
@@ -1689,7 +1740,10 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
               <label style="font-size:0.78rem;color:#333;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ajNocturnidadE" onchange="onAjusteObraChange()"> Nocturnidad (×1.5 desplazamiento)</label>
             </div>
           </div>
-          <div style="font-size:0.68rem;color:#aaa;margin-top:0.5rem;">Al cambiar cualquiera de estos, la carga teórica de arriba se recalcula sola.</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;">
+            <span style="font-size:0.68rem;color:#aaa;">Al cambiar cualquiera de estos, la carga teórica de arriba se recalcula sola.</span>
+            <button type="button" class="btn btn-sm" onclick="resetearAjusteObraE()">↺ Restablecer al contrato</button>
+          </div>
         </div>
         <div id="avisoCargaManual" style="display:none;font-size:0.72rem;color:#854f0b;margin-top:0.5rem;">⚠️ La carga actual no coincide con el cálculo de los tiempos de arriba — es un ajuste manual.</div>
       </div>
