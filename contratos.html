@@ -972,6 +972,7 @@ function abrirEditarObra(event, id) {
   // del contrato solo por haber abierto el modal una vez.
   ajusteObraTocado = !!(o.t_desplazamiento != null || o.t_visita != null || o.t_acta != null || o.t_informe != null || o.t_reunion != null || o.nocturnidad || (o.visitas_semana != null && o.visitas_semana != 1) || (o.num_css != null && o.num_css != 1));
   document.getElementById('avisoAjustePropio').style.display = ajusteObraTocado ? '' : 'none';
+  actualizarEstiloCargaEspecial();
 
   verificarCoincidenciaCarga();
   // Sección técnico: mostrar actual, cerrar el selector de reasignación si estaba abierto
@@ -1346,6 +1347,22 @@ async function quitarCoordinador(id) {
 
 var ajusteObraTocado = false;
 
+// El propio campo de carga se marca con un borde de color cuando la obra
+// tiene ajuste propio — así se ve de un vistazo sin tener que bajar a leer
+// el aviso ni desplegar el panel.
+function actualizarEstiloCargaEspecial() {
+  const campo = document.getElementById('eCarga');
+  if (ajusteObraTocado) {
+    campo.style.borderColor = '#854f0b';
+    campo.style.borderWidth = '1.5px';
+    campo.style.background = '#fdf8ef';
+  } else {
+    campo.style.borderColor = '#d0d0c8';
+    campo.style.borderWidth = '0.5px';
+    campo.style.background = '#fff';
+  }
+}
+
 function toggleAjusteObraE() {
   const wrap = document.getElementById('eAjusteWrap');
   const abierto = wrap.style.display !== 'none';
@@ -1374,6 +1391,7 @@ function resetearAjusteObraE() {
   document.getElementById('ajNocturnidadE').checked = false;
   ajusteObraTocado = false;
   document.getElementById('avisoAjustePropio').style.display = 'none';
+  actualizarEstiloCargaEspecial();
   const pct = calcularCargaDesdeAjusteE();
   if (pct != null) document.getElementById('eCarga').value = pct;
   verificarCoincidenciaCarga();
@@ -1411,6 +1429,7 @@ function calcularCargaDesdeAjusteE() {
 function onAjusteObraChange() {
   ajusteObraTocado = true;
   document.getElementById('avisoAjustePropio').style.display = '';
+  actualizarEstiloCargaEspecial();
   const pct = calcularCargaDesdeAjusteE();
   if (pct != null) document.getElementById('eCarga').value = pct;
   verificarCoincidenciaCarga();
