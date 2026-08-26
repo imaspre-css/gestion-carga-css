@@ -964,7 +964,12 @@ function abrirEditarObra(event, id) {
   document.getElementById('ajNumCssE').value = o.num_css ?? 1;
   document.getElementById('ajNocturnidadE').checked = !!o.nocturnidad;
   document.getElementById('eAjusteWrap').style.display = 'none';
-  document.getElementById('avisoSinBaremoAjuste').style.display = (cont && cont.jornada_horas_mes != null) ? 'none' : '';
+  const hayBaremo = !!(cont && cont.jornada_horas_mes != null);
+  const btnAjuste = document.getElementById('eBtnAjuste');
+  btnAjuste.disabled = !hayBaremo;
+  btnAjuste.title = hayBaremo ? 'Editar campos de carga de trabajo' : 'Este contrato no tiene baremo configurado — complétalo primero desde ⚙️ en la tarjeta del contrato.';
+  btnAjuste.style.opacity = hayBaremo ? '1' : '0.4';
+  btnAjuste.style.cursor = hayBaremo ? 'pointer' : 'not-allowed';
 
   // ¿Esta obra ya tiene guardado algún valor propio, distinto del contrato?
   // Si nunca se toca el panel, se guarda null en los 8 campos al pulsar
@@ -1739,14 +1744,13 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
 
       <div style="margin-top:0.5rem;" id="eAjusteSeccion">
         <div style="display:flex;align-items:center;gap:10px;">
-          <button type="button" class="btn btn-sm" onclick="toggleAjusteObraE()" title="Editar campos de carga de trabajo">⚙️</button>
+          <button type="button" class="btn btn-sm" id="eBtnAjuste" onclick="toggleAjusteObraE()" title="Editar campos de carga de trabajo">⚙️</button>
           <span style="font-size:0.82rem;color:#333;">Editar campos de carga de trabajo</span>
         </div>
         <div id="avisoAjustePropio" style="display:none;margin-top:6px;">
           <a href="#" onclick="event.preventDefault();abrirYDesplazarAjusteE();" style="font-size:0.78rem;color:#854f0b;background:#faeeda;padding:4px 10px;border-radius:20px;text-decoration:none;display:inline-block;">⚠️ Esta obra tiene carga de trabajo distinta al contrato</a>
         </div>
         <div id="eAjusteWrap" style="display:none;margin-top:0.75rem;background:#f8f8fe;border-radius:8px;padding:0.85rem;">
-          <div id="avisoSinBaremoAjuste" style="display:none;font-size:0.75rem;color:#854f0b;margin-bottom:0.6rem;">Este contrato no tiene baremo configurado — estos campos quedan guardados, pero la carga no se puede recalcular en vivo sin un baremo de referencia.</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Desplazamiento (h)</label><input type="number" id="ajDesplazamientoE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
             <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Visita (h)</label><input type="number" id="ajVisitaE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
