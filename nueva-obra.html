@@ -208,6 +208,31 @@ cssRequireRole(['staffer','delegado','representante']);
 <label>Carga teórica semanal (%) — estimación manual</label>
 <input type="number" id="fCargaManual" min="0" max="100" step="1" placeholder="ej. 15" oninput="renderPickerTecnicoNueva();actualizarBotonEnvio();">
 </div>
+<div style="margin-top:0.5rem;" id="fAjusteSeccion">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button type="button" class="btn btn-sm" id="fBtnAjuste" onclick="toggleAjusteObraNueva()" title="Editar campos de carga de trabajo" disabled>⚙️</button>
+    <span style="font-size:0.82rem;color:#333;">Editar campos de carga de trabajo</span>
+  </div>
+  <div id="avisoSinBaremoBotonNueva" style="display:none;font-size:0.75rem;color:#854f0b;margin-top:6px;">Este contrato no tiene baremo configurado — no se pueden ajustar estos campos hasta que lo tenga.</div>
+  <div id="fAjusteWrap" style="display:none;margin-top:0.75rem;background:#f8f8fe;border-radius:8px;padding:0.85rem;">
+    <div class="field-row">
+      <div class="field"><label>Desplazamiento (h)</label><input type="number" id="fAjDesplazamiento" step="0.25" min="0" oninput="onAjusteObraNuevaChange()"></div>
+      <div class="field"><label>Visita (h)</label><input type="number" id="fAjVisita" step="0.25" min="0" oninput="onAjusteObraNuevaChange()"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Acta (h)</label><input type="number" id="fAjActa" step="0.25" min="0" oninput="onAjusteObraNuevaChange()"></div>
+      <div class="field"><label>Informe (h)</label><input type="number" id="fAjInforme" step="0.25" min="0" oninput="onAjusteObraNuevaChange()"></div>
+    </div>
+    <div class="field"><label>Reunión (h)</label><input type="number" id="fAjReunion" step="0.25" min="0" oninput="onAjusteObraNuevaChange()"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;">
+      <span style="font-size:0.68rem;color:#aaa;">Al cambiar cualquiera, la carga de arriba se recalcula sola.</span>
+      <button type="button" class="btn btn-sm" onclick="resetearAjusteObraNueva()">↺ Restablecer al contrato</button>
+    </div>
+  </div>
+  <div id="avisoAjustePropioNueva" style="display:none;margin-top:6px;">
+    <span style="font-size:0.78rem;color:#854f0b;background:#faeeda;padding:4px 10px;border-radius:20px;display:inline-block;">⚠️ Esta obra tendrá carga de trabajo distinta al contrato</span>
+  </div>
+</div>
 </div>
 
 <div class="card" style="margin-bottom:1.25rem;" id="cardTecnico">
@@ -441,12 +466,29 @@ actualizarBotonEnvio();
 
 function mostrarBaremoInfo(b, codSinBaremo) {
 const wrap = document.getElementById('baremoInfoWrap');
+const btnAjuste = document.getElementById('fBtnAjuste');
 if (!b) {
 wrap.innerHTML = '<div class="notice notice-warn">⚠️ El contrato <strong>' + codSinBaremo + '</strong> no tiene baremo configurado.<br><br>'
 + 'Mientras tanto, puedes introducir una <strong>estimación manual</strong> de la carga en la tarjeta de la izquierda. En cuanto el contrato tenga baremo (botón ⚙️ en Contratos), pasará a calcularse automáticamente.<br><br>'
 + '<a href="contratos.html" class="btn btn-primary" style="text-decoration:none;">Ir a Contratos</a></div>';
+btnAjuste.disabled = true;
+btnAjuste.style.opacity = '0.4';
+btnAjuste.style.cursor = 'not-allowed';
+document.getElementById('avisoSinBaremoBotonNueva').style.display = '';
+document.getElementById('fAjusteWrap').style.display = 'none';
 return;
 }
+btnAjuste.disabled = false;
+btnAjuste.style.opacity = '1';
+btnAjuste.style.cursor = 'pointer';
+document.getElementById('avisoSinBaremoBotonNueva').style.display = 'none';
+document.getElementById('fAjDesplazamiento').value = b.t_desplazamiento;
+document.getElementById('fAjVisita').value = b.t_visita;
+document.getElementById('fAjActa').value = b.t_acta;
+document.getElementById('fAjInforme').value = b.t_informe;
+document.getElementById('fAjReunion').value = b.t_reunion;
+ajusteObraNuevaTocado = false;
+document.getElementById('avisoAjustePropioNueva').style.display = 'none';
 wrap.innerHTML =
 '<div class="notice notice-success" style="margin-bottom:0.75rem;">✅ Baremo configurado</div>'
 + '<div class="baremo-preview"><table>'
@@ -460,17 +502,55 @@ wrap.innerHTML =
 + '<div style="margin-top:0.75rem;font-size:0.72rem;color:#888;">Los baremos se editan en la página de Contratos (botón ⚙️).</div>';
 }
 
+var ajusteObraNuevaTocado = false;
+
+function toggleAjusteObraNueva() {
+  const wrap = document.getElementById('fAjusteWrap');
+  wrap.style.display = (wrap.style.display !== 'none') ? 'none' : '';
+}
+
+function onAjusteObraNuevaChange() {
+  ajusteObraNuevaTocado = true;
+  document.getElementById('avisoAjustePropioNueva').style.display = '';
+  calcularCarga();
+  renderPickerTecnicoNueva();
+}
+
+// Vuelve a los valores del contrato y "olvida" el ajuste — al enviar, los 5
+// tiempos se guardan como null, no como los números de hoy del contrato.
+function resetearAjusteObraNueva() {
+  if (!baremoActual) return;
+  document.getElementById('fAjDesplazamiento').value = baremoActual.t_desplazamiento;
+  document.getElementById('fAjVisita').value = baremoActual.t_visita;
+  document.getElementById('fAjActa').value = baremoActual.t_acta;
+  document.getElementById('fAjInforme').value = baremoActual.t_informe;
+  document.getElementById('fAjReunion').value = baremoActual.t_reunion;
+  ajusteObraNuevaTocado = false;
+  document.getElementById('avisoAjustePropioNueva').style.display = 'none';
+  calcularCarga();
+  renderPickerTecnicoNueva();
+}
+
 // ── CARGA TEÓRICA ─────────────────────────────────────────────
 function calcularCarga() {
 if (!baremoActual) return;
 const b = baremoActual;
+// Los 5 tiempos se leen del panel de ajuste, no directamente del baremo — si
+// nadie lo ha tocado, el panel ya está precargado con los valores del propio
+// contrato (en mostrarBaremoInfo), así que el resultado es idéntico a hoy
+// mientras nadie ajuste nada.
+const t_desp_base = parseFloat(document.getElementById('fAjDesplazamiento').value) || b.t_desplazamiento;
+const t_visita = parseFloat(document.getElementById('fAjVisita').value) || b.t_visita;
+const t_acta = parseFloat(document.getElementById('fAjActa').value) || b.t_acta;
+const t_informe = parseFloat(document.getElementById('fAjInforme').value) || b.t_informe;
+const t_reunion = parseFloat(document.getElementById('fAjReunion').value) || b.t_reunion;
 const visitas_semana = parseFloat(document.getElementById('fVisitas').value)||1;
 const visitas_mes = visitas_semana * 4;
 const num_css = parseInt(document.getElementById('fNumCSS').value)||1;
 const nocturnidad = document.getElementById('fNocturnidad').checked;
 const multi_css = document.getElementById('fMultiCSS').checked;
-const t_desp = nocturnidad ? b.t_desplazamiento * 1.5 : b.t_desplazamiento;
-let horas = ((t_desp*2) + b.t_visita + b.t_acta) * visitas_mes + b.t_informe + b.t_reunion;
+const t_desp = nocturnidad ? t_desp_base * 1.5 : t_desp_base;
+let horas = ((t_desp*2) + t_visita + t_acta) * visitas_mes + t_informe + t_reunion;
 if (multi_css && num_css > 1) horas = horas / num_css;
 const pct = Math.round((horas / b.jornada_horas_mes) * 100);
 const color = pct > 90 ? '#a32d2d' : pct > 70 ? '#854f0b' : '#0f6e56';
@@ -500,6 +580,11 @@ cod_obra_cliente: document.getElementById('fCodObraCliente').value.trim() || nul
 territorio: document.getElementById('fTerritorio').value || null,
 fecha_inicio: document.getElementById('fInicio').value || null,
 plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
+t_desplazamiento: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjDesplazamiento').value) || null) : null,
+t_visita: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjVisita').value) || null) : null,
+t_acta: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjActa').value) || null) : null,
+t_informe: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjInforme').value) || null) : null,
+t_reunion: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjReunion').value) || null) : null,
 visitas_semana: parseInt(document.getElementById('fVisitas').value) || 1,
 num_css: parseInt(document.getElementById('fNumCSS').value) || 1,
 nocturnidad: document.getElementById('fNocturnidad').checked,
@@ -561,7 +646,15 @@ estado: 'ACTIVA',
 fecha_inicio: document.getElementById('fInicio').value || null,
 plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
 fecha_fin: null,
-carga_teorica_semanal: cargaCalculada
+carga_teorica_semanal: cargaCalculada,
+nocturnidad: document.getElementById('fNocturnidad').checked,
+visitas_semana: parseFloat(document.getElementById('fVisitas').value) || null,
+num_css: parseInt(document.getElementById('fNumCSS').value) || null,
+t_desplazamiento: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjDesplazamiento').value) || null) : null,
+t_visita: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjVisita').value) || null) : null,
+t_acta: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjActa').value) || null) : null,
+t_informe: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjInforme').value) || null) : null,
+t_reunion: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjReunion').value) || null) : null
 };
 
 const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
