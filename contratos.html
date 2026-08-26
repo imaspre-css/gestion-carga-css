@@ -757,13 +757,10 @@ function closeBaremoModal() {
 
 function renderBaremoWizard() {
   const wrap = document.getElementById('baremoWizardWrap');
-  const progress = [1,2,3].map(i =>
+  const progress = [1,2].map(i =>
     '<div class="wp-step ' + (i < bwPhase ? 'done' : i === bwPhase ? 'active' : '') + '"></div>'
   ).join('');
-  let content = '';
-  if (bwPhase === 1) content = bwPhase1();
-  else if (bwPhase === 2) content = bwPhase2();
-  else content = bwPhase3();
+  const content = bwPhase === 1 ? bwPhase1() : bwPhase2();
   wrap.innerHTML = '<div style="display:flex;gap:4px;margin-bottom:1rem;">' + progress + '</div>' + content;
 }
 
@@ -804,42 +801,17 @@ function bwGuardar1() {
   renderBaremoWizard();
 }
 
+// La antigua Fase 2 (tipos de obra especiales) queda retirada — nunca llegó a
+// afectar al cálculo, y de las 5 casillas, 4 resultaron redundantes con algo
+// que ya existe en otro sitio (nocturnidad/MultiCSS/visitas ya están en Nueva
+// obra) y la quinta era un estado, no una cuestión de cálculo. El único hueco
+// real que quedaba (tiempos distintos para una obra en concreto) se resuelve
+// ahora por obra individual, en "Editar obra", no aquí a nivel de contrato.
 function bwPhase2() {
-  const tipos = [
-    { id: 'lejana', title: '🚗 Obra lejana', desc: 'Mayor tiempo de desplazamiento' },
-    { id: 'nocturna', title: '🌙 Obra nocturna', desc: 'Desplazamiento ×1.5' },
-    { id: 'discontinua', title: '📅 Obra discontinua', desc: 'Menos visitas mensuales' },
-    { id: 'multicss', title: '👥 MultiCSS', desc: 'Varios coordinadores comparten informe y reunión' },
-    { id: 'sin_comenzar', title: '⏳ Sin comenzar', desc: 'Obra adjudicada pero no iniciada' },
-  ];
-  const selected = bwData.tipos || [];
-  return '<div class="phase-title">Fase 2 — Tipos de obra especiales</div>'
-    + '<div class="phase-desc">Selecciona los tipos de obra especiales que existen en este contrato.</div>'
-    + '<div class="tipo-grid">'
-    + tipos.map(t => '<div class="tipo-card ' + (selected.includes(t.id)?'selected':'') + '" onclick="bwToggleTipo(\'' + t.id + '\')" id="bwtipo_' + t.id + '">'
-      + '<div class="tipo-card-title">' + t.title + '</div>'
-      + '<div class="tipo-card-desc">' + t.desc + '</div>'
-      + '</div>').join('')
-    + '</div>'
-    + '<div style="display:flex;justify-content:space-between;margin-top:1rem;">'
-    + '<button class="btn" onclick="bwPhase=1;renderBaremoWizard()">← Atrás</button>'
-    + '<button class="btn btn-primary" onclick="bwPhase=3;renderBaremoWizard()">Siguiente →</button>'
-    + '</div>';
-}
-
-function bwToggleTipo(id) {
-  if (!bwData.tipos) bwData.tipos = [];
-  const idx = bwData.tipos.indexOf(id);
-  if (idx >= 0) bwData.tipos.splice(idx, 1);
-  else bwData.tipos.push(id);
-  document.getElementById('bwtipo_' + id).classList.toggle('selected');
-}
-
-function bwPhase3() {
   const b = bwData;
   const hBase = ((b.t_desplazamiento*2) + b.t_visita + b.t_acta) * 4 + b.t_informe + b.t_reunion;
   const pct = Math.round((hBase / b.jornada_horas_mes) * 100);
-  return '<div class="phase-title">Fase 3 — Confirmar baremo</div>'
+  return '<div class="phase-title">Fase 2 — Confirmar baremo</div>'
     + '<div class="phase-desc">Revisa los parámetros antes de guardar. Podrás modificarlos en cualquier momento.</div>'
     + '<div class="baremo-preview"><table>'
     + '<tr><td style="color:#888;">Contrato</td><td>' + escH(b.cod_contrato) + (b.cliente ? ' — ' + escH(b.cliente) : '') + '</td></tr>'
@@ -855,7 +827,7 @@ function bwPhase3() {
     + '<div style="font-size:0.72rem;color:#4a4a8a;">Carga estándar (1 visita/semana, sin nocturnidad)</div>'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;margin-top:1rem;">'
-    + '<button class="btn" onclick="bwPhase=2;renderBaremoWizard()">← Atrás</button>'
+    + '<button class="btn" onclick="bwPhase=1;renderBaremoWizard()">← Atrás</button>'
     + '<button class="btn btn-primary" onclick="bwGuardarBaremo()">✅ Guardar baremo</button>'
     + '</div>';
 }
@@ -978,6 +950,21 @@ function abrirEditarObra(event, id) {
   document.getElementById('eCarga').value = o.carga_teorica_semanal || '';
   document.getElementById('eEstado').value = o.estado || 'ACTIVA';
   document.getElementById('editStatus').innerHTML = '';
+
+  // Panel de ajuste de tiempos: si la obra ya tiene su propio valor, se usa;
+  // si no, se precarga con el del baremo del contrato como punto de partida.
+  const cont = contratosDB.find(c => c.cod_contrato === o.cod_contrato);
+  document.getElementById('ajDesplazamientoE').value = o.t_desplazamiento ?? cont?.t_desplazamiento ?? '';
+  document.getElementById('ajVisitaE').value = o.t_visita ?? cont?.t_visita ?? '';
+  document.getElementById('ajActaE').value = o.t_acta ?? cont?.t_acta ?? '';
+  document.getElementById('ajInformeE').value = o.t_informe ?? cont?.t_informe ?? '';
+  document.getElementById('ajReunionE').value = o.t_reunion ?? cont?.t_reunion ?? '';
+  document.getElementById('ajVisitasSemanaE').value = o.visitas_semana ?? 1;
+  document.getElementById('ajNumCssE').value = o.num_css ?? 1;
+  document.getElementById('ajNocturnidadE').checked = !!o.nocturnidad;
+  document.getElementById('eAjusteWrap').style.display = 'none';
+  document.getElementById('eToggleAjuste').textContent = '⚙️ Esta obra tiene tiempos distintos al contrato';
+  verificarCoincidenciaCarga();
   // Sección técnico: mostrar actual, cerrar el selector de reasignación si estaba abierto
   nuevoTecnicoSeleccionado = null;
   document.getElementById('tecnicoActualLabel').textContent = o.tecnico || '—';
@@ -1348,6 +1335,54 @@ async function quitarCoordinador(id) {
   renderContratos();
 }
 
+function toggleAjusteObraE() {
+  const wrap = document.getElementById('eAjusteWrap');
+  const abierto = wrap.style.display !== 'none';
+  wrap.style.display = abierto ? 'none' : '';
+}
+
+function obtenerBaremoContratoActualE() {
+  const id = document.getElementById('eId').value;
+  const o = obras.find(x => x.id === id);
+  if (!o) return null;
+  return contratosDB.find(c => c.cod_contrato === o.cod_contrato) || null;
+}
+
+function calcularCargaDesdeAjusteE() {
+  const cont = obtenerBaremoContratoActualE();
+  if (!cont || cont.jornada_horas_mes == null) return null;
+  const t_desp_base = parseFloat(document.getElementById('ajDesplazamientoE').value) || 0;
+  const t_visita = parseFloat(document.getElementById('ajVisitaE').value) || 0;
+  const t_acta = parseFloat(document.getElementById('ajActaE').value) || 0;
+  const t_informe = parseFloat(document.getElementById('ajInformeE').value) || 0;
+  const t_reunion = parseFloat(document.getElementById('ajReunionE').value) || 0;
+  const nocturnidad = document.getElementById('ajNocturnidadE').checked;
+  const visitas_semana = parseFloat(document.getElementById('ajVisitasSemanaE').value) || 1;
+  const num_css = parseInt(document.getElementById('ajNumCssE').value) || 1;
+  const visitas_mes = visitas_semana * 4;
+  const t_desp = nocturnidad ? t_desp_base * 1.5 : t_desp_base;
+  let horas = ((t_desp*2) + t_visita + t_acta) * visitas_mes + t_informe + t_reunion;
+  if (num_css > 1) horas = horas / num_css;
+  return Math.round((horas / cont.jornada_horas_mes) * 100);
+}
+
+// Cambiar cualquiera de los 8 campos recalcula y rellena la carga directamente
+// — no es solo una sugerencia. Si después alguien la pisa a mano, esa es su
+// decisión (así lo pidió explícitamente el feedback que dio pie a esta pieza);
+// el aviso de "no coincide" está para dejar constancia de eso, no para impedirlo.
+function onAjusteObraChange() {
+  const pct = calcularCargaDesdeAjusteE();
+  if (pct != null) document.getElementById('eCarga').value = pct;
+  verificarCoincidenciaCarga();
+}
+
+function verificarCoincidenciaCarga() {
+  const pct = calcularCargaDesdeAjusteE();
+  const actual = parseFloat(document.getElementById('eCarga').value) || 0;
+  const aviso = document.getElementById('avisoCargaManual');
+  aviso.style.display = (pct != null && Math.round(actual) !== pct) ? '' : 'none';
+}
+
 async function guardarObra() {
   const id = document.getElementById('eId').value;
   const obraActual = obras.find(o => o.id === id);
@@ -1361,7 +1396,18 @@ async function guardarObra() {
     territorio: document.getElementById('eTerritorio').value,
     fecha_inicio: document.getElementById('eFechaInicio').value || null,
     fecha_fin: document.getElementById('eFechaFin').value || null,
-    estado: document.getElementById('eEstado').value
+    estado: document.getElementById('eEstado').value,
+    // Los 8 tiempos/parámetros de cálculo son de la obra en sí, no de cada
+    // reparto — dos coordinadores de la misma obra viajan al mismo sitio y
+    // tardan lo mismo, así que se comparten igual que municipio o territorio.
+    t_desplazamiento: parseFloat(document.getElementById('ajDesplazamientoE').value) || null,
+    t_visita: parseFloat(document.getElementById('ajVisitaE').value) || null,
+    t_acta: parseFloat(document.getElementById('ajActaE').value) || null,
+    t_informe: parseFloat(document.getElementById('ajInformeE').value) || null,
+    t_reunion: parseFloat(document.getElementById('ajReunionE').value) || null,
+    nocturnidad: document.getElementById('ajNocturnidadE').checked,
+    visitas_semana: parseFloat(document.getElementById('ajVisitasSemanaE').value) || null,
+    num_css: parseInt(document.getElementById('ajNumCssE').value) || null
   };
   const payload = Object.assign({}, camposCompartidos, {
     carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null
@@ -1612,7 +1658,7 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
         </div>
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Carga teórica semanal (%)</label>
-          <input type="number" id="eCarga" min="0" max="200" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+          <input type="number" id="eCarga" min="0" max="200" oninput="verificarCoincidenciaCarga()" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
         </div>
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Estado</label>
@@ -1627,6 +1673,27 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
           </select>
         </div>
       </div>
+
+      <div style="margin-top:0.5rem;">
+        <a href="#" id="eToggleAjuste" onclick="event.preventDefault();toggleAjusteObraE();" style="font-size:0.78rem;color:#4a4a8a;text-decoration:none;">⚙️ Esta obra tiene tiempos distintos al contrato</a>
+        <div id="eAjusteWrap" style="display:none;margin-top:0.75rem;background:#f8f8fe;border-radius:8px;padding:0.85rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Desplazamiento (h)</label><input type="number" id="ajDesplazamientoE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Visita (h)</label><input type="number" id="ajVisitaE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Acta (h)</label><input type="number" id="ajActaE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Informe (h)</label><input type="number" id="ajInformeE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Reunión (h)</label><input type="number" id="ajReunionE" step="0.25" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Visitas/semana</label><input type="number" id="ajVisitasSemanaE" step="0.5" min="0" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div><label style="font-size:0.75rem;color:#666;display:block;margin-bottom:3px;">Nº CSS</label><input type="number" id="ajNumCssE" step="1" min="1" oninput="onAjusteObraChange()" style="width:100%;padding:0.4rem 0.6rem;border:0.5px solid #d0d0c8;border-radius:6px;font-size:0.82rem;"></div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:0.4rem;">
+              <label style="font-size:0.78rem;color:#333;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ajNocturnidadE" onchange="onAjusteObraChange()"> Nocturnidad (×1.5 desplazamiento)</label>
+            </div>
+          </div>
+          <div style="font-size:0.68rem;color:#aaa;margin-top:0.5rem;">Al cambiar cualquiera de estos, la carga teórica de arriba se recalcula sola.</div>
+        </div>
+        <div id="avisoCargaManual" style="display:none;font-size:0.72rem;color:#854f0b;margin-top:0.5rem;">⚠️ La carga actual no coincide con el cálculo de los tiempos de arriba — es un ajuste manual.</div>
+      </div>
+
       <div style="margin-top:0.75rem;font-size:0.7rem;color:#aaa;">El código de obra forma parte de la clave que la identifica junto al contrato, descripción y técnico. En obras multicoordinador es normal que varias filas compartan el mismo código.</div>
       <input type="hidden" id="eId">
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
