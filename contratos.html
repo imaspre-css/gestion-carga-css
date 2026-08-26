@@ -642,7 +642,14 @@ async function guardarNuevoContrato() {
   // propio contrato ya mismo Y siga viéndolo tras un nuevo login. Aplica a
   // cualquiera con contratos acotados (delegado, o staffer sin admin_total).
   const delegadosSel = getDelegadosSeleccionados('ncDelList');
-  if (filtrarPorContrato) {
+  // Este bloque asume una lista propia y literal — cierto para delegado y
+  // staffer no-admin, pero nunca para representante: su alcance se calcula
+  // sumando el de sus delegados, y su columna contratos ni se lee ni debe
+  // escribirse nunca directamente. Escribir aquí para representante no
+  // rompía su cálculo real (que la ignora), pero sí dejaba un dato falso y
+  // confuso en su ficha — y probablemente contribuyó a la sesión de alguien
+  // quedando en un estado inconsistente hasta el siguiente login.
+  if (filtrarPorContrato && !cssEsRepresentante()) {
     if (!misContratos.includes(cod)) misContratos.push(cod);
     localStorage.setItem('css_contratos', JSON.stringify(misContratos));
     const miEmail = cssGetEmail();
