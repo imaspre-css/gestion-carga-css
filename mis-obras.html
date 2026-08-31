@@ -237,7 +237,8 @@ const id = event.currentTarget.dataset.id;
 const o = obras.find(x => x.id === id);
 if (!o) return;
 document.getElementById('eObraId').value = id;
-document.getElementById('editarObraInfo').textContent = (o.cod_obra||'') + ' — ' + (o.descripcion||'').substring(0,60);
+document.getElementById('editarObraInfo').textContent = (o.cod_obra||'');
+document.getElementById('eDescripcion').value = o.descripcion || '';
 document.getElementById('eFechaInicio').value = o.fecha_inicio ? o.fecha_inicio.split('T')[0] : '';
 document.getElementById('eFechaFin').value = o.fecha_fin ? o.fecha_fin.split('T')[0] : '';
 document.getElementById('eEstado').value = o.estado || 'ACTIVA';
@@ -258,10 +259,12 @@ if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
 document.getElementById('editarObraStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">La fecha de fin no puede ser anterior a la de inicio.</div>';
 return;
 }
-// Solo estos 3 campos: aunque se mandara cualquier otro, un trigger de la base
-// de datos lo ignoraría igualmente para cualquier técnico — esto es solo para
-// mandar lo mínimo necesario, no la barrera de seguridad en sí.
-const payload = { fecha_inicio: fechaInicio, fecha_fin: fechaFin, estado: estado };
+const descripcion = document.getElementById('eDescripcion').value.trim();
+// Estos 4 campos son los únicos que el trigger de la base de datos permite
+// tocar a un técnico — aunque se mandara cualquier otro, lo ignoraría
+// igualmente. Esto es solo para mandar lo mínimo necesario, no la barrera de
+// seguridad en sí (ver restringir_columnas_tecnico() en Supabase).
+const payload = { fecha_inicio: fechaInicio, fecha_fin: fechaFin, estado: estado, descripcion: descripcion || null };
 const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + obraId, {
 method: 'PATCH',
 headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
@@ -269,7 +272,7 @@ body: JSON.stringify(payload)
 });
 if (res.ok) {
 const o = obras.find(x => x.id === obraId);
-if (o) { o.fecha_inicio = fechaInicio; o.fecha_fin = fechaFin; o.estado = estado; }
+if (o) { o.fecha_inicio = fechaInicio; o.fecha_fin = fechaFin; o.estado = estado; o.descripcion = descripcion; }
 closeEditarObraModal();
 renderStats();
 renderObras();
@@ -299,6 +302,10 @@ if (e.target === document.getElementById('modalEditarObra')) closeEditarObraModa
 <div style="margin-bottom:0.75rem;">
 <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Obra</label>
 <div id="editarObraInfo" style="font-size:0.85rem;color:#1a1a1a;background:#f5f5f0;padding:0.5rem 0.75rem;border-radius:8px;"></div>
+</div>
+<div style="margin-bottom:0.75rem;">
+<label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
+<textarea id="eDescripcion" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;min-height:70px;resize:vertical;font-family:inherit;"></textarea>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0.75rem;">
 <div>
