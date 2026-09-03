@@ -6,6 +6,7 @@
 <title>Técnicos — CSS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -518,6 +519,7 @@ function detalleTecnicoHTML(nombre) {
     + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
     + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
     + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
+    + '<button class="btn btn-sm" onclick="cssExportarObrasAXlsx(obrasTec, \'' + nombre.replace(/'/g,"\\'") + '.xlsx\')">📥 Exportar a Excel</button>'
     + '</div>'
     + '<div class="stats-row">'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
