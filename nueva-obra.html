@@ -199,6 +199,10 @@ cssRequireRole(['staffer','delegado','representante']);
 <label>Observaciones</label>
 <textarea id="fObservaciones" placeholder="Información adicional relevante..."></textarea>
 </div>
+<div class="field">
+<label>¿Esta obra ya está en marcha, con técnico ya designado? <span style="color:#aaa;">(opcional)</span></label>
+<input type="text" id="fTecnicoPropuesto" placeholder="Nombre del técnico que ya está trabajando en ella">
+</div>
 </div>
 
 <div class="card" style="margin-bottom:1.25rem;">
@@ -594,6 +598,7 @@ colegiacion_requerida: document.getElementById('fColegiacion').checked,
 experiencia_anios: parseInt(document.getElementById('fExperiencia').value) || 0,
 prioridad: document.getElementById('fPrioridad').value,
 observaciones: document.getElementById('fObservaciones').value,
+tecnico_propuesto: document.getElementById('fTecnicoPropuesto').value.trim() || null,
 carga_teorica_calculada: cargaCalculada,
 estado: 'PENDIENTE'
 };
