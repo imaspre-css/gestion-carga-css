@@ -428,3 +428,40 @@ function cssGetEstadoClass(estado) {
   if (e === 'FINALIZADA') return 'estado-FINALIZADA';
   return 'estado-SUSPENDIDA';
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// Exportar obras a Excel — requiere que la página que lo use cargue la
+// librería SheetJS (CDN) por su cuenta; esta función solo construye el
+// archivo a partir de lo que ya tenga en memoria, sin volver a pedir nada
+// a Supabase.
+// ═══════════════════════════════════════════════════════════════
+function cssExportarObrasAXlsx(obrasArray, nombreArchivo) {
+  if (typeof XLSX === 'undefined') {
+    alert('No se pudo cargar la librería de exportación. Comprueba tu conexión e inténtalo de nuevo.');
+    return;
+  }
+  if (!obrasArray || !obrasArray.length) {
+    alert('No hay obras que exportar.');
+    return;
+  }
+  const datos = obrasArray.map(function(o) {
+    return {
+      'Código de obra': o.cod_obra || '',
+      'Descripción': o.descripcion || '',
+      'Cliente': o.cliente || '',
+      'Contrato': o.cod_contrato || '',
+      'Técnico': o.tecnico || '',
+      'Territorio': o.territorio || '',
+      'Estado': o.estado || '',
+      'Fecha inicio': o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '',
+      'Fecha fin': o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '',
+      'Carga teórica (%)': o.carga_teorica_semanal != null ? Math.round(o.carga_teorica_semanal) : ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(datos);
+  ws['!cols'] = [{wch:16},{wch:45},{wch:22},{wch:14},{wch:26},{wch:14},{wch:14},{wch:12},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Obras');
+  XLSX.writeFile(wb, nombreArchivo);
+}
