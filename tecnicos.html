@@ -465,6 +465,11 @@ function renderTechGrid() {
 // Calendario y tabla de obras completos de un técnico — antes se escribían
 // directamente en un contenedor fijo aparte; ahora se devuelven como HTML
 // para insertarse dentro de la fila desplegable de esa persona en concreto.
+function exportarTecnicoBtn(nombre) {
+  const obrasTec = obras.filter(o => o.tecnico === nombre);
+  cssExportarObrasAXlsx(obrasTec, nombre + '.xlsx');
+}
+
 function detalleTecnicoHTML(nombre) {
   const obrasTec = obras.filter(o => o.tecnico === nombre);
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
@@ -519,7 +524,7 @@ function detalleTecnicoHTML(nombre) {
     + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
     + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
     + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
-    + '<button class="btn btn-sm" onclick="cssExportarObrasAXlsx(obrasTec, \'' + nombre.replace(/'/g,"\\'") + '.xlsx\')">📥 Exportar a Excel</button>'
+    + '<button class="btn btn-sm" onclick="exportarTecnicoBtn(\'' + nombre.replace(/'/g,"\\'") + '\')">📥 Exportar a Excel</button>'
     + '</div>'
     + '<div class="stats-row">'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTec.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
