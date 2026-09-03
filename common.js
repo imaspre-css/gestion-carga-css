@@ -248,7 +248,8 @@ const CSS_NAV_ITEMS = [
   // alguna obra), no solo quien inicia sesión con ese rol.
   { href: 'mis-obras.html', label: 'Mis obras' },
   { href: 'encuesta_semanal.html', label: 'Encuesta', adminOnly: true },
-  { href: 'carga-masiva.html', label: 'Carga masiva', adminOnly: true }
+  { href: 'carga-masiva.html', label: 'Carga masiva', adminOnly: true },
+  { href: 'permisos.html', label: 'Permisos', adminOnly: true }
 ];
 
 /**
