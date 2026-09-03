@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Permisos — CSS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="common.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+.header { background: #1a1a2e; color: #fff; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+.header h1 { font-size: 1rem; font-weight: 500; }
+.nav { display: flex; gap: 4px; }
+.nav a { color: #9090b0; font-size: 13px; padding: 4px 12px; border-radius: 20px; text-decoration: none; transition: all 0.15s; }
+.nav a:hover, .nav a.active { color: #fff; background: rgba(255,255,255,0.1); }
+.container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 1rem; }
+.card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.card-title { font-size: 0.75rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: 0.5px solid #d0d0c8; background: #fff; color: #1a1a1a; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+.btn-primary:hover { background: #2a2a4e; }
+.btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+.btn-danger { color: #a32d2d; border-color: #f7c1c1; }
+.btn-danger:hover { background: #fcebeb; }
+.search-box { position: relative; display: inline-flex; align-items: center; }
+.search-box input { font-size: 12px; padding: 4px 10px 4px 26px; border-radius: 20px; border: 0.5px solid #d0d0c8; width: 180px; }
+.search-box .icon { position: absolute; left: 8px; font-size: 12px; color: #aaa; pointer-events: none; }
+.obras-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.obras-table th { background: #f5f5f0; padding: 0.5rem 0.75rem; text-align: left; font-weight: 500; color: #888; border-bottom: 0.5px solid #e0e0d8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; user-select: none; }
+.obras-table td { padding: 0.55rem 0.75rem; border-bottom: 0.5px solid #f0f0e8; vertical-align: middle; }
+.obras-table tr:last-child td { border-bottom: none; }
+.pill { display: inline-block; font-size: 0.68rem; padding: 2px 9px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.pill-staffer { background: #eeeefa; color: #4a4a8a; }
+.pill-delegado { background: #e1f5ee; color: #0f6e56; }
+.pill-representante { background: #faeeda; color: #854f0b; }
+.empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.85rem; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.field { margin-bottom: 0.85rem; }
+.field label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 4px; }
+.field input, .field select, .field textarea { width: 100%; padding: 0.5rem 0.75rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.875rem; font-family: inherit; }
+.field textarea { min-height: 60px; resize: vertical; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 0.5px solid #f5f5f0; }
+.toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: #d0d0c8; border-radius: 20px; transition: 0.2s; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+input:checked + .slider { background: #4a4a8a; }
+input:checked + .slider:before { transform: translateX(16px); }
+.notice { padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+.notice-success { background: #e1f5ee; color: #0f6e56; border: 0.5px solid #9fe1cb; }
+.notice-error { background: #fcebeb; color: #a32d2d; border: 0.5px solid #f7c1c1; }
+.notice-info { background: #e6f1fb; color: #185fa5; border: 0.5px solid #b5d4f4; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 14px; width: 92%; max-width: 560px; max-height: 88vh; overflow-y: auto; }
+.modal-head { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e8e0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; }
+.modal-head h3 { font-size: 1rem; font-weight: 500; }
+.modal-body { padding: 1.5rem; }
+.close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #aaa; }
+.acceso-denegado { text-align: center; padding: 4rem 1rem; color: #888; }
+</style>
+</head>
+<body>
+<script>
+cssRequireRole();
+if (!cssEsAdmin()) {
+  document.write('<div class="acceso-denegado"><h2>Acceso restringido</h2><p>Esta pantalla es solo para administradores.</p><a href="index.html" class="btn" style="margin-top:1rem;display:inline-block;">Volver al inicio</a></div>');
+  throw new Error('Acceso no autorizado a permisos.html');
+}
+</script>
+
+<div class="header">
+  <h1>🔑 Permisos</h1>
+  <div class="nav" id="navContainer"></div>
+</div>
+
+<div class="container">
+  <div id="loadingDiv"><div class="spinner"></div></div>
+  <div id="mainContent" style="display:none;">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Usuarios del sistema</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="search-box"><span class="icon">🔍</span><input type="text" id="buscarUsuario" placeholder="Buscar..." oninput="renderTabla()"></span>
+          <select id="filtroRol" onchange="renderTabla()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+            <option value="">Todos los roles</option>
+            <option value="staffer">Staffer</option>
+            <option value="delegado">Delegado</option>
+            <option value="representante">Representante</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="abrirNuevoUsuario()">+ Nuevo usuario</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;"><table class="obras-table"><thead><tr id="tablaHead"></tr></thead><tbody id="tablaBody"></tbody></table></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal editar/crear usuario -->
+<div class="modal-bg" id="modalUsuario">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitulo">Nuevo usuario</h3>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalStatus"></div>
+      <div class="field">
+        <label>Nombre completo *</label>
+        <input type="text" id="uNombre" placeholder="NOMBRE APELLIDOS">
+      </div>
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" id="uEmail" placeholder="nombre@imaspre.net">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Rol</label>
+          <select id="uRol" onchange="onRolChange()">
+            <option value="staffer">Staffer</option>
+            <option value="delegado">Delegado</option>
+            <option value="representante">Representante</option>
+          </select>
+        </div>
+        <div class="field" id="uAdminTotalWrap">
+          <label>Admin total</label>
+          <label class="toggle" style="margin-top:4px;"><input type="checkbox" id="uAdminTotal" onchange="onAdminChange()"><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="field" id="uContratosWrap">
+        <label>Contratos (códigos separados por comas)</label>
+        <textarea id="uContratos" placeholder="2334, 2789, 2498"></textarea>
+        <div id="uContratosNotaRepresentante" style="display:none;font-size:0.72rem;color:#888;margin-top:4px;">Para representante, esto normalmente debería quedar vacío — su alcance se calcula solo, sumando los contratos de los delegados que lo tengan como representante. Solo debería tener algo aquí si creó un contrato sin marcar ningún delegado.</div>
+      </div>
+      <div class="field" id="uRepresentanteWrap" style="display:none;">
+        <label>Representante (email) — si esta persona es delegada de alguien</label>
+        <input type="email" id="uRepresentanteEmail" placeholder="representante@imaspre.net">
+      </div>
+      <div class="toggle-row">
+        <label>Activo</label>
+        <label class="toggle"><input type="checkbox" id="uActivo" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row" id="uTecnicoRow">
+        <label>También es técnico <span style="color:#aaa;font-weight:400;">(aparecerá en el desplegable de asignación de obras)</span></label>
+        <label class="toggle"><input type="checkbox" id="uTambienTecnico"><span class="slider"></span></label>
+      </div>
+      <div id="uYaEsTecnicoAviso" style="display:none;" class="notice notice-info">✅ Esta persona ya tiene ficha de técnico — <a href="tecnicos.html" style="color:#185fa5;">editarla desde Técnicos</a>.</div>
+      <input type="hidden" id="uEmailOriginal">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem;">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = CSS_SUPABASE_URL;
+var SUPABASE_KEY = CSS_SUPABASE_KEY;
+
+var usuarios = [];
+var tecnicosPorEmail = {};
+var ordenCol = 'nombre';
+var ordenAsc = true;
+
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function pillClaseRol(rol) {
+  return rol === 'staffer' ? 'pill-staffer' : rol === 'delegado' ? 'pill-delegado' : 'pill-representante';
+}
+
+function renderTablaHead() {
+  const flecha = c => ordenCol === c ? (ordenAsc ? ' ▲' : ' ▼') : '';
+  const th = (c, label) => '<th onclick="ordenarPor(\'' + c + '\')">' + label + flecha(c) + '</th>';
+  document.getElementById('tablaHead').innerHTML =
+    th('nombre','Nombre') + th('email','Email') + th('rol','Rol') + th('contratos','Contratos') + '<th>Técnico</th>' + th('activo','Estado') + '<th></th>';
+}
+
+function ordenarPor(campo) {
+  if (ordenCol === campo) ordenAsc = !ordenAsc; else { ordenCol = campo; ordenAsc = true; }
+  renderTabla();
+}
+
+function renderTabla() {
+  renderTablaHead();
+  const busqueda = (document.getElementById('buscarUsuario').value || '').trim().toLowerCase();
+  const filtroRol = document.getElementById('filtroRol').value;
+  let lista = usuarios.slice();
+  if (busqueda) lista = lista.filter(u => u.nombre.toLowerCase().includes(busqueda) || u.email.toLowerCase().includes(busqueda));
+  if (filtroRol) lista = lista.filter(u => u.rol === filtroRol);
+
+  lista.sort((a, b) => {
+    let va = a[ordenCol], vb = b[ordenCol];
+    if (ordenCol === 'contratos') { va = (a.contratos||[]).length; vb = (b.contratos||[]).length; }
+    const cmp = typeof va === 'string' ? va.localeCompare(vb, 'es', {sensitivity:'base'}) : (va < vb ? -1 : va > vb ? 1 : 0);
+    return ordenAsc ? cmp : -cmp;
+  });
+
+  if (!lista.length) {
+    document.getElementById('tablaBody').innerHTML = '<tr><td colspan="7" class="empty">Sin usuarios con estos filtros</td></tr>';
+    return;
+  }
+
+  document.getElementById('tablaBody').innerHTML = lista.map(u => {
+    const esTecnico = !!tecnicosPorEmail[(u.email||'').toLowerCase()];
+    return '<tr' + (u.activo === false ? ' style="opacity:0.5;"' : '') + '>'
+      + '<td style="font-weight:500;">' + esc(u.nombre) + '</td>'
+      + '<td style="font-size:0.78rem;">' + esc(u.email) + '</td>'
+      + '<td><span class="pill ' + pillClaseRol(u.rol) + '">' + esc(u.rol) + (u.admin_total ? ' · admin' : '') + '</span></td>'
+      + '<td>' + (u.rol === 'representante' ? '<span style="color:#aaa;font-size:0.75rem;">calculado</span>' : (u.contratos||[]).length) + '</td>'
+      + '<td>' + (esTecnico ? '✅' : '—') + '</td>'
+      + '<td><span class="pill" style="' + (u.activo !== false ? 'background:#e1f5ee;color:#0f6e56;' : 'background:#f5f5f0;color:#888;') + '">' + (u.activo !== false ? 'Activo' : 'Inactivo') + '</span></td>'
+      + '<td><button class="btn btn-sm" onclick="abrirEditarUsuario(\'' + u.email.replace(/'/g,"\\\'") + '\')">✏️</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function onRolChange() {
+  const rol = document.getElementById('uRol').value;
+  document.getElementById('uAdminTotalWrap').style.display = rol === 'staffer' ? '' : 'none';
+  if (rol !== 'staffer') document.getElementById('uAdminTotal').checked = false;
+  document.getElementById('uRepresentanteWrap').style.display = rol === 'delegado' ? '' : 'none';
+  document.getElementById('uContratosNotaRepresentante').style.display = rol === 'representante' ? '' : 'none';
+  onAdminChange();
+}
+
+function onAdminChange() {
+  const esAdmin = document.getElementById('uAdminTotal').checked;
+  document.getElementById('uContratosWrap').style.opacity = esAdmin ? '0.5' : '1';
+}
+
+function abrirNuevoUsuario() {
+  document.getElementById('modalTitulo').textContent = 'Nuevo usuario';
+  document.getElementById('uEmailOriginal').value = '';
+  document.getElementById('uNombre').value = '';
+  document.getElementById('uEmail').value = '';
+  document.getElementById('uRol').value = 'staffer';
+  document.getElementById('uAdminTotal').checked = false;
+  document.getElementById('uContratos').value = '';
+  document.getElementById('uRepresentanteEmail').value = '';
+  document.getElementById('uActivo').checked = true;
+  document.getElementById('uTambienTecnico').checked = false;
+  document.getElementById('uTecnicoRow').style.display = '';
+  document.getElementById('uYaEsTecnicoAviso').style.display = 'none';
+  document.getElementById('modalStatus').innerHTML = '';
+  onRolChange();
+  document.getElementById('modalUsuario').classList.add('open');
+}
+
+function abrirEditarUsuario(email) {
+  const u = usuarios.find(x => x.email === email);
+  if (!u) return;
+  document.getElementById('modalTitulo').textContent = 'Editar usuario';
+  document.getElementById('uEmailOriginal').value = u.email;
+  document.getElementById('uNombre').value = u.nombre || '';
+  document.getElementById('uEmail').value = u.email || '';
+  document.getElementById('uRol').value = u.rol || 'staffer';
+  document.getElementById('uAdminTotal').checked = !!u.admin_total;
+  document.getElementById('uContratos').value = (u.contratos || []).join(', ');
+  document.getElementById('uRepresentanteEmail').value = u.representante_email || '';
+  document.getElementById('uActivo').checked = u.activo !== false;
+
+  const esTecnico = !!tecnicosPorEmail[(u.email||'').toLowerCase()];
+  document.getElementById('uTambienTecnico').checked = esTecnico;
+  document.getElementById('uTecnicoRow').style.display = esTecnico ? 'none' : '';
+  document.getElementById('uYaEsTecnicoAviso').style.display = esTecnico ? '' : 'none';
+
+  document.getElementById('modalStatus').innerHTML = '';
+  onRolChange();
+  document.getElementById('modalUsuario').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalUsuario').classList.remove('open'); }
+
+async function guardarUsuario() {
+  const nombre = document.getElementById('uNombre').value.trim();
+  const email = document.getElementById('uEmail').value.trim().toLowerCase();
+  if (!nombre || !email) { alert('Nombre y email son obligatorios.'); return; }
+
+  const rol = document.getElementById('uRol').value;
+  const adminTotal = document.getElementById('uAdminTotal').checked;
+  const contratos = document.getElementById('uContratos').value.split(',').map(s => s.trim()).filter(Boolean);
+  const representanteEmail = document.getElementById('uRepresentanteEmail').value.trim().toLowerCase() || null;
+  const activo = document.getElementById('uActivo').checked;
+  const emailOriginal = document.getElementById('uEmailOriginal').value;
+  const tambienTecnico = document.getElementById('uTambienTecnico').checked;
+
+  const payload = {
+    nombre, email, rol,
+    admin_total: rol === 'staffer' ? adminTotal : false,
+    contratos: contratos,
+    representante_email: rol === 'delegado' ? representanteEmail : null,
+    activo
+  };
+
+  let res;
+  if (emailOriginal) {
+    res = await fetch(SUPABASE_URL + '/rest/v1/usuarios?email=eq.' + encodeURIComponent(emailOriginal), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+  } else {
+    res = await fetch(SUPABASE_URL + '/rest/v1/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  if (!res.ok) {
+    const errTxt = await res.text();
+    console.error('Error guardando usuario:', errTxt);
+    document.getElementById('modalStatus').innerHTML = '<div class="notice notice-error">❌ Error al guardar. Comprueba que el email no esté repetido.</div>';
+    return;
+  }
+
+  const yaEsTecnico = !!tecnicosPorEmail[email];
+  if (tambienTecnico && !yaEsTecnico) {
+    const resT = await fetch(SUPABASE_URL + '/rest/v1/tecnicos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
+      body: JSON.stringify({ nombre, email, activo: true })
+    });
+    if (!resT.ok) {
+      console.error('Error creando ficha de técnico:', await resT.text());
+      document.getElementById('modalStatus').innerHTML = '<div class="notice notice-error">⚠️ El usuario se guardó, pero no se pudo crear su ficha de técnico (revisa si ya existe con ese email o nombre).</div>';
+      await cargarTodo();
+      renderTabla();
+      return;
+    }
+  }
+
+  document.getElementById('modalStatus').innerHTML = '<div class="notice notice-success">✅ Guardado correctamente</div>';
+  await cargarTodo();
+  renderTabla();
+  setTimeout(closeModal, 900);
+}
+
+async function cargarTodo() {
+  const [ru, rt] = await Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/usuarios?select=*&order=nombre', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }),
+    fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,email', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } })
+  ]);
+  usuarios = await ru.json();
+  if (!Array.isArray(usuarios)) usuarios = [];
+  const tecnicos = await rt.json();
+  tecnicosPorEmail = {};
+  (Array.isArray(tecnicos) ? tecnicos : []).forEach(t => { if (t.email) tecnicosPorEmail[t.email.toLowerCase()] = true; });
+}
+
+async function init() {
+  document.getElementById('navContainer').innerHTML = cssRenderNav('permisos.html');
+  await cargarTodo();
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  renderTabla();
+}
+
+document.getElementById('modalUsuario').addEventListener('click', e => { if (e.target === document.getElementById('modalUsuario')) closeModal(); });
+init();
+</script>
+</body>
+</html>
