@@ -6,6 +6,7 @@
 <title>Contratos — CSS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
@@ -382,6 +383,7 @@ function renderContratos() {
       + '<div class="contrato-stat"><div class="contrato-stat-num"' + (pendientesDesig > 0 ? ' style="color:#854f0b;"' : '') + '>' + pendientesDesig + '</div><div class="contrato-stat-label">Pdte. designar</div></div>'
       + '</div>'
       + (puedeEditar ? '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirBaremoBtn(event)" title="Configurar / editar baremo">⚙️</button><button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="abrirEditarContratoBtn(event)" title="Editar contrato">✏️</button>' : '')
+      + '<button class="btn btn-sm" data-cod="' + escH(cont.cod) + '" onclick="exportarContratoBtn(event)" title="Exportar las obras de este contrato a Excel">📥</button>'
       + (isStaffer ? '<button class="btn btn-sm" style="color:#a32d2d;border-color:#f7c1c1;" data-cod="' + escH(cont.cod) + '" onclick="eliminarContratoBtn(event)" title="Eliminar contrato">🗑️</button>' : '')
       + '<span class="chevron' + (isOpen?' open':'') + '">▼</span>'
       + '</div>'
@@ -767,6 +769,13 @@ var bwData = {};
 function abrirBaremoBtn(event) {
   event.stopPropagation();
   abrirBaremo(event.currentTarget.dataset.cod);
+}
+
+function exportarContratoBtn(event) {
+  event.stopPropagation();
+  const cod = event.currentTarget.dataset.cod;
+  const obrasDelContrato = obras.filter(o => o.cod_contrato === cod);
+  cssExportarObrasAXlsx(obrasDelContrato, cod + '.xlsx');
 }
 
 function abrirBaremo(cod) {
