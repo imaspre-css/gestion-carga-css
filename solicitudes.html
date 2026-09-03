@@ -211,11 +211,15 @@ function renderTabla() {
     if (s.estado === 'PENDIENTE') {
       if (isStaffer) {
         acciones = '<div style="display:flex;gap:4px;">'
+          + '<button class="btn btn-sm" onclick="verDetalle(\'' + s.id + '\')">Ver</button>'
           + '<button class="btn btn-sm btn-primary" onclick="abrirAsignar(\'' + s.id + '\')">Asignar</button>'
           + '<button class="btn btn-sm btn-danger" onclick="abrirResolucion(\'' + s.id + '\',\'RECHAZADA\')">Rechazar</button>'
           + '</div>';
       } else if (isDelegadoRol) {
-        acciones = '<button class="btn btn-sm btn-danger" onclick="abrirResolucion(\'' + s.id + '\',\'CANCELADA\')">Cancelar</button>';
+        acciones = '<div style="display:flex;gap:4px;">'
+          + '<button class="btn btn-sm" onclick="verDetalle(\'' + s.id + '\')">Ver</button>'
+          + '<button class="btn btn-sm btn-danger" onclick="abrirResolucion(\'' + s.id + '\',\'CANCELADA\')">Cancelar</button>'
+          + '</div>';
       } else {
         acciones = '<span style="font-size:0.75rem;color:#888;">Pendiente</span>';
       }
@@ -225,6 +229,7 @@ function renderTabla() {
     html += '<tr>'
       + '<td><div style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(s.denominacion||'') + '">'
         + (s.tipo_solicitud === 'SUSTITUCION' ? '<span class="tag" style="background:#e6f1fb;color:#185fa5;margin-right:4px;">🔄 Sustitución</span>' : '')
+        + (s.tecnico_propuesto ? '<span class="tag" style="background:#faeeda;color:#854f0b;margin-right:4px;" title="Técnico propuesto por el delegado">⭐ ' + escH(s.tecnico_propuesto) + '</span>' : '')
         + escH(s.denominacion||'—') + '</div>'
       + '<div style="font-size:0.72rem;color:#aaa;">' + [s.cliente, s.municipio, (s.cod_obra_resultante ? 'Nº ' + s.cod_obra_resultante : null)].filter(Boolean).map(escH).join(' · ') + '</div></td>'
       + '<td><span class="tag tag-producto">' + escH(s.producto||'CSS') + '</span></td>'
@@ -330,7 +335,8 @@ function renderModalAsignar() {
     { key: 'todos', label: 'Todos', n: vistas.todos.length }
   ];
 
-  let html = '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
+  let html = (solicitudActual.tecnico_propuesto ? '<div class="notice" style="background:#faeeda;color:#854f0b;border:0.5px solid #fac775;">⭐ El delegado indica que esta obra ya está en marcha, con <strong>' + escH(solicitudActual.tecnico_propuesto) + '</strong> como técnico designado — búscalo abajo para confirmarlo.</div>' : '')
+    + '<div style="background:#f5f5f0;border-radius:8px;padding:0.75rem;margin-bottom:1.25rem;font-size:0.82rem;">'
     + '<div style="font-weight:500;margin-bottom:4px;">' + escH(solicitudActual.denominacion||'') + (solicitudActual.cod_obra_resultante ? ' <span style="color:#4a4a8a;">(Nº ' + escH(solicitudActual.cod_obra_resultante) + ')</span>' : '') + '</div>'
     + '<div style="color:#888;">' + [solicitudActual.cod_contrato, solicitudActual.producto||'CSS', solicitudActual.municipio, solicitudActual.territorio].filter(Boolean).map(escH).join(' · ') + ' · Carga: <strong>' + (cargaNueva||'—') + '%</strong></div>'
     + '</div>';
@@ -529,7 +535,9 @@ function verDetalle(id) {
   const fecha = s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES') : '—';
   const fechaAsig = s.fecha_asignacion ? new Date(s.fecha_asignacion).toLocaleDateString('es-ES') : '—';
   const fechaRes = s.fecha_resolucion ? new Date(s.fecha_resolucion).toLocaleDateString('es-ES') : null;
-  document.getElementById('modalBody').innerHTML = '<div class="detail-grid">'
+  document.getElementById('modalBody').innerHTML =
+    (s.tecnico_propuesto ? '<div class="notice" style="background:#faeeda;color:#854f0b;border:0.5px solid #fac775;">⭐ El delegado indica que esta obra ya está en marcha, con <strong>' + escH(s.tecnico_propuesto) + '</strong> como técnico designado.</div>' : '')
+    + '<div class="detail-grid">'
     + '<div class="detail-item"><label>Producto</label><span>' + escH(s.producto||'CSS') + '</span></div>'
     + '<div class="detail-item"><label>Contrato</label><span>' + escH(s.cod_contrato||'—') + '</span></div>'
     + '<div class="detail-item"><label>Cliente</label><span>' + escH(s.cliente||'—') + '</span></div>'
