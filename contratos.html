@@ -730,6 +730,32 @@ function closeEditarContratoModal() {
   document.getElementById('modalEditarContrato').classList.remove('open');
 }
 
+// Cambiar el código de un contrato es distinto de un campo normal — se
+// propaga a obras, solicitudes y usuarios a la vez, así que vive fuera del
+// flujo de "Guardar" de siempre, con su propia confirmación explícita.
+async function cambiarCodigoContrato() {
+  const codViejo = document.getElementById('ecCod').value;
+  const codNuevo = prompt('Nuevo código para este contrato (sustituirá "' + codViejo + '" en todas las obras, solicitudes y usuarios que lo tengan):', codViejo);
+  if (!codNuevo) return;
+  const codNuevoTrim = codNuevo.trim();
+  if (!codNuevoTrim || codNuevoTrim === codViejo) return;
+  if (!confirm('¿Seguro que quieres cambiar "' + codViejo + '" por "' + codNuevoTrim + '"?\n\nEsto actualiza TODAS las obras, solicitudes y usuarios que tengan este código. No se puede deshacer.')) return;
+
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/renombrar_contrato', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+    body: JSON.stringify({ cod_viejo: codViejo, cod_nuevo: codNuevoTrim })
+  });
+  if (!res.ok) {
+    const errTxt = await res.text();
+    alert('Error al cambiar el código: ' + errTxt);
+    return;
+  }
+  alert('Código actualizado correctamente a "' + codNuevoTrim + '".');
+  closeEditarContratoModal();
+  await init();
+}
+
 async function guardarEditarContrato() {
   const cod = document.getElementById('ecCod').value;
   const cliente = document.getElementById('ecCliente').value.trim();
@@ -986,6 +1012,9 @@ function abrirEditarObra(event, id) {
   if (!o) return;
   document.getElementById('eId').value = id;
   document.getElementById('eCodObra').value = o.cod_obra || '';
+  const selContrato = document.getElementById('eCodContrato');
+  selContrato.innerHTML = contratosDB.map(c => '<option value="' + escH(c.cod_contrato) + '">' + escH(c.cod_contrato) + (c.cliente ? ' — ' + escH(c.cliente) : '') + '</option>').join('');
+  selContrato.value = o.cod_contrato || '';
   document.getElementById('eProducto').value = o.producto || 'CSS';
   document.getElementById('eDescripcion').value = o.descripcion || '';
   document.getElementById('eCliente').value = o.cliente || '';
@@ -1509,6 +1538,7 @@ async function guardarObra() {
 
   const camposCompartidos = {
     cod_obra: document.getElementById('eCodObra').value.trim(),
+    cod_contrato: document.getElementById('eCodContrato').value,
     producto: document.getElementById('eProducto').value,
     descripcion: document.getElementById('eDescripcion').value.trim(),
     cliente: document.getElementById('eCliente').value.trim(),
@@ -1742,6 +1772,12 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
           <input type="text" id="eCodObra" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
         </div>
         <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Contrato <span style="color:#aaa;">(cambiarlo traspasa la obra)</span></label>
+          <select id="eCodContrato" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;"></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Producto</label>
           <select id="eProducto" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
             <option value="CSS">CSS</option>
@@ -1893,7 +1929,10 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Código de contrato</label>
-          <input type="text" id="ecCod" readonly style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #e0e0d8;border-radius:8px;font-size:0.875rem;background:#f5f5f0;color:#888;">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="ecCod" readonly style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #e0e0d8;border-radius:8px;font-size:0.875rem;background:#f5f5f0;color:#888;">
+            <button type="button" class="btn btn-sm" onclick="cambiarCodigoContrato()" title="Cambiar el código (se propaga a obras, solicitudes y usuarios)">✏️</button>
+          </div>
         </div>
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
