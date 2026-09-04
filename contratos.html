@@ -167,6 +167,7 @@ cssRequireRole(['staffer','delegado','representante']);
             <option value="FINALIZADA">Finalizada</option>
           </select>
           <input type="text" id="buscarContrato" placeholder="Buscar contrato..." oninput="renderContratos()" style="min-width:160px;">
+          <input type="text" id="buscarTecnico" placeholder="Buscar técnico..." oninput="renderContratos()" style="min-width:160px;">
         </div>
       </div>
       <div id="contratosWrap"></div>
@@ -264,6 +265,7 @@ function renderContratos() {
   const filtroT = document.getElementById('filtroTerritorio').value.toUpperCase();
   const filtroE = document.getElementById('filtroEstado').value.toUpperCase();
   const buscar = document.getElementById('buscarContrato').value.toLowerCase();
+  const buscarTec = document.getElementById('buscarTecnico').value.toLowerCase();
 
   // Seed with contratos from the contratos table (so newly created ones without obras appear)
   const contratoMap = {};
@@ -285,6 +287,7 @@ function renderContratos() {
   if (filtroT) contratos = contratos.filter(c => c.obras.some(o => (o.territorio||'').toUpperCase() === filtroT));
   if (filtroE) contratos = contratos.filter(c => c.obras.some(o => (o.estado||'').toUpperCase() === filtroE));
   if (buscar) contratos = contratos.filter(c => c.cod.toLowerCase().includes(buscar) || c.cliente.toLowerCase().includes(buscar));
+  if (buscarTec) contratos = contratos.filter(c => c.obras.some(o => (o.tecnico||'').toLowerCase().includes(buscarTec)));
 
   if (!contratos.length) {
     document.getElementById('contratosWrap').innerHTML = '<div class="empty">No hay contratos con estos filtros</div>';
@@ -1495,6 +1498,15 @@ function verificarCoincidenciaCarga() {
 async function guardarObra() {
   const id = document.getElementById('eId').value;
   const obraActual = obras.find(o => o.id === id);
+
+  // Aviso en pantalla, antes incluso de intentar guardar — la base de datos
+  // también lo rechazará si se salta esto, pero es mejor decirlo aquí que
+  // dejar que llegue como un error técnico de Supabase.
+  if (document.getElementById('eEstado').value === 'FINALIZADA' && !document.getElementById('eFechaFin').value) {
+    alert('Para marcar una obra como FINALIZADA, primero hay que indicar su fecha de fin.');
+    return;
+  }
+
   const camposCompartidos = {
     cod_obra: document.getElementById('eCodObra').value.trim(),
     producto: document.getElementById('eProducto').value,
