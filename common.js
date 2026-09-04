@@ -198,14 +198,55 @@ function cssObraCuentaParaCarga(o) {
   return CSS_ESTADOS_CARGA_ACTIVA.indexOf((o.estado || '').toUpperCase()) !== -1;
 }
 
-function cssConstruirFichaTecnico(nombres, obrasArr, excluir) {
+// Pide a Supabase la carga de TODA la empresa (solo lo mínimo: técnico,
+// contrato, carga, fechas, estado — sin cliente ni descripción) para que
+// staffer/representante puedan ver el total real de un técnico, no solo la
+// parte que cae dentro de sus propios contratos. admin_total no la necesita,
+// ya ve todo por RLS normal.
+async function cssCargarCargaGlobal() {
+  if (cssEsAdmin()) return null;
+  if (!cssEsStaffer() && !cssEsRepresentante()) return null;
+  try {
+    const res = await fetch(CSS_SUPABASE_URL + '/rest/v1/rpc/obras_carga_global', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CSS_SUPABASE_KEY, Authorization: 'Bearer ' + CSS_SUPABASE_KEY }
+    });
+    if (!res.ok) return null;
+    const datos = await res.json();
+    return Array.isArray(datos) ? datos : null;
+  } catch (e) { return null; }
+}
+
+// obrasArr: las obras dentro de tu propio alcance (con todo el detalle).
+// obrasGlobalArr: opcional — si se pasa (desde cssCargarCargaGlobal), se usa
+// para calcular el total real de cada técnico, desglosando cuánto de ese
+// total cae dentro de tus propios contratos y cuánto no. Sin ella, se
+// comporta igual que antes (solo lo que ya tienes delante).
+function cssConstruirFichaTecnico(nombres, obrasArr, excluir, obrasGlobalArr) {
   const excluirArr = Array.isArray(excluir) ? excluir : (excluir ? [excluir] : []);
+  const esAdmin = cssEsAdmin();
+  const misContratos = new Set(cssGetContratos() || []);
   return nombres.filter(function (t) { return excluirArr.indexOf(t) === -1; }).map(function (t) {
     const obrasTec = obrasArr.filter(function (o) { return o.tecnico === t; });
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
-    const cargaTeorica = obrasTecActivas.reduce(function (s, o) { return s + (parseFloat(o.carga_teorica_semanal) || 0); }, 0);
+    const cargaPropia = Math.round(obrasTecActivas.reduce(function (s, o) { return s + (parseFloat(o.carga_teorica_semanal) || 0); }, 0));
     const email = (obrasTec[0] && obrasTec[0].email) || '';
-    return { name: t, email: email, obras: obrasTecActivas.length, cargaTeorica: Math.round(cargaTeorica) };
+
+    let cargaTeorica = cargaPropia;
+    let cargaOtros = 0;
+    if (Array.isArray(obrasGlobalArr) && !esAdmin) {
+      const globalTec = obrasGlobalArr.filter(function (o) { return o.tecnico === t && cssObraCuentaParaCarga(o); });
+      let sumaGlobal = 0;
+      globalTec.forEach(function (o) {
+        const c = parseFloat(o.carga_teorica_semanal) || 0;
+        if (!misContratos.has(o.cod_contrato)) cargaOtros += c;
+        sumaGlobal += c;
+      });
+      cargaOtros = Math.round(cargaOtros);
+      cargaTeorica = Math.round(sumaGlobal);
+    }
+
+    return { name: t, email: email, obras: obrasTecActivas.length, cargaTeorica: cargaTeorica, cargaPropia: cargaPropia, cargaOtros: cargaOtros };
   });
 }
 
@@ -216,7 +257,7 @@ function cssConstruirFichaTecnico(nombres, obrasArr, excluir) {
  *
  * Devuelve { vistas: {pool, territorio, todos}, defecto: 'pool'|'territorio'|'todos' }
  */
-function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, excluir) {
+function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, excluir, obrasGlobalArr) {
   const todosNombres = Array.from(new Set((tecnicosDBArr && tecnicosDBArr.length ? tecnicosDBArr.map(function(t){return t.nombre;}) : obrasArr.map(function (o) { return o.tecnico; })))).sort();
 
   let poolNombres = [];
@@ -235,9 +276,9 @@ function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, e
   }
 
   const vistas = {
-    pool: cssConstruirFichaTecnico(poolNombres, obrasArr, excluir),
-    territorio: cssConstruirFichaTecnico(territorioNombres, obrasArr, excluir),
-    todos: cssConstruirFichaTecnico(todosNombres, obrasArr, excluir)
+    pool: cssConstruirFichaTecnico(poolNombres, obrasArr, excluir, obrasGlobalArr),
+    territorio: cssConstruirFichaTecnico(territorioNombres, obrasArr, excluir, obrasGlobalArr),
+    todos: cssConstruirFichaTecnico(todosNombres, obrasArr, excluir, obrasGlobalArr)
   };
   const defecto = vistas.pool.length ? 'pool' : (vistas.territorio.length ? 'territorio' : 'todos');
   return { vistas: vistas, defecto: defecto };
