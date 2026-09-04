@@ -382,12 +382,13 @@ function renderComparativa() {
   tecComparando.forEach(nombre => {
     const obrasTec = obras.filter(o => o.tecnico === nombre);
     const cargas = calcCargaPorSemana(obrasTec);
-    const cargaTotal = Math.round(obrasTec.filter(cssObraCuentaParaCarga).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const desglose = desgloseCargaTecnico(nombre, obrasTec.filter(cssObraCuentaParaCarga));
+    const cargaTotal = desglose.total;
     const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
     const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-    let cells = '<div class="cal-label" style="font-size:0.65rem;display:flex;align-items:center;gap:4px;">'
+    let cells = '<div class="cal-label" style="font-size:0.65rem;display:flex;align-items:center;gap:4px;" title="' + (desglose.otros > 0 ? desglose.propia + '% en tus contratos + ' + desglose.otros + '% en otros' : '') + '">'
       + '<span class="comparativa-quitar" onclick="quitarDeComparativa(\'' + nombre.replace(/'/g,"\\'") + '\')" title="Quitar de la comparativa">✕</span>'
-      + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%</span></div>';
+      + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%' + (desglose.otros > 0 ? '*' : '') + '</span></div>';
     for (let w = 0; w < TOTAL_SEMANAS; w++) {
       const pct = Math.round(cargas[w]);
       const color = getColor(pct);
@@ -417,8 +418,8 @@ function renderTechGrid() {
   let fichas = tecnicos.map(t => {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
-    const carga = Math.round(obrasTecActivas.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
-    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', obras: obrasTecActivas.length, carga };
+    const desglose = desgloseCargaTecnico(t, obrasTecActivas);
+    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
   });
 
   fichas.sort((a,b) => {
@@ -449,9 +450,9 @@ function renderTechGrid() {
       + '</td>'
       + '<td style="font-size:0.8rem;color:#888;">' + f.territorio + '</td>'
       + '<td style="font-size:0.8rem;">' + f.obras + '</td>'
-      + '<td style="min-width:110px;"><div style="display:flex;align-items:center;gap:8px;">'
+      + '<td style="min-width:130px;"><div style="display:flex;align-items:center;gap:8px;">'
       + '<div class="bar-bg" style="flex:1;"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(f.carga,100) + '%;"></div></div>'
-      + '<span style="font-size:0.78rem;font-weight:500;min-width:32px;">' + f.carga + '%</span>'
+      + '<span style="font-size:0.78rem;font-weight:500;min-width:32px;" title="' + (f.cargaOtros > 0 ? 'Incluye ' + f.cargaOtros + '% en contratos fuera de tu alcance' : '') + '">' + f.carga + '%' + (f.cargaOtros > 0 ? ' <span style="color:#aaa;">*</span>' : '') + '</span>'
       + '</div></td>'
       + '</tr>';
     const filaDetalle = expandido
@@ -469,6 +470,23 @@ function renderTechGrid() {
 function exportarTecnicoBtn(nombre) {
   const obrasTec = obras.filter(o => o.tecnico === nombre);
   cssExportarObrasAXlsx(obrasTec, nombre + '.xlsx');
+}
+
+// Reutilizado en la tabla, el detalle y la comparativa — evita repetir la
+// misma lógica de "propio vs otros" en los tres sitios por separado.
+function desgloseCargaTecnico(nombre, obrasTecActivas) {
+  const cargaPropia = Math.round(obrasTecActivas.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+  if (!Array.isArray(obrasCargaGlobalReal) || cssEsAdmin()) {
+    return { propia: cargaPropia, otros: 0, total: cargaPropia };
+  }
+  const misContratos = new Set(cssGetContratos() || []);
+  let sumaGlobal = 0, otros = 0;
+  obrasCargaGlobalReal.filter(o => o.tecnico === nombre && cssObraCuentaParaCarga(o)).forEach(o => {
+    const c = parseFloat(o.carga_teorica_semanal) || 0;
+    if (!misContratos.has(o.cod_contrato)) otros += c;
+    sumaGlobal += c;
+  });
+  return { propia: cargaPropia, otros: Math.round(otros), total: Math.round(sumaGlobal) };
 }
 
 function idSeguro(nombre) {
@@ -521,7 +539,8 @@ function detalleTecnicoHTML(nombre) {
   // sumando como si todavía diera trabajo real.
   const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-  const cargaTotal = Math.round(obrasTecActivas.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+  const desgloseDetalle = desgloseCargaTecnico(nombre, obrasTecActivas);
+  const cargaTotal = desgloseDetalle.total;
   const email = obrasTec[0]?.email || '';
   const cargas = calcCargaPorSemana(obrasTec);
   const currentWeek = SEMANAS_ATRAS;
@@ -569,8 +588,10 @@ function detalleTecnicoHTML(nombre) {
     + '<div class="avatar-lg">' + ini + '</div>'
     + '<div><div class="detalle-name">' + escH(nombre) + '</div>'
     + '<div class="detalle-meta">' + (email||'sin email') + '</div></div>'
-    + '<div style="margin-left:auto;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
-    + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div></div>'
+    + '<div style="margin-left:auto;text-align:right;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
+    + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div>'
+    + (desgloseDetalle.otros > 0 ? '<div style="font-size:0.68rem;color:#aaa;">' + desgloseDetalle.propia + '% en tus contratos + ' + desgloseDetalle.otros + '% en otros</div>' : '')
+    + '</div>'
     + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
     + '<button class="btn btn-sm" onclick="exportarTecnicoBtn(\'' + nombre.replace(/'/g,"\\'") + '\')">📥 Exportar a Excel</button>'
     + '</div>'
@@ -793,11 +814,14 @@ async function loadTecnicos() {
   if (!Array.isArray(tecnicosDB)) tecnicosDB = [];
 }
 
+var obrasCargaGlobalReal = null;
+
 async function init() {
   document.getElementById('navContainer').innerHTML = cssRenderNav('tecnicos.html');
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } });
   obras = await res.json();
   if (!Array.isArray(obras)) obras = [];
+  obrasCargaGlobalReal = await cssCargarCargaGlobal();
   await loadTecnicos();
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
