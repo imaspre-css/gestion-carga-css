@@ -16,7 +16,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .filters select { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; border: 0.5px solid rgba(255,255,255,0.2); cursor: pointer; }
 .filters select option { background: #1a1a2e; }
 .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
 .stat-box { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 10px; padding: 1rem; }
 .stat-num { font-size: 1.8rem; font-weight: 500; color: #1a1a2e; }
 .stat-label { font-size: 0.72rem; color: #aaa; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -113,12 +113,32 @@ cssRequireRole();
     </div>
     <div class="grid-2b">
       <div class="card">
+        <div class="card-title">⚠️ Técnicos sobrecargados <span style="color:#bbb;text-transform:none;letter-spacing:0;">(carga real &gt;100%, toda la empresa)</span></div>
+        <div id="sobrecargadosList"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📐 Mayor desviación teórica vs. real</div>
+        <div id="desviacionList"></div>
+      </div>
+    </div>
+    <div class="grid-2b">
+      <div class="card">
         <div class="card-title">Carga por contrato</div>
         <canvas id="chartContrato" height="200"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Carga por territorio</div>
-        <canvas id="chartTerritorio" height="200"></canvas>
+        <div class="card-title">Capacidad disponible por territorio <span style="color:#bbb;text-transform:none;letter-spacing:0;">(según territorio del técnico)</span></div>
+        <div id="capacidadTerritorioList"></div>
+      </div>
+    </div>
+    <div class="grid-2b">
+      <div class="card">
+        <div class="card-title">Histórico — carga teórica total de la empresa</div>
+        <canvas id="chartHistoricoCarga" height="180"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Histórico — obras pendientes de designar</div>
+        <canvas id="chartHistoricoPendientes" height="180"></canvas>
       </div>
     </div>
     <div class="card">
@@ -148,23 +168,35 @@ var SUPABASE_URL = CSS_SUPABASE_URL;
 var SUPABASE_KEY = CSS_SUPABASE_KEY;
 
 var obras = [], respuestas = [];
+var obrasGlobal = null, respuestasGlobal = null, tecnicosDB = [];
 var isDelegadoRol = cssEsDelegado();
 var misContratos = cssGetContratos();
 var filtrarPorContrato = cssFiltraPorContrato();
-var chartContrato = null, chartTerritorio = null;
+var chartContrato = null, chartHistCarga = null, chartHistPendientes = null;
+var puedeVerGlobal = cssEsStaffer() || cssEsRepresentante() || cssEsAdmin();
 
 async function fetchAll() {
-  const [o, r] = await Promise.all([
+  const [o, r, t] = await Promise.all([
     fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } }).then(r => r.json()),
-    fetch(SUPABASE_URL + '/rest/v1/respuestas?select=*&limit=1000&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
+    fetch(SUPABASE_URL + '/rest/v1/respuestas?select=*&limit=1000&order=semana_inicio.desc', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
+    fetch(SUPABASE_URL + '/rest/v1/tecnicos?select=nombre,territorio', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json())
   ]);
   obras = Array.isArray(o) ? o : [];
   respuestas = Array.isArray(r) ? r : [];
+  tecnicosDB = Array.isArray(t) ? t : [];
   if (filtrarPorContrato) {
   obras = obras.filter(o => misContratos.includes(o.cod_contrato));
   const codsObra = new Set(obras.map(o => o.cod_obra));
   respuestas = respuestas.filter(r => codsObra.has(r.cod_obra));
 }
+
+  // Datos de toda la empresa — para los indicadores de Nivel 1 y capacidad por
+  // territorio, que no tendrían sentido acotados a un solo contrato o delegado.
+  if (puedeVerGlobal) {
+    const [og, rg] = await Promise.all([cssCargarCargaGlobal(), cssCargarRespuestasGlobal()]);
+    obrasGlobal = og;
+    respuestasGlobal = rg;
+  }
 }
 
 function getFilters() {
@@ -202,10 +234,9 @@ function getFilteredResp() {
 }
 
 function calcCargaReal(r) {
-  // Estimate hours: actas*0.75 + reuniones*3 + informes*0.75 + revision_pss*1 + anotaciones*0.25 + anexos*0.5
   const h = (r.actas_visita||0)*0.75 + (r.reuniones||0)*3 + (r.informes_mensuales||0)*0.75 +
             (r.revision_pss||0)*1 + (r.anotaciones||0)*0.25 + (r.anexos||0)*0.5;
-  return Math.round((h / 30) * 100); // 30h = jornada semanal
+  return Math.round((h / 30) * 100);
 }
 
 function renderStats(resp) {
@@ -218,11 +249,14 @@ const sobrecargas = conResp.filter(t => {
 const total = resp.filter(r => r.tecnico === t).reduce((s, r) => s + calcCargaReal(r), 0);
 return total > 90;
 });
+const fuentePendientes = Array.isArray(obrasGlobal) ? obrasGlobal : obras;
+const pendientesDesignar = fuentePendientes.filter(o => o.estado === 'PDTE. DESIG. CSS').length;
 document.getElementById('statsGrid').innerHTML =
 '<div class="stat-box"><div class="stat-num">' + tecnicos.length + '</div><div class="stat-label">Técnicos activos</div></div>' +
 '<div class="stat-box"><div class="stat-num">' + enCurso.length + '</div><div class="stat-label">Obras en curso</div></div>' +
 '<div class="stat-box' + (sobrecargas.length ? ' stat-warn' : '') + '"><div class="stat-num">' + sobrecargas.length + '</div><div class="stat-label">Sobrecargas &gt;90%</div></div>' +
-'<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>';
+'<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>' +
+'<div class="stat-box' + (pendientesDesignar ? ' stat-warn' : '') + '" style="cursor:pointer;" onclick="location.href=\'solicitudes.html\'" title="Ir a Solicitudes"><div class="stat-num">' + pendientesDesignar + '</div><div class="stat-label">Pendientes designar CSS</div></div>';
 const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
 document.getElementById('semanaLabel').textContent = semana ? 'Semana del ' + semana : 'Sin datos de encuesta aún';
 }
@@ -317,31 +351,111 @@ function renderChartContrato(resp) {
   });
 }
 
-function renderChartTerritorio(resp) {
-  const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
-  const reales = territorios.map(t => {
-    const ot = obras.filter(o => o.territorio === t);
-    const tecs = [...new Set(ot.map(o => o.tecnico))];
-    const vals = tecs.map(tc => resp.filter(r => r.tecnico === tc).reduce((s,r) => s+calcCargaReal(r), 0));
-    return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+// ── NIVEL 1: técnicos por encima del 100% de carga REAL, toda la empresa ──
+function renderSobrecargados() {
+  const cont = document.getElementById('sobrecargadosList');
+  if (!Array.isArray(respuestasGlobal)) { cont.innerHTML = '<div class="no-data">Solo disponible para staffer o representante</div>'; return; }
+  const f = getFilters();
+  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const porTecnico = {};
+  respuestasGlobal.filter(r => !semana || r.semana_inicio === semana).forEach(r => {
+    porTecnico[r.tecnico] = (porTecnico[r.tecnico] || 0) + calcCargaReal(r);
+  });
+  const sobrecargados = Object.entries(porTecnico).map(([t,c]) => [t, Math.round(c)]).filter(x => x[1] > 100).sort((a,b) => b[1]-a[1]);
+  if (!sobrecargados.length) { cont.innerHTML = '<div class="no-data">Nadie por encima del 100% esta semana ✓</div>'; return; }
+  cont.innerHTML = sobrecargados.map(([t,c]) =>
+    '<div class="resp-row"><span style="font-size:0.82rem;">' + escH(t) + '</span><span class="tag tag-red">' + c + '%</span></div>'
+  ).join('');
+}
+
+// ── NIVEL 1: mayor diferencia entre lo calculado y lo declarado, toda la empresa ──
+function renderDesviacion() {
+  const cont = document.getElementById('desviacionList');
+  if (!Array.isArray(obrasGlobal) || !Array.isArray(respuestasGlobal)) { cont.innerHTML = '<div class="no-data">Solo disponible para staffer o representante</div>'; return; }
+  const f = getFilters();
+  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const nombres = [...new Set(obrasGlobal.map(o => o.tecnico))];
+  const filas = nombres.map(t => {
+    const teorica = Math.round(obrasGlobal.filter(o => o.tecnico === t && cssObraCuentaParaCarga(o)).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+    const real = Math.round(respuestasGlobal.filter(r => r.tecnico === t && (!semana || r.semana_inicio === semana)).reduce((s,r) => s+calcCargaReal(r), 0));
+    return { t, teorica, real, desv: Math.abs(teorica - real) };
+  }).filter(x => x.teorica || x.real);
+  filas.sort((a,b) => b.desv - a.desv);
+  const top = filas.slice(0, 8);
+  if (!top.length) { cont.innerHTML = '<div class="no-data">Sin datos suficientes</div>'; return; }
+  cont.innerHTML = top.map(x =>
+    '<div class="resp-row"><span style="font-size:0.82rem;">' + escH(x.t) + '</span>'
+    + '<span style="font-size:0.75rem;color:#888;">' + x.teorica + '% teórico · ' + x.real + '% real <strong style="color:' + (x.desv>30?'#a32d2d':'#854f0b') + ';">(' + (x.teorica>x.real?'−':'+') + x.desv + ')</strong></span></div>'
+  ).join('');
+}
+
+// ── Capacidad por territorio DEL TÉCNICO (no de la obra) — no depende de
+// que las obras nacionales tengan su territorio real reclasificado todavía ──
+function renderCapacidadTerritorio() {
+  const cont = document.getElementById('capacidadTerritorioList');
+  const fuente = Array.isArray(obrasGlobal) ? obrasGlobal : obras;
+  const porTerritorio = {};
+  tecnicosDB.forEach(t => {
+    if (!t.territorio) return;
+    const carga = fuente.filter(o => o.tecnico === t.nombre && cssObraCuentaParaCarga(o)).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0);
+    if (!porTerritorio[t.territorio]) porTerritorio[t.territorio] = { tecnicos: 0, cargaSuma: 0 };
+    porTerritorio[t.territorio].tecnicos++;
+    porTerritorio[t.territorio].cargaSuma += carga;
+  });
+  const filas = Object.entries(porTerritorio).map(([terr, d]) => {
+    const mediaFrac = d.tecnicos ? (d.cargaSuma / d.tecnicos) / 100 : 0;
+    const margen = Math.round(d.tecnicos * (1 - mediaFrac) * 10) / 10;
+    return { terr, tecnicos: d.tecnicos, mediaPct: Math.round(mediaFrac*100), margen };
+  }).sort((a,b) => a.margen - b.margen);
+  if (!filas.length) { cont.innerHTML = '<div class="no-data">Sin técnicos con territorio asignado todavía</div>'; return; }
+  cont.innerHTML = filas.map(x =>
+    '<div class="resp-row"><span style="font-size:0.82rem;">' + escH(x.terr) + ' <span style="color:#aaa;">(' + x.tecnicos + ')</span></span>'
+    + '<span style="font-size:0.78rem;">' + x.mediaPct + '% media · <strong style="color:' + (x.margen<1?'#a32d2d':x.margen<2?'#854f0b':'#0f6e56') + ';">' + x.margen + ' técnicos libres</strong></span></div>'
+  ).join('');
+}
+
+// ── Nivel 3: histórico a partir de las fotos diarias ──
+async function comprobarYGuardarSnapshot() {
+  if (!puedeVerGlobal || !Array.isArray(obrasGlobal)) return;
+  const hoy = new Date().toISOString().split('T')[0];
+  const cargaTotal = Math.round(obrasGlobal.filter(cssObraCuentaParaCarga).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
+  const pendientes = obrasGlobal.filter(o => o.estado === 'PDTE. DESIG. CSS').length;
+  const porTerritorio = {};
+  tecnicosDB.forEach(t => {
+    if (!t.territorio) return;
+    const carga = obrasGlobal.filter(o => o.tecnico === t.nombre && cssObraCuentaParaCarga(o)).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0);
+    if (!porTerritorio[t.territorio]) porTerritorio[t.territorio] = { tecnicos: 0, cargaSuma: 0 };
+    porTerritorio[t.territorio].tecnicos++;
+    porTerritorio[t.territorio].cargaSuma += carga;
+  });
+  // Prefer resolution=ignore-duplicates: si dos personas abren el dashboard el
+  // mismo día casi a la vez, el segundo intento no falla, simplemente no hace nada.
+  await fetch(SUPABASE_URL + '/rest/v1/dashboard_snapshots', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify({ fecha: hoy, carga_teorica_total: cargaTotal, obras_pendientes_designar: pendientes, capacidad_territorio: porTerritorio })
+  });
+}
+
+async function renderHistoricoCharts() {
+  if (!puedeVerGlobal) return;
+  const res = await fetch(SUPABASE_URL + '/rest/v1/dashboard_snapshots?select=*&order=fecha.asc&limit=90', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+  const snaps = await res.json();
+  if (!Array.isArray(snaps) || !snaps.length) return;
+  const labels = snaps.map(s => new Date(s.fecha).toLocaleDateString('es-ES', {day:'2-digit',month:'short'}));
+
+  if (chartHistCarga) chartHistCarga.destroy();
+  chartHistCarga = new Chart(document.getElementById('chartHistoricoCarga').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Carga teórica total (%)', data: snaps.map(s => s.carga_teorica_total), borderColor: 'rgba(74,74,138,0.9)', backgroundColor: 'rgba(74,74,138,0.1)', fill: true, tension: 0.3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
   });
 
-  if (chartTerritorio) chartTerritorio.destroy();
-  const ctx = document.getElementById('chartTerritorio').getContext('2d');
-  chartTerritorio = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: territorios,
-      datasets: [{ label: 'Carga real media', data: reales, backgroundColor: 'rgba(74,74,138,0.75)', borderRadius: 4 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: v => v+'%', font: { size: 10 } } },
-        x: { ticks: { font: { size: 10 } } }
-      }
-    }
+  if (chartHistPendientes) chartHistPendientes.destroy();
+  chartHistPendientes = new Chart(document.getElementById('chartHistoricoPendientes').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Obras pendientes de designar', data: snaps.map(s => s.obras_pendientes_designar), borderColor: 'rgba(163,45,45,0.85)', backgroundColor: 'rgba(163,45,45,0.08)', fill: true, tension: 0.3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
   });
 }
 
@@ -371,9 +485,6 @@ function renderDetalle(resp) {
   document.getElementById('detalleTabla').innerHTML = html;
 }
 
-// escH() ahora la provee common.js (misma implementación, evita duplicarla aquí)
-
-// ── MODAL: RESPUESTAS DE UN TÉCNICO (semana seleccionada) ──────
 function abrirRespTecnico(nombre) {
   const f = getFilters();
   const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
@@ -386,7 +497,6 @@ function abrirRespTecnico(nombre) {
   document.getElementById('rtSub').textContent = (semana ? 'Semana del ' + semana : 'Todas las semanas')
     + ' · teórico ' + teorico + '% · real ' + real + '%';
 
-  // Obras encuestables sin respuesta esta semana
   const encuestables = obrasTec.filter(o => ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
   const respondidas = new Set(resp.map(r => r.cod_obra));
   const sinResponder = encuestables.filter(o => !respondidas.has(o.cod_obra));
@@ -432,8 +542,10 @@ function renderAll() {
   renderStats(resp);
   renderTechList(resp);
   renderRespList(resp);
+  renderSobrecargados();
+  renderDesviacion();
   renderChartContrato(resp);
-  renderChartTerritorio(resp);
+  renderCapacidadTerritorio();
   renderDetalle(resp);
 }
 
@@ -444,6 +556,8 @@ async function init() {
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainDash').style.display = 'block';
   renderAll();
+  await comprobarYGuardarSnapshot();
+  await renderHistoricoCharts();
 }
 
 init();
