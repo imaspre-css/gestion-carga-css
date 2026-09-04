@@ -203,6 +203,20 @@ function cssObraCuentaParaCarga(o) {
 // staffer/representante puedan ver el total real de un técnico, no solo la
 // parte que cae dentro de sus propios contratos. admin_total no la necesita,
 // ya ve todo por RLS normal.
+async function cssCargarRespuestasGlobal() {
+  if (cssEsAdmin()) return null;
+  if (!cssEsStaffer() && !cssEsRepresentante()) return null;
+  try {
+    const res = await fetch(CSS_SUPABASE_URL + '/rest/v1/rpc/respuestas_carga_global', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: CSS_SUPABASE_KEY, Authorization: 'Bearer ' + CSS_SUPABASE_KEY }
+    });
+    if (!res.ok) return null;
+    const datos = await res.json();
+    return Array.isArray(datos) ? datos : null;
+  } catch (e) { return null; }
+}
+
 async function cssCargarCargaGlobal() {
   if (cssEsAdmin()) return null;
   if (!cssEsStaffer() && !cssEsRepresentante()) return null;
