@@ -360,11 +360,27 @@ return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? r
 
 function construirFichaNueva(nombres) {
 const obrasG = window._obrasGlobal || [];
+const cargaGlobalReal = window._obrasCargaGlobalReal; // toda la empresa, vía RPC — null para admin_total, que ya lo ve todo
+const esAdmin = cssEsAdmin();
+const misContratos = new Set(cssGetContratos() || []);
 return nombres.map(t => {
 const obrasTec = obrasG.filter(o => o.tecnico === t);
-const cargaTeorica = obrasTec.reduce((s,o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
+const cargaPropia = Math.round(obrasTec.reduce((s,o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0));
 const email = obrasTec[0]?.email || (tecnicosDBGlobal.find(x => x.nombre === t)?.email) || '';
-return { name: t, email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
+
+let cargaTeorica = cargaPropia, cargaOtros = 0;
+if (Array.isArray(cargaGlobalReal) && !esAdmin) {
+  let sumaGlobal = 0;
+  cargaGlobalReal.filter(o => o.tecnico === t && cssObraCuentaParaCarga(o)).forEach(o => {
+    const c = parseFloat(o.carga_teorica_semanal) || 0;
+    if (!misContratos.has(o.cod_contrato)) cargaOtros += c;
+    sumaGlobal += c;
+  });
+  cargaOtros = Math.round(cargaOtros);
+  cargaTeorica = Math.round(sumaGlobal);
+}
+
+return { name: t, email, obras: obrasTec.length, cargaTeorica, cargaPropia, cargaOtros };
 });
 }
 
@@ -421,7 +437,7 @@ const selected = tecnicoSeleccionado === t.name ? ' selected' : '';
 html += '<div class="tech-option' + selected + '" onclick="seleccionarTecnicoNueva(\'' + t.name.replace(/'/g,"\\'") + '\',this)">'
 + '<div class="avatar">' + ini + '</div>'
 + '<div class="tech-info"><div class="tech-name">' + t.name + '</div>'
-+ '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
++ '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '%' + (t.cargaOtros > 0 ? ' <span style="color:#aaa;">(' + t.cargaPropia + '% en tus contratos + ' + t.cargaOtros + '% en otros)</span>' : '') + ' → con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
 + '<div class="bar-bg"><div class="bar-fill' + (isOver?' bar-over':'') + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
 + '</div>'
 + (isOver ? '<span style="font-size:0.7rem;color:#a32d2d;">⚠️</span>' : '')
@@ -702,7 +718,10 @@ await enviarComoObraDirecta(contrato, denominacion, producto, cargaCalculada, cl
 
 function escHtmlLocal(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-loadContratos();
+(async function() {
+  await loadContratos();
+  window._obrasCargaGlobalReal = await cssCargarCargaGlobal();
+})();
 </script>
 </body>
 </html>
