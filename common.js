@@ -188,13 +188,24 @@ async function cssGetPoolContrato(codContrato) {
  * o un array de strings (para no proponer al propio técnico actual de la obra,
  * o a quienes ya son coordinadores de ella).
  */
+// Solo estos 3 estados representan carga "de verdad" hoy — el resto
+// (FINALIZADA, SUSPENDIDA, SIN ACTIVIDAD, PDTE. DESIG. CSS) no debería
+// contarse al calcular cuánto trabajo real tiene un técnico ahora mismo.
+// Vive aquí, no repetido en cada página, para que "qué cuenta como activo"
+// tenga una única definición en todo el proyecto.
+const CSS_ESTADOS_CARGA_ACTIVA = ['ACTIVA', 'PDTE. INICIO', 'EN PROCESO DE FINALIZACIÓN'];
+function cssObraCuentaParaCarga(o) {
+  return CSS_ESTADOS_CARGA_ACTIVA.indexOf((o.estado || '').toUpperCase()) !== -1;
+}
+
 function cssConstruirFichaTecnico(nombres, obrasArr, excluir) {
   const excluirArr = Array.isArray(excluir) ? excluir : (excluir ? [excluir] : []);
   return nombres.filter(function (t) { return excluirArr.indexOf(t) === -1; }).map(function (t) {
     const obrasTec = obrasArr.filter(function (o) { return o.tecnico === t; });
-    const cargaTeorica = obrasTec.reduce(function (s, o) { return s + (parseFloat(o.carga_teorica_semanal) || 0); }, 0);
+    const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
+    const cargaTeorica = obrasTecActivas.reduce(function (s, o) { return s + (parseFloat(o.carga_teorica_semanal) || 0); }, 0);
     const email = (obrasTec[0] && obrasTec[0].email) || '';
-    return { name: t, email: email, obras: obrasTec.length, cargaTeorica: Math.round(cargaTeorica) };
+    return { name: t, email: email, obras: obrasTecActivas.length, cargaTeorica: Math.round(cargaTeorica) };
   });
 }
 
