@@ -318,7 +318,7 @@ async function abrirAsignar(id) {
   document.getElementById('modalAsignar').classList.add('open');
 
   const poolEmails = await cssGetPoolContrato(solicitudActual.cod_contrato);
-  const { vistas, defecto } = cssGetVistasTecnicos(solicitudActual.territorio, poolEmails, obras, null, null);
+  const { vistas, defecto } = cssGetVistasTecnicos(solicitudActual.territorio, poolEmails, obras, null, null, obrasCargaGlobalReal);
   vistasActuales = vistas;
   origenActivo = defecto;
 
@@ -361,7 +361,7 @@ function renderModalAsignar() {
       + '<div class="avatar">' + ini + '</div>'
       + '<div class="tech-info">'
       + '<div class="tech-name">' + escH(t.name) + '</div>'
-      + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '% \u2192 con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
+      + '<div class="tech-meta">' + t.obras + ' obras · actual: ' + t.cargaTeorica + '%' + (t.cargaOtros > 0 ? ' <span style="color:#aaa;">(' + t.cargaPropia + '% en tus contratos + ' + t.cargaOtros + '% en otros)</span>' : '') + ' \u2192 con esta obra: <strong style="color:' + (isOver?'#a32d2d':cargaFinal>80?'#854f0b':'#0f6e56') + ';">' + cargaFinal + '%</strong></div>'
       + '<div class="bar-bg"><div class="bar-fill ' + barColor + '" style="width:' + Math.min(cargaFinal,100) + '%;"></div></div>'
       + '</div>'
       + (isOver ? '<span style="font-size:0.7rem;color:#a32d2d;">\u26a0\ufe0f Sobrecarga</span>' : '')
@@ -564,9 +564,12 @@ function closeModal() {
   solicitudActual = null;
 }
 
+var obrasCargaGlobalReal = null;
+
 async function init() {
   document.getElementById('navContainer').innerHTML = cssRenderNav('solicitudes.html');
   await fetchAll();
+  obrasCargaGlobalReal = await cssCargarCargaGlobal();
   renderStats();
   renderTabla();
 }
