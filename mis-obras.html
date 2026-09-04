@@ -259,6 +259,10 @@ if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
 document.getElementById('editarObraStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">La fecha de fin no puede ser anterior a la de inicio.</div>';
 return;
 }
+if (estado === 'FINALIZADA' && !fechaFin) {
+document.getElementById('editarObraStatus').innerHTML = '<div style="background:#fcebeb;color:#a32d2d;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.82rem;margin-bottom:0.75rem;">Para marcar la obra como FINALIZADA, indica antes su fecha de fin.</div>';
+return;
+}
 const descripcion = document.getElementById('eDescripcion').value.trim();
 // Estos 4 campos son los únicos que el trigger de la base de datos permite
 // tocar a un técnico — aunque se mandara cualquier otro, lo ignoraría
