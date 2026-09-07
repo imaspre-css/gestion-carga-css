@@ -266,13 +266,13 @@ return;
 const descripcion = document.getElementById('eDescripcion').value.trim();
 // Estos 4 campos son los únicos que el trigger de la base de datos permite
 // tocar a un técnico — aunque se mandara cualquier otro, lo ignoraría
-// igualmente. Esto es solo para mandar lo mínimo necesario, no la barrera de
-// seguridad en sí (ver restringir_columnas_tecnico() en Supabase).
-const payload = { fecha_inicio: fechaInicio, fecha_fin: fechaFin, estado: estado, descripcion: descripcion || null };
-const res = await fetch(SUPABASE_URL + '/rest/v1/obras?id=eq.' + obraId, {
-method: 'PATCH',
-headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' },
-body: JSON.stringify(payload)
+// igualmente. Esto ya no depende de comprobar tu rol — la función solo sabe
+// tocar estos 4 campos por su propia estructura, sea quien sea quien la
+// llame (técnico puro, o alguien con doble faceta editando su propia obra).
+const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/actualizar_obra_autoservicio', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+body: JSON.stringify({ p_id: obraId, p_fecha_inicio: fechaInicio || null, p_fecha_fin: fechaFin || null, p_estado: estado, p_descripcion: descripcion || null })
 });
 if (res.ok) {
 const o = obras.find(x => x.id === obraId);
