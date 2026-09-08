@@ -1547,7 +1547,10 @@ async function guardarObra() {
     territorio: document.getElementById('eTerritorio').value,
     fecha_inicio: document.getElementById('eFechaInicio').value || null,
     fecha_fin: document.getElementById('eFechaFin').value || null,
-    estado: document.getElementById('eEstado').value,
+    // estado: se quitó de aquí — en obras multicoordinador (frecuente en
+    // ADIF), cada coordinador puede tener actividad real distinta en su
+    // propia zona en un momento dado, así que viaja individual, igual que
+    // la carga teórica de cada uno.
     // Los 8 tiempos/parámetros de cálculo son de la obra en sí, no de cada
     // reparto — dos coordinadores de la misma obra viajan al mismo sitio y
     // tardan lo mismo, así que se comparten igual que municipio o territorio.
@@ -1565,7 +1568,8 @@ async function guardarObra() {
     num_css: ajusteObraTocado ? (parseInt(document.getElementById('ajNumCssE').value) || null) : null
   };
   const payload = Object.assign({}, camposCompartidos, {
-    carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null
+    carga_teorica_semanal: parseFloat(document.getElementById('eCarga').value) || null,
+    estado: document.getElementById('eEstado').value
   });
 
   // Reasignación de técnico (si se seleccionó uno nuevo) — nunca se propaga a hermanos
