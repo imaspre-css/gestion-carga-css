@@ -653,14 +653,18 @@ function detalleTecnicoHTML(email) {
 function renderTablaGestion() {
   const filtroGestion = document.getElementById('filtroTerritorioGestion')?.value || '';
   const busquedaGestion = (document.getElementById('buscarGestion')?.value || '').trim().toLowerCase();
-  // Merge tecnicosDB with tecnicos from obras not yet in DB
-  const nombresDB = tecnicosDB.map(t => t.nombre);
-  const soloEnObras = [...new Set(obras.map(o => o.tecnico))]
-    .filter(n => !nombresDB.includes(n))
-    .map(n => {
-      const o = obras.find(x => x.tecnico === n);
-      return { id: null, nombre: n, email: o?.email||'', territorio: o?.territorio||'', activo: true, _soloObras: true };
-    });
+  // Comparación por email, no por nombre — así una grafía distinta de la
+  // misma persona (mayúsculas, tildes) nunca aparece como alguien nuevo.
+  const emailsDB = new Set(tecnicosDB.map(t => (t.email||'').toLowerCase()).filter(Boolean));
+  const emailsVistos = new Set();
+  const soloEnObras = [];
+  obras.forEach(o => {
+    const email = (o.email||'').toLowerCase();
+    if (email && !emailsDB.has(email) && !emailsVistos.has(email)) {
+      emailsVistos.add(email);
+      soloEnObras.push({ id: null, nombre: o.tecnico, email: o.email||'', territorio: o.territorio||'', activo: true, _soloObras: true });
+    }
+  });
   const activos = tecnicosDB.filter(t => t.activo !== false);
   const inactivos = tecnicosDB.filter(t => t.activo === false);
   let todos = [...activos, ...soloEnObras, ...inactivos];
