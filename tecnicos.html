@@ -436,18 +436,19 @@ function renderTechGrid() {
   renderTechTableHead();
   const filtro = document.getElementById('filtroTerritorioEquipo')?.value || '';
   const busqueda = (document.getElementById('buscarEquipo')?.value || '').trim().toLowerCase();
-  let tecnicos = getAllTecnicos();
-  if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t).toUpperCase() === filtro.toUpperCase());
-  if (busqueda) tecnicos = tecnicos.filter(t => t.toLowerCase().includes(busqueda));
+  let tecnicos = getAllTecnicosPorEmail();
+  if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t.nombre).toUpperCase() === filtro.toUpperCase());
+  if (busqueda) tecnicos = tecnicos.filter(t => t.nombre.toLowerCase().includes(busqueda));
 
-  // Ficha completa de cada uno, calculada una sola vez, para poder ordenar por
-  // cualquier columna (no solo el nombre, que es lo único gratis en un array de strings)
+  // Ficha completa de cada uno, calculada una sola vez — agrupada por email,
+  // no por nombre, así dos grafías del mismo técnico nunca aparecen como dos
+  // personas distintas.
   let fichas = tecnicos.map(t => {
-    const obrasTec = obras.filter(o => o.tecnico === t);
+    const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === t.email);
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
-    const desglose = desgloseCargaTecnico(t, obrasTecActivas);
-    const tecObj = tecnicosDB.find(x => x.nombre === t);
-    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
+    const desglose = desgloseCargaTecnico(t.email, obrasTecActivas);
+    const tecObj = tecnicosDB.find(x => (x.email||'').toLowerCase() === t.email);
+    return { email: t.email, nombre: t.nombre, territorio: getTecnicoTerritorio(t.nombre) || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
   });
 
   fichas.sort((a,b) => {
