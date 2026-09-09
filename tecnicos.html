@@ -341,7 +341,7 @@ function renderTechTableHead() {
   const flecha = campo => ordenEquipoColumna === campo ? (ordenEquipoAsc ? ' ▲' : ' ▼') : '';
   const th = (campo, label) => '<th class="tech-th" onclick="ordenarEquipoPor(\'' + campo + '\')">' + label + flecha(campo) + '</th>';
   document.getElementById('techTableHead').innerHTML =
-    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('obras','Obras') + th('carga','Carga');
+    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('loteAdif','ADIF') + th('obras','Obras') + th('carga','Carga');
 }
 
 // Comparar (casilla) y desplegar detalle (nombre) son dos acciones
@@ -426,7 +426,8 @@ function renderTechGrid() {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
     const desglose = desgloseCargaTecnico(t, obrasTecActivas);
-    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
+    const tecObj = tecnicosDB.find(x => x.nombre === t);
+    return { nombre: t, territorio: getTecnicoTerritorio(t) || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
   });
 
   fichas.sort((a,b) => {
@@ -439,7 +440,7 @@ function renderTechGrid() {
   });
 
   if (!fichas.length) {
-    document.getElementById('techGrid').innerHTML = '<tr><td colspan="5" class="empty">Sin técnicos con estos filtros</td></tr>';
+    document.getElementById('techGrid').innerHTML = '<tr><td colspan="6" class="empty">Sin técnicos con estos filtros</td></tr>';
     renderComparativa();
     return;
   }
@@ -456,6 +457,7 @@ function renderTechGrid() {
       + '<div class="tech-row-name"><div class="avatar">' + ini + '</div>' + escH(f.nombre) + ' <span style="color:#aaa;font-size:0.68rem;">' + (expandido?'▲':'▼') + '</span></div>'
       + '</td>'
       + '<td style="font-size:0.8rem;color:#888;">' + f.territorio + '</td>'
+      + '<td style="font-size:0.8rem;color:#888;">' + f.loteAdif + '</td>'
       + '<td style="font-size:0.8rem;">' + f.obras + '</td>'
       + '<td style="min-width:130px;"><div style="display:flex;align-items:center;gap:8px;">'
       + '<div class="bar-bg" style="flex:1;"><div class="bar-fill ' + barClass + '" style="width:' + Math.min(f.carga,100) + '%;"></div></div>'
@@ -836,13 +838,15 @@ async function init() {
   await loadTecnicos();
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
-  // Populate territory filters from actual data
-  const territorios = [...new Set(obras.map(o => (o.territorio||'').toUpperCase()).filter(Boolean))].sort();
+  // Misma lista fija que el propio campo de territorio del técnico — antes
+  // se derivaba del territorio de las obras, que es un campo distinto y
+  // podía mostrar valores (FUNCIONAL, NACIONAL) que ya no aplican a personas.
+  const TERRITORIOS_TECNICO = ['MADRID','CATALUÑA','CIUDAD REAL','LEVANTE','GALICIA','CANTABRIA','PAÍS VASCO','NAVARRA','EXTREMADURA','ANDALUCÍA OCCIDENTAL','ANDALUCÍA ORIENTAL','ASTURIAS','CASTILLA Y LEÓN'];
   ['filtroTerritorioEquipo','filtroTerritorioGestion'].forEach(id => {
     const sel = document.getElementById(id);
     if (sel) {
       sel.innerHTML = '<option value="">Todos los territorios</option>';
-      territorios.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
+      TERRITORIOS_TECNICO.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
     }
   });
   renderTechGrid();
