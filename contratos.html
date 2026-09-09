@@ -491,6 +491,7 @@ init();
 function abrirNuevoContrato() {
   document.getElementById('ncCod').value = '';
   document.getElementById('ncCliente').value = '';
+  document.getElementById('ncTerritorio').value = '';
   document.getElementById('ncDescripcion').value = '';
   document.getElementById('ncBuscarTec').value = '';
   document.getElementById('ncStatus').innerHTML = '';
@@ -611,6 +612,7 @@ document.addEventListener('change', function(e) {
 async function guardarNuevoContrato() {
   const cod = document.getElementById('ncCod').value.trim();
   const cliente = document.getElementById('ncCliente').value.trim();
+  const territorio = document.getElementById('ncTerritorio').value;
   const descripcion = document.getElementById('ncDescripcion').value.trim();
   const pool = getPoolSeleccionados('ncPoolList');
   const status = document.getElementById('ncStatus');
@@ -627,6 +629,7 @@ async function guardarNuevoContrato() {
   const payload = {
     cod_contrato: cod,
     cliente: cliente || null,
+    territorio: territorio || null,
     descripcion: descripcion || null,
     tecnicos_preseleccionados: pool.length ? pool : null
   };
@@ -1897,6 +1900,13 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
           <input type="text" id="ncCliente" placeholder="ej. RENFE" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
         </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
+          <select id="ncTerritorio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="">Selecciona...</option>
+            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>LEVANTE</option><option>GALICIA</option><option>CANTABRIA</option><option>PAÍS VASCO</option><option>NAVARRA</option><option>EXTREMADURA</option><option>ANDALUCÍA OCCIDENTAL</option><option>ANDALUCÍA ORIENTAL</option><option>ASTURIAS</option><option>CASTILLA Y LEÓN</option><option>FUNCIONAL</option><option>NACIONAL</option>
+          </select>
+        </div>
         <div style="grid-column:1/-1;">
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
           <input type="text" id="ncDescripcion" placeholder="Descripción breve del contrato" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
@@ -1941,6 +1951,13 @@ document.getElementById('modalSustitucion').addEventListener('click', e => {
         <div>
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Cliente</label>
           <input type="text" id="ecCliente" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Territorio</label>
+          <select id="ecTerritorio" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
+            <option value="">Selecciona...</option>
+            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>LEVANTE</option><option>GALICIA</option><option>CANTABRIA</option><option>PAÍS VASCO</option><option>NAVARRA</option><option>EXTREMADURA</option><option>ANDALUCÍA OCCIDENTAL</option><option>ANDALUCÍA ORIENTAL</option><option>ASTURIAS</option><option>CASTILLA Y LEÓN</option><option>FUNCIONAL</option><option>NACIONAL</option>
+          </select>
         </div>
         <div style="grid-column:1/-1;">
           <label style="font-size:0.78rem;color:#666;display:block;margin-bottom:4px;">Descripción</label>
