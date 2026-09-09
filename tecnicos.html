@@ -651,7 +651,7 @@ function renderTablaGestion() {
   }
 
   let html = '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
-    + '<th>Nombre</th><th>Email</th><th>Teléfono</th><th>Territorio</th><th>ADIF</th><th>Titulación</th><th>Colegiado</th><th>Estado</th>';
+    + '<th>Nombre</th><th>Email</th><th style="white-space:nowrap;">Teléfono</th><th>Territorio</th><th style="white-space:nowrap;">ADIF</th><th style="max-width:110px;">Titulación</th><th>Colegiado</th><th>Estado</th>';
   if (isStaffer) html += '<th></th>';
   html += '</tr></thead><tbody>';
 
@@ -659,10 +659,10 @@ function renderTablaGestion() {
     html += '<tr style="' + (t.activo === false ? 'opacity:0.5;' : '') + '">'
       + '<td style="font-weight:500;">' + t.nombre + '</td>'
       + '<td style="font-size:0.78rem;">' + (t.email||'—') + '</td>'
-      + '<td style="font-size:0.78rem;">' + (t.telefono||'—') + '</td>'
+      + '<td style="font-size:0.78rem;white-space:nowrap;">' + (t.telefono||'—') + '</td>'
       + '<td>' + (t.territorio||'—') + '</td>'
-      + '<td>' + (t.lote_adif||'—') + '</td>'
-      + '<td style="font-size:0.78rem;">' + (t.titulacion||'—') + '</td>'
+      + '<td style="white-space:nowrap;">' + (t.lote_adif||'—') + '</td>'
+      + '<td style="font-size:0.78rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (t.titulacion||'') + '">' + (t.titulacion||'—') + '</td>'
       + '<td>' + (t.colegiado ? '✓' : '—') + '</td>'
       + '<td><span class="pill ' + (t.activo !== false ? 'pill-green' : '') + '" style="' + (t.activo === false ? 'background:#f5f5f0;color:#888;' : '') + '">' + (t.activo !== false ? 'Activo' : 'Inactivo') + '</span></td>';
     if (isStaffer) {
