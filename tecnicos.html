@@ -207,7 +207,14 @@ cssRequireRole();
           <label>Territorio</label>
           <select id="tTerritorio">
             <option value="">Selecciona...</option>
-            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>FUNCIONAL</option><option>NACIONAL</option><option>LEVANTE</option><option>NORTE</option><option>SUR</option>
+            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>LEVANTE</option><option>GALICIA</option><option>CANTABRIA</option><option>PAÍS VASCO</option><option>NAVARRA</option><option>EXTREMADURA</option><option>ANDALUCÍA OCCIDENTAL</option><option>ANDALUCÍA ORIENTAL</option><option>ASTURIAS</option><option>CASTILLA Y LEÓN</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Lote ADIF <span style="color:#aaa;">(opcional, independiente del territorio)</span></label>
+          <select id="tLoteAdif">
+            <option value="">Ninguno</option>
+            <option>LOTE 1</option><option>LOTE 2</option><option>LOTE 3</option>
           </select>
         </div>
         <div class="field">
@@ -679,6 +686,7 @@ function abrirModalNuevo() {
   document.getElementById('tEmail').value = '';
   document.getElementById('tTelefono').value = '';
   document.getElementById('tTerritorio').value = '';
+  document.getElementById('tLoteAdif').value = '';
   document.getElementById('tTitulacion').value = '';
   document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
   document.getElementById('tColegiado').checked = false;
@@ -697,6 +705,7 @@ function editarTecnico(id) {
   document.getElementById('tEmail').value = t.email || '';
   document.getElementById('tTelefono').value = t.telefono || '';
   document.getElementById('tTerritorio').value = t.territorio || '';
+  document.getElementById('tLoteAdif').value = t.lote_adif || '';
   document.getElementById('tTitulacion').value = t.titulacion || '';
   document.getElementById('tFechaAlta').value = t.fecha_alta || '';
   document.getElementById('tColegiado').checked = t.colegiado || false;
@@ -717,7 +726,8 @@ function editarDesdeObras(nombre) {
     document.getElementById('tNombre').value = nombre;
     document.getElementById('tEmail').value = o?.email || '';
     document.getElementById('tTelefono').value = '';
-    document.getElementById('tTerritorio').value = o?.territorio || '';
+    document.getElementById('tTerritorio').value = '';
+    document.getElementById('tLoteAdif').value = '';
     document.getElementById('tTitulacion').value = '';
     document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
     document.getElementById('tColegiado').checked = false;
@@ -738,6 +748,7 @@ async function guardarTecnico() {
     email: document.getElementById('tEmail').value.trim(),
     telefono: document.getElementById('tTelefono').value.trim(),
     territorio: document.getElementById('tTerritorio').value,
+    lote_adif: document.getElementById('tLoteAdif').value || null,
     titulacion: document.getElementById('tTitulacion').value.trim(),
     fecha_alta: document.getElementById('tFechaAlta').value || null,
     colegiado: document.getElementById('tColegiado').checked,
