@@ -313,10 +313,29 @@ function calcCargaPorSemana(obrasTec) {
 var tecComparando = [];
 var tecExpandidos = [];
 
-function getAllTecnicos() {
-  const nombresObras = [...new Set(obras.map(o => o.tecnico))];
-  const nombresDB = tecnicosDB.filter(t => t.activo !== false).map(t => t.nombre);
-  return [...new Set([...nombresObras, ...nombresDB])].sort();
+// Agrupamos por email, no por nombre — dos grafías distintas del mismo
+// nombre (mayúsculas, tildes, apellidos) ya no crean dos técnicos falsos,
+// porque el email es estable y único de verdad.
+function getAllTecnicosPorEmail() {
+  const porEmail = {};
+  obras.forEach(o => {
+    const email = (o.email || '').toLowerCase().trim();
+    if (email && !porEmail[email]) porEmail[email] = o.tecnico;
+  });
+  tecnicosDB.filter(t => t.activo !== false).forEach(t => {
+    const email = (t.email || '').toLowerCase().trim();
+    if (email) porEmail[email] = t.nombre; // la ficha es la fuente de verdad del nombre a mostrar
+  });
+  return Object.entries(porEmail)
+    .map(([email, nombre]) => ({ email, nombre }))
+    .sort((a,b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+}
+
+function nombreCanonico(email) {
+  const t = tecnicosDB.find(x => (x.email||'').toLowerCase() === email);
+  if (t) return t.nombre;
+  const o = obras.find(x => (x.email||'').toLowerCase() === email);
+  return o ? o.tecnico : email;
 }
 
 function getTecnicoTerritorio(nombre) {
@@ -349,22 +368,22 @@ function renderTechTableHead() {
 // detalle abierto, o viceversa. Antes vivían mezcladas en una sola selección,
 // lo que obligaba a elegir entre "ver la barra compacta" o "ver el calendario
 // completo" según cuántos hubiera marcados; separarlas evita esa disyuntiva.
-function toggleComparar(nombre) {
-  const idx = tecComparando.indexOf(nombre);
+function toggleComparar(email) {
+  const idx = tecComparando.indexOf(email);
   if (idx >= 0) tecComparando.splice(idx, 1);
-  else tecComparando.push(nombre);
+  else tecComparando.push(email);
   renderTechGrid();
 }
 
-function toggleExpandir(nombre) {
-  const idx = tecExpandidos.indexOf(nombre);
+function toggleExpandir(email) {
+  const idx = tecExpandidos.indexOf(email);
   if (idx >= 0) tecExpandidos.splice(idx, 1);
-  else tecExpandidos.push(nombre);
+  else tecExpandidos.push(email);
   renderTechGrid();
 }
 
-function quitarDeComparativa(nombre) {
-  tecComparando = tecComparando.filter(n => n !== nombre);
+function quitarDeComparativa(email) {
+  tecComparando = tecComparando.filter(e => e !== email);
   renderTechGrid();
 }
 
@@ -386,15 +405,16 @@ function renderComparativa() {
   }
 
   let cals = '';
-  tecComparando.forEach(nombre => {
-    const obrasTec = obras.filter(o => o.tecnico === nombre);
+  tecComparando.forEach(email => {
+    const nombre = nombreCanonico(email);
+    const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
     const cargas = calcCargaPorSemana(obrasTec);
-    const desglose = desgloseCargaTecnico(nombre, obrasTec.filter(cssObraCuentaParaCarga));
+    const desglose = desgloseCargaTecnico(email, obrasTec.filter(cssObraCuentaParaCarga));
     const cargaTotal = desglose.total;
     const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
     const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     let cells = '<div class="cal-label" style="font-size:0.65rem;display:flex;align-items:center;gap:4px;" title="' + (desglose.otros > 0 ? desglose.propia + '% en tus contratos + ' + desglose.otros + '% en otros' : '') + '">'
-      + '<span class="comparativa-quitar" onclick="quitarDeComparativa(\'' + nombre.replace(/'/g,"\\'") + '\')" title="Quitar de la comparativa">✕</span>'
+      + '<span class="comparativa-quitar" onclick="quitarDeComparativa(\'' + email.replace(/'/g,"\\'") + '\')" title="Quitar de la comparativa">✕</span>'
       + ini + ' <span class="' + pctClass + '">' + cargaTotal + '%' + (desglose.otros > 0 ? '*' : '') + '</span></div>';
     for (let w = 0; w < TOTAL_SEMANAS; w++) {
       const pct = Math.round(cargas[w]);
@@ -448,9 +468,9 @@ function renderTechGrid() {
   document.getElementById('techGrid').innerHTML = fichas.map(f => {
     const ini = f.nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
     const barClass = f.carga >= 100 ? 'bar-over' : f.carga >= 85 ? 'bar-warn' : '';
-    const comparando = tecComparando.includes(f.nombre);
-    const expandido = tecExpandidos.includes(f.nombre);
-    const nombreEscapado = f.nombre.replace(/'/g,"\\'");
+    const comparando = tecComparando.includes(f.email);
+    const expandido = tecExpandidos.includes(f.email);
+    const nombreEscapado = f.email.replace(/'/g,"\\'");
     const filaPrincipal = '<tr class="tech-row' + (comparando ? ' selected' : '') + '">'
       + '<td style="text-align:center;"><input type="checkbox" ' + (comparando?'checked':'') + ' onchange="toggleComparar(\'' + nombreEscapado + '\')" aria-label="Comparar ' + escH(f.nombre) + '"></td>'
       + '<td onclick="toggleExpandir(\'' + nombreEscapado + '\')" style="cursor:pointer;">'
@@ -465,7 +485,7 @@ function renderTechGrid() {
       + '</div></td>'
       + '</tr>';
     const filaDetalle = expandido
-      ? ('<tr><td colspan="5" style="padding:0;background:#fafaf8;border-bottom:0.5px solid #e8e8e0;"><div style="padding:1.25rem 1.5rem;">' + detalleTecnicoHTML(f.nombre) + '</div></td></tr>')
+      ? ('<tr><td colspan="5" style="padding:0;background:#fafaf8;border-bottom:0.5px solid #e8e8e0;"><div style="padding:1.25rem 1.5rem;">' + detalleTecnicoHTML(f.email) + '</div></td></tr>')
       : '';
     return filaPrincipal + filaDetalle;
   }).join('');
@@ -476,21 +496,22 @@ function renderTechGrid() {
 // Calendario y tabla de obras completos de un técnico — antes se escribían
 // directamente en un contenedor fijo aparte; ahora se devuelven como HTML
 // para insertarse dentro de la fila desplegable de esa persona en concreto.
-function exportarTecnicoBtn(nombre) {
-  const obrasTec = obras.filter(o => o.tecnico === nombre);
+function exportarTecnicoBtn(email) {
+  const nombre = nombreCanonico(email);
+  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
   cssExportarObrasAXlsx(obrasTec, nombre + '.xlsx');
 }
 
 // Reutilizado en la tabla, el detalle y la comparativa — evita repetir la
 // misma lógica de "propio vs otros" en los tres sitios por separado.
-function desgloseCargaTecnico(nombre, obrasTecActivas) {
+function desgloseCargaTecnico(email, obrasTecActivas) {
   const cargaPropia = Math.round(obrasTecActivas.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
   if (!Array.isArray(obrasCargaGlobalReal) || cssEsAdmin()) {
     return { propia: cargaPropia, otros: 0, total: cargaPropia };
   }
   const misContratos = new Set(cssGetContratos() || []);
   let sumaGlobal = 0, otros = 0;
-  obrasCargaGlobalReal.filter(o => o.tecnico === nombre && cssObraCuentaParaCarga(o)).forEach(o => {
+  obrasCargaGlobalReal.filter(o => (o.email||'').toLowerCase() === email && cssObraCuentaParaCarga(o)).forEach(o => {
     const c = parseFloat(o.carga_teorica_semanal) || 0;
     if (!misContratos.has(o.cod_contrato)) otros += c;
     sumaGlobal += c;
@@ -498,16 +519,16 @@ function desgloseCargaTecnico(nombre, obrasTecActivas) {
   return { propia: cargaPropia, otros: Math.round(otros), total: Math.round(sumaGlobal) };
 }
 
-function idSeguro(nombre) {
-  return nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
+function idSeguro(email) {
+  return email.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
 }
 
 // Filas de la tabla de obras, con los filtros aplicados — separada de
 // detalleTecnicoHTML para poder volver a llamarla solo a ella cuando cambie
 // un filtro, sin tener que reconstruir el calendario ni el resto del panel.
-function filasObrasTecnico(nombre) {
-  const id = idSeguro(nombre);
-  const obrasTec = obras.filter(o => o.tecnico === nombre);
+function filasObrasTecnico(email) {
+  const id = idSeguro(email);
+  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
   const fEstado = document.getElementById('filtroEstado_' + id)?.value || '';
   const fCliente = (document.getElementById('filtroCliente_' + id)?.value || '').trim().toLowerCase();
   const fDesde = document.getElementById('filtroDesde_' + id)?.value || '';
@@ -535,22 +556,22 @@ function filasObrasTecnico(nombre) {
   }).join('') : '<tr><td colspan="' + (puedeEditarObras ? 9 : 8) + '" class="empty">Sin obras con estos filtros</td></tr>';
 }
 
-function actualizarFiltroObrasTecnico(nombre) {
-  const id = idSeguro(nombre);
-  document.getElementById('obrasTbody_' + id).innerHTML = filasObrasTecnico(nombre);
+function actualizarFiltroObrasTecnico(email) {
+  const id = idSeguro(email);
+  document.getElementById('obrasTbody_' + id).innerHTML = filasObrasTecnico(email);
 }
 
-function detalleTecnicoHTML(nombre) {
-  const id = idSeguro(nombre);
-  const obrasTec = obras.filter(o => o.tecnico === nombre);
+function detalleTecnicoHTML(email) {
+  const id = idSeguro(email);
+  const nombre = nombreCanonico(email);
+  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
   // Solo las obras "en marcha" cuentan para la carga y el calendario — una
   // obra FINALIZADA (o suspendida, sin actividad, etc.) no debería seguir
   // sumando como si todavía diera trabajo real.
   const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-  const desgloseDetalle = desgloseCargaTecnico(nombre, obrasTecActivas);
+  const desgloseDetalle = desgloseCargaTecnico(email, obrasTecActivas);
   const cargaTotal = desgloseDetalle.total;
-  const email = obrasTec[0]?.email || '';
   const cargas = calcCargaPorSemana(obrasTec);
   const currentWeek = SEMANAS_ATRAS;
   const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
@@ -580,18 +601,18 @@ function detalleTecnicoHTML(nombre) {
 
   const puedeEditarObras = isStaffer || cssEsDelegado();
   const filtrosHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center;">'
-    + '<select id="filtroEstado_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + nombre.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;">'
+    + '<select id="filtroEstado_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;">'
     + '<option value="">Todos los estados</option>'
     + ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'].map(e => '<option value="' + e + '">' + e + '</option>').join('')
     + '</select>'
-    + '<input type="text" id="filtroCliente_' + id + '" placeholder="Cliente..." oninput="actualizarFiltroObrasTecnico(\'' + nombre.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;width:130px;">'
+    + '<input type="text" id="filtroCliente_' + id + '" placeholder="Cliente..." oninput="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;width:130px;">'
     + '<span style="font-size:0.72rem;color:#aaa;">Inicio desde</span>'
-    + '<input type="date" id="filtroDesde_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + nombre.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:3px 6px;border-radius:8px;border:0.5px solid #d0d0c8;">'
+    + '<input type="date" id="filtroDesde_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:3px 6px;border-radius:8px;border:0.5px solid #d0d0c8;">'
     + '<span style="font-size:0.72rem;color:#aaa;">hasta</span>'
-    + '<input type="date" id="filtroHasta_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + nombre.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:3px 6px;border-radius:8px;border:0.5px solid #d0d0c8;">'
+    + '<input type="date" id="filtroHasta_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:3px 6px;border-radius:8px;border:0.5px solid #d0d0c8;">'
     + '</div>';
 
-  const obrasHTML = filasObrasTecnico(nombre);
+  const obrasHTML = filasObrasTecnico(email);
 
   return '<div class="detalle-header">'
     + '<div class="avatar-lg">' + ini + '</div>'
@@ -602,7 +623,7 @@ function detalleTecnicoHTML(nombre) {
     + (desgloseDetalle.otros > 0 ? '<div style="font-size:0.68rem;color:#aaa;">' + desgloseDetalle.propia + '% en tus contratos + ' + desgloseDetalle.otros + '% en otros</div>' : '')
     + '</div>'
     + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
-    + '<button class="btn btn-sm" onclick="exportarTecnicoBtn(\'' + nombre.replace(/'/g,"\\'") + '\')">📥 Exportar a Excel</button>'
+    + '<button class="btn btn-sm" onclick="exportarTecnicoBtn(\'' + email.replace(/'/g,"\\'") + '\')">📥 Exportar a Excel</button>'
     + '</div>'
     + '<div class="stats-row">'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTecActivas.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
