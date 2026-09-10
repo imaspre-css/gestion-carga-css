@@ -363,7 +363,7 @@ function renderTechTableHead() {
   const flecha = campo => ordenEquipoColumna === campo ? (ordenEquipoAsc ? ' ▲' : ' ▼') : '';
   const th = (campo, label) => '<th class="tech-th" onclick="ordenarEquipoPor(\'' + campo + '\')">' + label + flecha(campo) + '</th>';
   document.getElementById('techTableHead').innerHTML =
-    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('loteAdif','ADIF') + th('obras','Obras') + th('carga','Carga');
+    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('delegacion','Delegación') + th('loteAdif','ADIF') + th('obras','Obras') + th('carga','Carga');
 }
 
 // Comparar (casilla) y desplegar detalle (nombre) son dos acciones
@@ -451,7 +451,7 @@ function renderTechGrid() {
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
     const desglose = desgloseCargaTecnico(t.email, obrasTecActivas);
     const tecObj = tecnicosDB.find(x => (x.email||'').toLowerCase() === t.email);
-    return { email: t.email, nombre: t.nombre, territorio: getTecnicoTerritorio(t.nombre) || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
+    return { email: t.email, nombre: t.nombre, territorio: getTecnicoTerritorio(t.nombre) || '—', delegacion: tecObj?.delegacion || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
   });
 
   fichas.sort((a,b) => {
@@ -464,7 +464,7 @@ function renderTechGrid() {
   });
 
   if (!fichas.length) {
-    document.getElementById('techGrid').innerHTML = '<tr><td colspan="6" class="empty">Sin técnicos con estos filtros</td></tr>';
+    document.getElementById('techGrid').innerHTML = '<tr><td colspan="7" class="empty">Sin técnicos con estos filtros</td></tr>';
     renderComparativa();
     return;
   }
@@ -481,6 +481,7 @@ function renderTechGrid() {
       + '<div class="tech-row-name"><div class="avatar">' + ini + '</div>' + escH(f.nombre) + ' <span style="color:#aaa;font-size:0.68rem;">' + (expandido?'▲':'▼') + '</span></div>'
       + '</td>'
       + '<td style="font-size:0.8rem;color:#888;">' + f.territorio + '</td>'
+      + '<td style="font-size:0.8rem;color:#888;">' + f.delegacion + '</td>'
       + '<td style="font-size:0.8rem;color:#888;">' + f.loteAdif + '</td>'
       + '<td style="font-size:0.8rem;">' + f.obras + '</td>'
       + '<td style="min-width:130px;"><div style="display:flex;align-items:center;gap:8px;">'
@@ -690,6 +691,7 @@ function renderTablaGestion() {
       + '<td style="font-size:0.78rem;">' + (t.email||'—') + '</td>'
       + '<td style="font-size:0.78rem;white-space:nowrap;">' + (t.telefono||'—') + '</td>'
       + '<td>' + (t.territorio||'—') + '</td>'
+      + '<td>' + (t.delegacion||'—') + '</td>'
       + '<td style="white-space:nowrap;">' + (t.lote_adif||'—') + '</td>'
       + '<td style="font-size:0.78rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (t.titulacion||'') + '">' + (t.titulacion||'—') + '</td>'
       + '<td>' + (t.colegiado ? '✓' : '—') + '</td>'
@@ -715,7 +717,7 @@ function renderTablaGestion() {
 function poblarSelectDelegaciones(valorActual) {
   const sel = document.getElementById('tDelegacion');
   sel.innerHTML = '<option value="">Selecciona...</option>'
-    + delegacionesDB.map(d => '<option value="' + escH(d.delegacion) + '">' + escH(d.delegacion) + (d.territorio ? ' (' + escH(d.territorio) + ')' : ' (sin territorio)') + '</option>').join('');
+    + delegacionesDB.map(d => '<option value="' + escH(d.delegacion) + '">' + escH(d.delegacion) + '</option>').join('');
   sel.value = valorActual || '';
   actualizarTerritorioDesdeDelegacion();
 }
