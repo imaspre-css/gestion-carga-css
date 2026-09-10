@@ -738,8 +738,9 @@ function renderTablaGestion() {
 
 function poblarSelectDelegaciones(valorActual) {
   const sel = document.getElementById('tDelegacion');
+  const ordenadas = [...delegacionesDB].sort((a,b) => a.delegacion.localeCompare(b.delegacion, 'es', {sensitivity:'base'}));
   sel.innerHTML = '<option value="">Selecciona...</option>'
-    + delegacionesDB.map(d => '<option value="' + escH(d.delegacion) + '">' + escH(d.delegacion) + '</option>').join('');
+    + ordenadas.map(d => '<option value="' + escH(d.delegacion) + '">' + escH(d.delegacion) + '</option>').join('');
   sel.value = valorActual || '';
   actualizarTerritorioDesdeDelegacion();
 }
@@ -914,7 +915,7 @@ async function init() {
   // Misma lista fija que el propio campo de territorio del técnico — antes
   // se derivaba del territorio de las obras, que es un campo distinto y
   // podía mostrar valores (FUNCIONAL, NACIONAL) que ya no aplican a personas.
-  const TERRITORIOS_TECNICO = ['MADRID','CATALUÑA','CIUDAD REAL','LEVANTE','GALICIA','CANTABRIA','PAÍS VASCO','NAVARRA','EXTREMADURA','ANDALUCÍA OCCIDENTAL','ANDALUCÍA ORIENTAL','ASTURIAS','CASTILLA Y LEÓN'];
+  const TERRITORIOS_TECNICO = ['ANDALUCÍA OCCIDENTAL','ANDALUCÍA ORIENTAL','ASTURIAS','CANTABRIA','CASTILLA Y LEÓN','CATALUÑA','CIUDAD REAL','EXTREMADURA','GALICIA','LEVANTE','MADRID','NAVARRA','PAÍS VASCO'];
   ['filtroTerritorioEquipo','filtroTerritorioGestion'].forEach(id => {
     const sel = document.getElementById(id);
     if (sel) {
@@ -922,11 +923,12 @@ async function init() {
       TERRITORIOS_TECNICO.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
     }
   });
+  const delegacionesOrdenadas = [...delegacionesDB].sort((a,b) => a.delegacion.localeCompare(b.delegacion, 'es', {sensitivity:'base'}));
   ['filtroDelegacionEquipo','filtroDelegacionGestion'].forEach(id => {
     const sel = document.getElementById(id);
     if (sel) {
       sel.innerHTML = '<option value="">Todas las delegaciones</option>';
-      delegacionesDB.forEach(d => { const op = document.createElement('option'); op.value = d.delegacion; op.textContent = d.delegacion; sel.appendChild(op); });
+      delegacionesOrdenadas.forEach(d => { const op = document.createElement('option'); op.value = d.delegacion; op.textContent = d.delegacion; sel.appendChild(op); });
     }
   });
   renderTechGrid();
