@@ -155,6 +155,13 @@ cssRequireRole();
             <select id="filtroTerritorioEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
               <option value="">Todos los territorios</option>
             </select>
+            <select id="filtroDelegacionEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+              <option value="">Todas las delegaciones</option>
+            </select>
+            <select id="filtroAdifEquipo" onchange="renderTechGrid()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+              <option value="">Todos los lotes ADIF</option>
+              <option>LOTE 1</option><option>LOTE 2</option><option>LOTE 3</option>
+            </select>
           </div>
         </div>
         <div id="comparativaPanel" class="comparativa-panel"></div>
@@ -172,6 +179,13 @@ cssRequireRole();
           <span class="search-box"><span class="icon">🔍</span><input type="text" id="buscarGestion" placeholder="Buscar técnico..." oninput="renderTablaGestion()"></span>
           <select id="filtroTerritorioGestion" onchange="renderTablaGestion()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
             <option value="">Todos los territorios</option>
+          </select>
+          <select id="filtroDelegacionGestion" onchange="renderTablaGestion()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+            <option value="">Todas las delegaciones</option>
+          </select>
+          <select id="filtroAdifGestion" onchange="renderTablaGestion()" style="font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid #d0d0c8;">
+            <option value="">Todos los lotes ADIF</option>
+            <option>LOTE 1</option><option>LOTE 2</option><option>LOTE 3</option>
           </select>
           <button class="btn btn-primary btn-sm" onclick="abrirModalNuevo()">+ Nuevo técnico</button>
         </div>
@@ -439,8 +453,12 @@ function renderTechGrid() {
   renderTechTableHead();
   const filtro = document.getElementById('filtroTerritorioEquipo')?.value || '';
   const busqueda = (document.getElementById('buscarEquipo')?.value || '').trim().toLowerCase();
+  const filtroDelegacion = document.getElementById('filtroDelegacionEquipo')?.value || '';
+  const filtroAdif = document.getElementById('filtroAdifEquipo')?.value || '';
   let tecnicos = getAllTecnicosPorEmail();
   if (filtro) tecnicos = tecnicos.filter(t => getTecnicoTerritorio(t.nombre).toUpperCase() === filtro.toUpperCase());
+  if (filtroDelegacion) tecnicos = tecnicos.filter(t => (tecnicosDB.find(x => (x.email||'').toLowerCase() === t.email)?.delegacion || '') === filtroDelegacion);
+  if (filtroAdif) tecnicos = tecnicos.filter(t => (tecnicosDB.find(x => (x.email||'').toLowerCase() === t.email)?.lote_adif || '') === filtroAdif);
   if (busqueda) tecnicos = tecnicos.filter(t => t.nombre.toLowerCase().includes(busqueda));
 
   // Ficha completa de cada uno, calculada una sola vez — agrupada por email,
@@ -672,7 +690,11 @@ function renderTablaGestion() {
   const activos = tecnicosDB.filter(t => t.activo !== false);
   const inactivos = tecnicosDB.filter(t => t.activo === false);
   let todos = [...activos, ...soloEnObras, ...inactivos];
+  const filtroDelegacionGestion = document.getElementById('filtroDelegacionGestion')?.value || '';
+  const filtroAdifGestion = document.getElementById('filtroAdifGestion')?.value || '';
   if (filtroGestion) todos = todos.filter(t => (t.territorio||getTecnicoTerritorio(t.nombre)||'').toUpperCase() === filtroGestion.toUpperCase());
+  if (filtroDelegacionGestion) todos = todos.filter(t => (t.delegacion||'') === filtroDelegacionGestion);
+  if (filtroAdifGestion) todos = todos.filter(t => (t.lote_adif||'') === filtroAdifGestion);
   if (busquedaGestion) todos = todos.filter(t => t.nombre.toLowerCase().includes(busquedaGestion));
 
   if (!todos.length) {
@@ -681,7 +703,7 @@ function renderTablaGestion() {
   }
 
   let html = '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
-    + '<th>Nombre</th><th>Email</th><th style="white-space:nowrap;">Teléfono</th><th>Territorio</th><th style="white-space:nowrap;">ADIF</th><th style="max-width:110px;">Titulación</th><th>Colegiado</th><th>Estado</th>';
+    + '<th>Nombre</th><th>Email</th><th style="white-space:nowrap;">Teléfono</th><th>Territorio</th><th>Delegación</th><th style="white-space:nowrap;">ADIF</th><th style="max-width:110px;">Titulación</th><th>Colegiado</th><th>Estado</th>';
   if (isStaffer) html += '<th></th>';
   html += '</tr></thead><tbody>';
 
@@ -898,6 +920,13 @@ async function init() {
     if (sel) {
       sel.innerHTML = '<option value="">Todos los territorios</option>';
       TERRITORIOS_TECNICO.forEach(t => { const op = document.createElement('option'); op.value = t; op.textContent = t; sel.appendChild(op); });
+    }
+  });
+  ['filtroDelegacionEquipo','filtroDelegacionGestion'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) {
+      sel.innerHTML = '<option value="">Todas las delegaciones</option>';
+      delegacionesDB.forEach(d => { const op = document.createElement('option'); op.value = d.delegacion; op.textContent = d.delegacion; sel.appendChild(op); });
     }
   });
   renderTechGrid();
