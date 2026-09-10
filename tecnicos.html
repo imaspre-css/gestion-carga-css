@@ -204,11 +204,14 @@ cssRequireRole();
           <input type="tel" id="tTelefono" placeholder="600 000 000">
         </div>
         <div class="field">
-          <label>Territorio</label>
-          <select id="tTerritorio">
+          <label>Delegación</label>
+          <select id="tDelegacion" onchange="actualizarTerritorioDesdeDelegacion()">
             <option value="">Selecciona...</option>
-            <option>MADRID</option><option>CATALUÑA</option><option>CIUDAD REAL</option><option>LEVANTE</option><option>GALICIA</option><option>CANTABRIA</option><option>PAÍS VASCO</option><option>NAVARRA</option><option>EXTREMADURA</option><option>ANDALUCÍA OCCIDENTAL</option><option>ANDALUCÍA ORIENTAL</option><option>ASTURIAS</option><option>CASTILLA Y LEÓN</option>
           </select>
+        </div>
+        <div class="field">
+          <label>Territorio <span style="color:#aaa;">(se rellena solo, según la delegación)</span></label>
+          <input type="text" id="tTerritorio" readonly style="background:#f5f5f0;color:#888;">
         </div>
         <div class="field">
           <label>Lote ADIF <span style="color:#aaa;">(opcional, independiente del territorio)</span></label>
@@ -709,12 +712,26 @@ function renderTablaGestion() {
   document.getElementById('tablaGestion').innerHTML = html;
 }
 
+function poblarSelectDelegaciones(valorActual) {
+  const sel = document.getElementById('tDelegacion');
+  sel.innerHTML = '<option value="">Selecciona...</option>'
+    + delegacionesDB.map(d => '<option value="' + escH(d.delegacion) + '">' + escH(d.delegacion) + (d.territorio ? ' (' + escH(d.territorio) + ')' : ' (sin territorio)') + '</option>').join('');
+  sel.value = valorActual || '';
+  actualizarTerritorioDesdeDelegacion();
+}
+
+function actualizarTerritorioDesdeDelegacion() {
+  const delegacion = document.getElementById('tDelegacion').value;
+  const d = delegacionesDB.find(x => x.delegacion === delegacion);
+  document.getElementById('tTerritorio').value = d ? (d.territorio || '(sin territorio)') : '';
+}
+
 function abrirModalNuevo() {
   document.getElementById('tId').value = '';
   document.getElementById('tNombre').value = '';
   document.getElementById('tEmail').value = '';
   document.getElementById('tTelefono').value = '';
-  document.getElementById('tTerritorio').value = '';
+  poblarSelectDelegaciones('');
   document.getElementById('tLoteAdif').value = '';
   document.getElementById('tTitulacion').value = '';
   document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
@@ -733,7 +750,7 @@ function editarTecnico(id) {
   document.getElementById('tNombre').value = t.nombre || '';
   document.getElementById('tEmail').value = t.email || '';
   document.getElementById('tTelefono').value = t.telefono || '';
-  document.getElementById('tTerritorio').value = t.territorio || '';
+  poblarSelectDelegaciones(t.delegacion || '');
   document.getElementById('tLoteAdif').value = t.lote_adif || '';
   document.getElementById('tTitulacion').value = t.titulacion || '';
   document.getElementById('tFechaAlta').value = t.fecha_alta || '';
@@ -755,7 +772,7 @@ function editarDesdeObras(nombre) {
     document.getElementById('tNombre').value = nombre;
     document.getElementById('tEmail').value = o?.email || '';
     document.getElementById('tTelefono').value = '';
-    document.getElementById('tTerritorio').value = '';
+    poblarSelectDelegaciones('');
     document.getElementById('tLoteAdif').value = '';
     document.getElementById('tTitulacion').value = '';
     document.getElementById('tFechaAlta').value = new Date().toISOString().split('T')[0];
@@ -776,7 +793,7 @@ async function guardarTecnico() {
     nombre,
     email: document.getElementById('tEmail').value.trim(),
     telefono: document.getElementById('tTelefono').value.trim(),
-    territorio: document.getElementById('tTerritorio').value,
+    delegacion: document.getElementById('tDelegacion').value || null,
     lote_adif: document.getElementById('tLoteAdif').value || null,
     titulacion: document.getElementById('tTitulacion').value.trim(),
     fecha_alta: document.getElementById('tFechaAlta').value || null,
@@ -856,12 +873,17 @@ async function loadTecnicos() {
 
 var obrasCargaGlobalReal = null;
 
+var delegacionesDB = [];
+
 async function init() {
   document.getElementById('navContainer').innerHTML = cssRenderNav('tecnicos.html');
   const res = await fetch(SUPABASE_URL + '/rest/v1/obras?select=*&limit=5000', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Range': '0-4999' } });
   obras = await res.json();
   if (!Array.isArray(obras)) obras = [];
   obrasCargaGlobalReal = await cssCargarCargaGlobal();
+  const resDel = await fetch(SUPABASE_URL + '/rest/v1/delegaciones?select=*&order=territorio,delegacion', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+  delegacionesDB = await resDel.json();
+  if (!Array.isArray(delegacionesDB)) delegacionesDB = [];
   await loadTecnicos();
   document.getElementById('loadingDiv').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
