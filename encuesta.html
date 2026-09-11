@@ -24,6 +24,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .tareas { padding: 0.5rem 1rem 0.75rem; }
 .tarea-row { display: flex; align-items: center; padding: 0.45rem 0; border-bottom: 0.5px solid #f5f5f0; }
 .tarea-row:last-child { border-bottom: none; }
+.otros-wrap { padding: 0.6rem 0 0; }
+.otros-wrap label { font-size: 0.78rem; color: #666; display: block; margin-bottom: 5px; }
+.otros-wrap textarea { width: 100%; min-height: 54px; padding: 0.5rem 0.65rem; border: 0.5px solid #d0d0c8; border-radius: 8px; font-size: 0.83rem; font-family: inherit; resize: vertical; color: #1a1a1a; }
+.otros-wrap textarea:focus { outline: none; border-color: #4a4a8a; }
 .tarea-label { font-size: 0.83rem; color: #333; flex: 1; }
 .counter { display: flex; align-items: center; gap: 5px; }
 .counter button { width: 30px; height: 30px; border: 0.5px solid #d0d0c8; border-radius: 7px; background: #f5f5f0; font-size: 1.1rem; cursor: pointer; color: #444; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -154,6 +158,8 @@ function renderForm(data) {
       html += '<button type="button" onclick="cnt(\'t_' + i + '_' + j + '\',1)">+</button>';
       html += '</div></div>';
     }
+    html += '<div class="otros-wrap"><label>Otros (opcional)</label>'
+      + '<textarea id="otros_' + i + '" placeholder="Cualquier otra actuación que no encaje arriba..."></textarea></div>';
     html += '</div></div>';
   }
   document.getElementById('obrasList').innerHTML = html;
@@ -207,6 +213,7 @@ async function enviar() {
       var el = document.getElementById('t_' + i + '_' + j);
       actividades[acts[j].campo] = parseInt(el ? el.value : 0) || 0;
     }
+    var otrosEl = document.getElementById('otros_' + i);
     var payload = {
       tecnico: SESSION_DATA.tecnico,
       cod_obra: o.num,
@@ -215,7 +222,8 @@ async function enviar() {
       semana_inicio: SESSION_DATA.semana_inicio,
       semana_fin: SESSION_DATA.semana_fin || '',
       producto: producto,
-      actividades: actividades
+      actividades: actividades,
+      otros_texto: (otrosEl && otrosEl.value.trim()) ? otrosEl.value.trim() : null
     };
     // Compatibilidad: para CSS rellenar también las columnas clásicas de la tabla
     if (producto === 'CSS') {
