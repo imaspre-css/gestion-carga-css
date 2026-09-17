@@ -302,19 +302,14 @@ if (esCSS && baremoActual) calcularCarga();
 actualizarBotonEnvio();
 }
 
-// La carga teórica es obligatoria siempre — pero puede venir del baremo (si el
-// contrato ya lo tiene configurado) o de una estimación manual (mientras tanto).
-// Cuando el baremo esté generalizado, se podrá retirar la vía manual.
 function actualizarBotonEnvio() {
 const hayContrato = !!document.getElementById('fContrato').value;
 const esCSS = document.getElementById('fProducto').value === 'CSS';
 const hayCarga = esCSS ? (!!baremoActual || !!document.getElementById('fCargaManual').value) : !!document.getElementById('fCargaManual').value;
-// El delegado no elige técnico (esa tarjeta está oculta para él); el staffer sí debe elegir uno.
 const hayTecnico = isDelegadoRol || !!tecnicoSeleccionado;
 document.getElementById('btnEnviar').disabled = !(hayContrato && hayCarga && hayTecnico);
 }
 
-// ── LOAD CONTRATOS ────────────────────────────────────────────
 async function loadContratos() {
 const [rc, ro, rt] = await Promise.all([
 fetch(SUPABASE_URL + '/rest/v1/contratos?select=*&order=cod_contrato', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }).then(r => r.json()),
@@ -327,7 +322,6 @@ tecnicosDBGlobal = (Array.isArray(rt) ? rt : []).filter(t => t.activo !== false)
 if (filtrarPorContrato) contratos = contratos.filter(c => misContratos.includes(c.cod_contrato));
 let obras = window._obrasGlobal;
 if (filtrarPorContrato) obras = obras.filter(o => misContratos.includes(o.cod_contrato));
-// Unir: contratos de la tabla + los que solo existen en obras (por si falta alguno), respetando el filtro del delegado
 const mapa = new Map();
 contratos.forEach(c => mapa.set(c.cod_contrato, { cod: c.cod_contrato, cliente: c.cliente||'', baremo: c.jornada_horas_mes != null ? c : null }));
 obras.forEach(o => { if (o.cod_contrato && !mapa.has(o.cod_contrato)) mapa.set(o.cod_contrato, { cod: o.cod_contrato, cliente: o.cliente||'', baremo: null }); });
@@ -346,7 +340,6 @@ sel.innerHTML = '<option value="">No tienes contratos asignados</option>';
 }
 }
 
-// ── ASIGNACIÓN DE TÉCNICO (pool contrato → territorio → todos) ────────
 async function getPoolContratoNueva(codContrato) {
 if (!codContrato) return [];
 try {
@@ -360,7 +353,7 @@ return (rows && rows[0] && Array.isArray(rows[0].tecnicos_preseleccionados)) ? r
 
 function construirFichaNueva(nombres) {
 const obrasG = window._obrasGlobal || [];
-const cargaGlobalReal = window._obrasCargaGlobalReal; // toda la empresa, vía RPC — null para admin_total, que ya lo ve todo
+const cargaGlobalReal = window._obrasCargaGlobalReal;
 const esAdmin = cssEsAdmin();
 const misContratos = new Set(cssGetContratos() || []);
 return nombres.map(t => {
@@ -536,8 +529,6 @@ function onAjusteObraNuevaChange() {
   renderPickerTecnicoNueva();
 }
 
-// Vuelve a los valores del contrato y "olvida" el ajuste — al enviar, los 5
-// tiempos se guardan como null, no como los números de hoy del contrato.
 function resetearAjusteObraNueva() {
   if (!baremoActual) return;
   document.getElementById('fAjDesplazamiento').value = baremoActual.t_desplazamiento;
@@ -551,19 +542,19 @@ function resetearAjusteObraNueva() {
   renderPickerTecnicoNueva();
 }
 
-// ── CARGA TEÓRICA ─────────────────────────────────────────────
+// Mismo arreglo que en Contratos: 0 es "falso" en JavaScript, así que un
+// campo puesto a 0 a propósito caía siempre al valor del contrato.
+function numOrDefault(v, def) { const n = parseFloat(v); return isNaN(n) ? def : n; }
+function numOrNull(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+
 function calcularCarga() {
 if (!baremoActual) return;
 const b = baremoActual;
-// Los 5 tiempos se leen del panel de ajuste, no directamente del baremo — si
-// nadie lo ha tocado, el panel ya está precargado con los valores del propio
-// contrato (en mostrarBaremoInfo), así que el resultado es idéntico a hoy
-// mientras nadie ajuste nada.
-const t_desp_base = parseFloat(document.getElementById('fAjDesplazamiento').value) || b.t_desplazamiento;
-const t_visita = parseFloat(document.getElementById('fAjVisita').value) || b.t_visita;
-const t_acta = parseFloat(document.getElementById('fAjActa').value) || b.t_acta;
-const t_informe = parseFloat(document.getElementById('fAjInforme').value) || b.t_informe;
-const t_reunion = parseFloat(document.getElementById('fAjReunion').value) || b.t_reunion;
+const t_desp_base = numOrDefault(document.getElementById('fAjDesplazamiento').value, b.t_desplazamiento);
+const t_visita = numOrDefault(document.getElementById('fAjVisita').value, b.t_visita);
+const t_acta = numOrDefault(document.getElementById('fAjActa').value, b.t_acta);
+const t_informe = numOrDefault(document.getElementById('fAjInforme').value, b.t_informe);
+const t_reunion = numOrDefault(document.getElementById('fAjReunion').value, b.t_reunion);
 const visitas_semana = parseFloat(document.getElementById('fVisitas').value)||1;
 const visitas_mes = visitas_semana * 4;
 const num_css = parseInt(document.getElementById('fNumCSS').value)||1;
@@ -585,7 +576,6 @@ document.getElementById('cargaBox').innerHTML =
 if (baremoActual) baremoActual._carga_calculada = pct;
 }
 
-// ── DELEGADO: crea una SOLICITUD (sin técnico) para que el staffer la asigne ──
 async function enviarComoSolicitud(contrato, denominacion, producto, cargaCalculada, cliente) {
 const btn = document.getElementById('btnEnviar');
 const payload = {
@@ -600,11 +590,11 @@ cod_obra_cliente: document.getElementById('fCodObraCliente').value.trim() || nul
 territorio: document.getElementById('fTerritorio').value || null,
 fecha_inicio: document.getElementById('fInicio').value || null,
 plazo_meses: parseInt(document.getElementById('fPlazo').value) || null,
-t_desplazamiento: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjDesplazamiento').value) || null) : null,
-t_visita: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjVisita').value) || null) : null,
-t_acta: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjActa').value) || null) : null,
-t_informe: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjInforme').value) || null) : null,
-t_reunion: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjReunion').value) || null) : null,
+t_desplazamiento: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjDesplazamiento').value) : null,
+t_visita: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjVisita').value) : null,
+t_acta: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjActa').value) : null,
+t_informe: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjInforme').value) : null,
+t_reunion: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjReunion').value) : null,
 visitas_semana: parseInt(document.getElementById('fVisitas').value) || 1,
 num_css: parseInt(document.getElementById('fNumCSS').value) || 1,
 nocturnidad: document.getElementById('fNocturnidad').checked,
@@ -626,7 +616,6 @@ body: JSON.stringify(payload)
 if (res.ok) {
 document.getElementById('envioStatus').innerHTML = '<div class="notice notice-success">✅ Solicitud enviada. El staffer la verá en Solicitudes.</div>';
 btn.textContent = '✅ Solicitud enviada';
-// Avisar a quien deba actuar sobre esta solicitud (staffer/representante del contrato, y admin)
 fetch(SUPABASE_URL + '/rest/v1/rpc/notificar_solicitud_nueva', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
@@ -645,7 +634,6 @@ document.getElementById('envioStatus').innerHTML = '<div class="notice" style="b
 }
 }
 
-// ── STAFFER: crea la obra y asigna técnico directamente (como hoy) ──
 async function enviarComoObraDirecta(contrato, denominacion, producto, cargaCalculada, cliente) {
 const btn = document.getElementById('btnEnviar');
 if (!tecnicoSeleccionado) { alert('Selecciona un técnico.'); btn.disabled = false; btn.textContent = '✅ Crear obra y asignar técnico'; return; }
@@ -671,11 +659,11 @@ carga_teorica_semanal: cargaCalculada,
 nocturnidad: document.getElementById('fNocturnidad').checked,
 visitas_semana: parseFloat(document.getElementById('fVisitas').value) || null,
 num_css: parseInt(document.getElementById('fNumCSS').value) || null,
-t_desplazamiento: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjDesplazamiento').value) || null) : null,
-t_visita: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjVisita').value) || null) : null,
-t_acta: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjActa').value) || null) : null,
-t_informe: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjInforme').value) || null) : null,
-t_reunion: ajusteObraNuevaTocado ? (parseFloat(document.getElementById('fAjReunion').value) || null) : null
+t_desplazamiento: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjDesplazamiento').value) : null,
+t_visita: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjVisita').value) : null,
+t_acta: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjActa').value) : null,
+t_informe: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjInforme').value) : null,
+t_reunion: ajusteObraNuevaTocado ? numOrNull(document.getElementById('fAjReunion').value) : null
 };
 
 const res = await fetch(SUPABASE_URL + '/rest/v1/obras', {
@@ -695,7 +683,6 @@ document.getElementById('envioStatus').innerHTML = '<div class="notice" style="b
 }
 }
 
-// ── Punto de entrada del botón: bifurca según rol ──
 async function enviarSolicitud() {
 const contrato = document.getElementById('fContrato').value;
 const denominacion = document.getElementById('fDenominacion').value.trim();
