@@ -236,15 +236,26 @@ async function cssCargarCargaGlobal() {
 // para calcular el total real de cada técnico, desglosando cuánto de ese
 // total cae dentro de tus propios contratos y cuánto no. Sin ella, se
 // comporta igual que antes (solo lo que ya tienes delante).
-function cssConstruirFichaTecnico(nombres, obrasArr, excluir, obrasGlobalArr) {
-  const excluirArr = Array.isArray(excluir) ? excluir : (excluir ? [excluir] : []);
+function cssConstruirFichaTecnico(nombres, obrasArr, excluir, obrasGlobalArr, tecnicosDBArr) {
+  // excluir se compara por EMAIL, no por nombre — una grafía distinta del
+  // mismo técnico (mayúsculas, tildes, apellidos) ya no deja "colarse" a
+  // alguien que en realidad ya está asignado, evitando el choque de clave
+  // duplicada al guardar. Se acepta también un array de nombres como
+  // respaldo, por si algún técnico todavía no tiene email localizable.
+  const excluirRaw = Array.isArray(excluir) ? excluir : (excluir ? [excluir] : []);
+  const excluirEmails = excluirRaw.map(function(e){ return (e||'').toLowerCase(); });
   const esAdmin = cssEsAdmin();
   const misContratos = new Set(cssGetContratos() || []);
-  return nombres.filter(function (t) { return excluirArr.indexOf(t) === -1; }).map(function (t) {
+
+  return nombres.map(function (t) {
     const obrasTec = obrasArr.filter(function (o) { return o.tecnico === t; });
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
     const cargaPropia = Math.round(obrasTecActivas.reduce(function (s, o) { return s + (parseFloat(o.carga_teorica_semanal) || 0); }, 0));
-    const email = (obrasTec[0] && obrasTec[0].email) || '';
+    let email = (obrasTec[0] && obrasTec[0].email) || '';
+    if (!email && tecnicosDBArr) {
+      const ficha = tecnicosDBArr.find(function(x){ return x.nombre === t; });
+      if (ficha) email = ficha.email || '';
+    }
 
     let cargaTeorica = cargaPropia;
     let cargaOtros = 0;
@@ -261,6 +272,11 @@ function cssConstruirFichaTecnico(nombres, obrasArr, excluir, obrasGlobalArr) {
     }
 
     return { name: t, email: email, obras: obrasTecActivas.length, cargaTeorica: cargaTeorica, cargaPropia: cargaPropia, cargaOtros: cargaOtros };
+  }).filter(function (ficha) {
+    const emailLower = (ficha.email || '').toLowerCase();
+    // Si el técnico no tiene email localizable, se cae al nombre como
+    // último respaldo, para no dejar de excluirlo por falta de dato.
+    return excluirEmails.indexOf(emailLower) === -1 && excluirRaw.indexOf(ficha.name) === -1;
   });
 }
 
@@ -290,9 +306,9 @@ function cssGetVistasTecnicos(territorio, poolEmails, obrasArr, tecnicosDBArr, e
   }
 
   const vistas = {
-    pool: cssConstruirFichaTecnico(poolNombres, obrasArr, excluir, obrasGlobalArr),
-    territorio: cssConstruirFichaTecnico(territorioNombres, obrasArr, excluir, obrasGlobalArr),
-    todos: cssConstruirFichaTecnico(todosNombres, obrasArr, excluir, obrasGlobalArr)
+    pool: cssConstruirFichaTecnico(poolNombres, obrasArr, excluir, obrasGlobalArr, tecnicosDBArr),
+    territorio: cssConstruirFichaTecnico(territorioNombres, obrasArr, excluir, obrasGlobalArr, tecnicosDBArr),
+    todos: cssConstruirFichaTecnico(todosNombres, obrasArr, excluir, obrasGlobalArr, tecnicosDBArr)
   };
   const defecto = vistas.pool.length ? 'pool' : (vistas.territorio.length ? 'territorio' : 'todos');
   return { vistas: vistas, defecto: defecto };
