@@ -1126,7 +1126,7 @@ async function abrirCambioTecnico() {
   wrap.innerHTML = '<div style="text-align:center;padding:1rem;color:#888;font-size:0.82rem;">Cargando técnicos...</div>';
 
   const poolEmails = await cssGetPoolContrato(o.cod_contrato);
-  const { vistas, defecto } = cssGetVistasTecnicos(o.territorio, poolEmails, obrasGlobal, tecnicosDB, o.tecnico);
+  const { vistas, defecto } = cssGetVistasTecnicos(o.territorio, poolEmails, obras, tecnicosDB, (o.email||'').toLowerCase(), obrasGlobal);
   vistasTecnicosObra = vistas;
   origenActivoObra = defecto;
   nuevoTecnicoSeleccionado = null;
@@ -1212,9 +1212,12 @@ async function abrirAnadirCoordinador(refId) {
   document.getElementById('acConfirmBtn').disabled = true;
   document.getElementById('modalAnadirCoordinador').classList.add('open');
 
-  const nombresActuales = grupoActual.map(o => o.tecnico);
+  // Se excluye por email (estable), no por nombre — y se usan las obras
+  // locales para el selector (con territorio y demás), dejando obrasGlobal
+  // solo para el desglose de "cuánta carga tiene en otros contratos".
+  const emailsActuales = grupoActual.map(o => (o.email||'').toLowerCase());
   const poolEmails = await cssGetPoolContrato(ref.cod_contrato);
-  const { vistas, defecto } = cssGetVistasTecnicos(ref.territorio, poolEmails, obrasGlobal, tecnicosDB, nombresActuales);
+  const { vistas, defecto } = cssGetVistasTecnicos(ref.territorio, poolEmails, obras, tecnicosDB, emailsActuales, obrasGlobal);
   vistasCoordinador = vistas;
   origenActivoCoordinador = defecto;
   renderCoordinadorPicker();
