@@ -840,6 +840,13 @@ function renderBaremoWizard() {
   wrap.innerHTML = '<div style="display:flex;gap:4px;margin-bottom:1rem;">' + progress + '</div>' + content;
 }
 
+// parseFloat(x) || valor es un fallo clásico de JavaScript: 0 es "falso" en
+// el lenguaje, así que un campo puesto a 0 a propósito (como "esta obra no
+// necesita acta de visita") caía siempre al valor por defecto en vez de
+// respetar el cero. Estas dos funciones sí distinguen "vacío" de "cero".
+function numOrDefault(v, def) { const n = parseFloat(v); return isNaN(n) ? def : n; }
+function numOrNull(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+
 function bwPhase1() {
   const v = (x, d) => (x != null ? x : d);
   return '<div class="phase-title">Fase 1 — Tiempos base del contrato</div>'
@@ -867,12 +874,12 @@ function bwPhase1() {
 
 function bwGuardar1() {
   bwData.cliente = document.getElementById('bw_cliente').value.trim();
-  bwData.t_desplazamiento = parseFloat(document.getElementById('bw_desp').value)||1;
-  bwData.t_visita = parseFloat(document.getElementById('bw_visita').value)||1;
-  bwData.t_acta = parseFloat(document.getElementById('bw_acta').value)||0.75;
-  bwData.t_informe = parseFloat(document.getElementById('bw_informe').value)||0.75;
-  bwData.t_reunion = parseFloat(document.getElementById('bw_reunion').value)||3;
-  bwData.jornada_horas_mes = parseFloat(document.getElementById('bw_jornada').value)||120;
+  bwData.t_desplazamiento = numOrDefault(document.getElementById('bw_desp').value, 1);
+  bwData.t_visita = numOrDefault(document.getElementById('bw_visita').value, 1);
+  bwData.t_acta = numOrDefault(document.getElementById('bw_acta').value, 0.75);
+  bwData.t_informe = numOrDefault(document.getElementById('bw_informe').value, 0.75);
+  bwData.t_reunion = numOrDefault(document.getElementById('bw_reunion').value, 3);
+  bwData.jornada_horas_mes = numOrDefault(document.getElementById('bw_jornada').value, 120);
   bwPhase = 2;
   renderBaremoWizard();
 }
@@ -1564,11 +1571,11 @@ async function guardarObra() {
     // ni se cambió nada, se guarda null en los 8: la obra sigue flotando con
     // el baremo del contrato, en vez de quedar fijada al valor de hoy solo
     // por haber abierto el modal para cambiar otra cosa cualquiera.
-    t_desplazamiento: ajusteObraTocado ? (parseFloat(document.getElementById('ajDesplazamientoE').value) || null) : null,
-    t_visita: ajusteObraTocado ? (parseFloat(document.getElementById('ajVisitaE').value) || null) : null,
-    t_acta: ajusteObraTocado ? (parseFloat(document.getElementById('ajActaE').value) || null) : null,
-    t_informe: ajusteObraTocado ? (parseFloat(document.getElementById('ajInformeE').value) || null) : null,
-    t_reunion: ajusteObraTocado ? (parseFloat(document.getElementById('ajReunionE').value) || null) : null,
+    t_desplazamiento: ajusteObraTocado ? numOrNull(document.getElementById('ajDesplazamientoE').value) : null,
+    t_visita: ajusteObraTocado ? numOrNull(document.getElementById('ajVisitaE').value) : null,
+    t_acta: ajusteObraTocado ? numOrNull(document.getElementById('ajActaE').value) : null,
+    t_informe: ajusteObraTocado ? numOrNull(document.getElementById('ajInformeE').value) : null,
+    t_reunion: ajusteObraTocado ? numOrNull(document.getElementById('ajReunionE').value) : null,
     nocturnidad: ajusteObraTocado ? document.getElementById('ajNocturnidadE').checked : false,
     visitas_semana: ajusteObraTocado ? (parseFloat(document.getElementById('ajVisitasSemanaE').value) || null) : null,
     num_css: ajusteObraTocado ? (parseInt(document.getElementById('ajNumCssE').value) || null) : null
