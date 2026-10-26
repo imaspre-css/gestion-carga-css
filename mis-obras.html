@@ -49,6 +49,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .estado-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
 .estado-ACTIVA { background: #e1f5ee; color: #0f6e56; }
 .estado-PDTE-INICIO { background: #e6f1fb; color: #185fa5; }
+.estado-TRABAJOS-PREV { background: #f0eefa; color: #5b4a9e; }
 .estado-PDTE-DESIG { background: #f0e9fb; color: #6a3fa5; }
 .estado-SIN-ACTIVIDAD { background: #f5f5f0; color: #777; }
 .estado-SUSPENDIDA { background: #faeeda; color: #854f0b; }
@@ -181,6 +182,7 @@ const est = (o.estado||'').toUpperCase();
 const estadoClass =
 est === 'ACTIVA' ? 'estado-ACTIVA' :
 est === 'PDTE. INICIO' ? 'estado-PDTE-INICIO' :
+est === 'TRABAJOS PREVIOS' ? 'estado-TRABAJOS-PREV' :
 est === 'PDTE. DESIG. CSS' ? 'estado-PDTE-DESIG' :
 est === 'SIN ACTIVIDAD' ? 'estado-SIN-ACTIVIDAD' :
 est === 'SUSPENDIDA' ? 'estado-SUSPENDIDA' :
@@ -326,6 +328,7 @@ if (e.target === document.getElementById('modalEditarObra')) closeEditarObraModa
 <select id="eEstado" style="width:100%;padding:0.5rem 0.75rem;border:0.5px solid #d0d0c8;border-radius:8px;font-size:0.875rem;">
 <option value="PDTE. DESIG. CSS">PDTE. DESIG. CSS</option>
 <option value="PDTE. INICIO">PDTE. INICIO</option>
+<option value="TRABAJOS PREVIOS">TRABAJOS PREVIOS</option>
 <option value="ACTIVA">ACTIVA</option>
 <option value="SIN ACTIVIDAD">SIN ACTIVIDAD</option>
 <option value="SUSPENDIDA">SUSPENDIDA</option>
