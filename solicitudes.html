@@ -443,7 +443,10 @@ async function confirmarAsignacion() {
         territorio: solicitudActual.territorio || '',
         municipio: solicitudActual.municipio || null,
         cod_obra_cliente: solicitudActual.cod_obra_cliente || null,
-        estado: 'ACTIVA',
+        // Antes nacía ACTIVA y sumaba carga desde el primer momento. Ahora
+        // nace PDTE. INICIO: ya tiene técnico pero no ha arrancado, así que no
+        // suma hasta que alguien la pase a TRABAJOS PREVIOS o ACTIVA.
+        estado: 'PDTE. INICIO',
         fecha_inicio: solicitudActual.fecha_inicio || null,
         plazo_meses: solicitudActual.plazo_meses || null,
         fecha_fin: null,
