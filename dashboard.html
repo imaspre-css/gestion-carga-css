@@ -84,7 +84,10 @@ cssRequireRole();
     <div class="semana-label" id="semanaLabel">Cargando...</div>
   </div>
   <div class="filters">
-    <select id="filtroSemana" onchange="renderAll()"><option value="">Todas las semanas</option></select>
+    <span style="font-size:12px;color:#9090b0;">Desde</span>
+    <input type="date" id="filtroDesde" onchange="renderAll()" style="font-size:12px;padding:4px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:#fff;border:0.5px solid rgba(255,255,255,0.2);">
+    <span style="font-size:12px;color:#9090b0;">hasta</span>
+    <input type="date" id="filtroHasta" onchange="renderAll()" style="font-size:12px;padding:4px 8px;border-radius:20px;background:rgba(255,255,255,0.1);color:#fff;border:0.5px solid rgba(255,255,255,0.2);">
     <select id="filtroContrato" onchange="renderAll()"><option value="">Todos los contratos</option></select>
     <select id="filtroTerritorio" onchange="renderAll()"><option value="">Todos los territorios</option></select>
   </div>
@@ -158,7 +161,7 @@ cssRequireRole();
       </div>
       <button class="close-btn" onclick="closeRespTecnicoModal()">✕</button>
     </div>
-    <div class="modal-body" id="rtBody"></div>
+    <div class="modal-body"><div style="margin-bottom:1.25rem;"><canvas id="rtChart" height="90"></canvas></div><div id="rtBody"></div></div>
   </div>
 </div>
 
@@ -201,7 +204,8 @@ async function fetchAll() {
 
 function getFilters() {
   return {
-    semana: document.getElementById('filtroSemana').value,
+    desde: document.getElementById('filtroDesde').value,
+    hasta: document.getElementById('filtroHasta').value,
     contrato: document.getElementById('filtroContrato').value,
     territorio: document.getElementById('filtroTerritorio').value
   };
@@ -212,10 +216,15 @@ function populateFilters() {
   const contratos = [...new Set(obras.map(o => o.cod_contrato).filter(Boolean))].sort();
   const territorios = [...new Set(obras.map(o => o.territorio).filter(Boolean))].sort();
 
-  const sel = document.getElementById('filtroSemana');
-  sel.innerHTML = '<option value="">Todas las semanas</option>';
-  semanas.forEach(s => { const op = document.createElement('option'); op.value = s; op.textContent = 'Semana del ' + s; sel.appendChild(op); });
-  if (semanas.length) sel.value = semanas[0];
+  // Por defecto, las últimas 4 semanas disponibles — no "todo el histórico"
+  const selDesde = document.getElementById('filtroDesde');
+  const selHasta = document.getElementById('filtroHasta');
+  if (semanas.length && !selHasta.value) {
+    selHasta.value = semanas[0];
+    const fechaDesde = new Date(semanas[0]);
+    fechaDesde.setDate(fechaDesde.getDate() - 21); // 4 semanas completas, incluida la de "hasta"
+    selDesde.value = fechaDesde.toISOString().split('T')[0];
+  }
 
   const selC = document.getElementById('filtroContrato');
   contratos.forEach(s => { const op = document.createElement('option'); op.value = s; op.textContent = s; selC.appendChild(op); });
@@ -227,7 +236,8 @@ function populateFilters() {
 function getFilteredResp() {
   const f = getFilters();
   return respuestas.filter(r =>
-    (!f.semana || r.semana_inicio === f.semana) &&
+    (!f.desde || r.semana_inicio >= f.desde) &&
+    (!f.hasta || r.semana_inicio <= f.hasta) &&
     (!f.contrato || obras.find(o => o.cod_obra === r.cod_obra && o.cod_contrato === f.contrato)) &&
     (!f.territorio || obras.find(o => o.cod_obra === r.cod_obra && o.territorio === f.territorio))
   );
@@ -237,6 +247,15 @@ function calcCargaReal(r) {
   const h = (r.actas_visita||0)*0.75 + (r.reuniones||0)*3 + (r.informes_mensuales||0)*0.75 +
             (r.revision_pss||0)*1 + (r.anotaciones||0)*0.25 + (r.anexos||0)*0.5;
   return Math.round((h / 30) * 100);
+}
+
+// Nº de semanas que cubre el rango elegido — para promediar la carga real en
+// vez de sumarla sin más (una suma de 4 semanas no se puede comparar contra
+// un teórico que es un valor fijo, no acumulado).
+function semanasEnRango(f) {
+  if (!f.desde || !f.hasta) return 1;
+  const dias = (new Date(f.hasta) - new Date(f.desde)) / (24*3600*1000);
+  return Math.max(1, Math.round(dias / 7) + 1);
 }
 
 function renderStats(resp) {
@@ -257,13 +276,13 @@ document.getElementById('statsGrid').innerHTML =
 '<div class="stat-box' + (sobrecargas.length ? ' stat-warn' : '') + '"><div class="stat-num">' + sobrecargas.length + '</div><div class="stat-label">Sobrecargas &gt;90%</div></div>' +
 '<div class="stat-box"><div class="stat-num">' + conResp.length + '/' + tecnicos.length + '</div><div class="stat-label">Han respondido</div></div>' +
 '<div class="stat-box' + (pendientesDesignar ? ' stat-warn' : '') + '" style="cursor:pointer;" onclick="location.href=\'solicitudes.html\'" title="Ir a Solicitudes"><div class="stat-num">' + pendientesDesignar + '</div><div class="stat-label">Pendientes designar CSS</div></div>';
-const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
-document.getElementById('semanaLabel').textContent = semana ? 'Semana del ' + semana : 'Sin datos de encuesta aún';
+document.getElementById('semanaLabel').textContent = (f.desde && f.hasta) ? 'Del ' + f.desde + ' al ' + f.hasta : 'Sin datos de encuesta aún';
 }
   
 function renderTechList(resp) {
   const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
   const f = getFilters();
+  const numSemanas = semanasEnRango(f);
 
   let html = '';
   tecnicos.forEach(t => {
@@ -271,7 +290,9 @@ function renderTechList(resp) {
     const obrasTec = obras.filter(o => o.tecnico === t);
     const cargaTeorica = obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0);
     const respTec = resp.filter(r => r.tecnico === t);
-    const cargaReal = respTec.reduce((s, r) => s + calcCargaReal(r), 0);
+    // Media semanal del periodo, no la suma — para que sea comparable al
+    // teórico (un valor fijo) sea cual sea el número de semanas elegido.
+    const cargaReal = Math.round(respTec.reduce((s, r) => s + calcCargaReal(r), 0) / numSemanas);
     const tieneResp = respTec.length > 0;
     const pctT = Math.min(cargaTeorica, 100);
     const pctR = Math.min(cargaReal, 120);
@@ -300,9 +321,9 @@ function renderTechList(resp) {
 
 function renderRespList(resp) {
   const f = getFilters();
-  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const semanaMasReciente = f.hasta || (respuestas[0] ? respuestas[0].semana_inicio : '');
   const tecnicos = [...new Set(obras.map(o => o.tecnico))].sort();
-  const conResp = [...new Set(resp.filter(r => !f.semana || r.semana_inicio === semana).map(r => r.tecnico))];
+  const conResp = [...new Set(resp.filter(r => r.semana_inicio === semanaMasReciente).map(r => r.tecnico))];
 
   let html = '';
   tecnicos.forEach(t => {
@@ -356,13 +377,13 @@ function renderSobrecargados() {
   const cont = document.getElementById('sobrecargadosList');
   if (!Array.isArray(respuestasGlobal)) { cont.innerHTML = '<div class="no-data">Solo disponible para staffer o representante</div>'; return; }
   const f = getFilters();
-  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const numSemanas = semanasEnRango(f);
   const porTecnico = {};
-  respuestasGlobal.filter(r => !semana || r.semana_inicio === semana).forEach(r => {
+  respuestasGlobal.filter(r => (!f.desde || r.semana_inicio >= f.desde) && (!f.hasta || r.semana_inicio <= f.hasta)).forEach(r => {
     porTecnico[r.tecnico] = (porTecnico[r.tecnico] || 0) + calcCargaReal(r);
   });
-  const sobrecargados = Object.entries(porTecnico).map(([t,c]) => [t, Math.round(c)]).filter(x => x[1] > 100).sort((a,b) => b[1]-a[1]);
-  if (!sobrecargados.length) { cont.innerHTML = '<div class="no-data">Nadie por encima del 100% esta semana ✓</div>'; return; }
+  const sobrecargados = Object.entries(porTecnico).map(([t,c]) => [t, Math.round(c / numSemanas)]).filter(x => x[1] > 100).sort((a,b) => b[1]-a[1]);
+  if (!sobrecargados.length) { cont.innerHTML = '<div class="no-data">Nadie por encima del 100% de media en este periodo ✓</div>'; return; }
   cont.innerHTML = sobrecargados.map(([t,c]) =>
     '<div class="resp-row"><span style="font-size:0.82rem;">' + escH(t) + '</span><span class="tag tag-red">' + c + '%</span></div>'
   ).join('');
@@ -373,11 +394,12 @@ function renderDesviacion() {
   const cont = document.getElementById('desviacionList');
   if (!Array.isArray(obrasGlobal) || !Array.isArray(respuestasGlobal)) { cont.innerHTML = '<div class="no-data">Solo disponible para staffer o representante</div>'; return; }
   const f = getFilters();
-  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const numSemanas = semanasEnRango(f);
   const nombres = [...new Set(obrasGlobal.map(o => o.tecnico))];
   const filas = nombres.map(t => {
     const teorica = Math.round(obrasGlobal.filter(o => o.tecnico === t && cssObraCuentaParaCarga(o)).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
-    const real = Math.round(respuestasGlobal.filter(r => r.tecnico === t && (!semana || r.semana_inicio === semana)).reduce((s,r) => s+calcCargaReal(r), 0));
+    const realBruto = respuestasGlobal.filter(r => r.tecnico === t && (!f.desde || r.semana_inicio >= f.desde) && (!f.hasta || r.semana_inicio <= f.hasta)).reduce((s,r) => s+calcCargaReal(r), 0);
+    const real = Math.round(realBruto / numSemanas);
     return { t, teorica, real, desv: Math.abs(teorica - real) };
   }).filter(x => x.teorica || x.real);
   filas.sort((a,b) => b.desv - a.desv);
@@ -437,6 +459,39 @@ async function comprobarYGuardarSnapshot() {
   });
 }
 
+function lunesDeEstaSemana() {
+  const hoy = new Date();
+  const dia = hoy.getDay(); // 0=domingo, 1=lunes, ... 6=sábado
+  const offset = dia === 0 ? -6 : 1 - dia;
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + offset);
+  return lunes.toISOString().split('T')[0];
+}
+
+// Una fila por técnico, con su carga teórica de HOY — la semana de la foto es
+// siempre el lunes de la semana en curso. Dentro de 4 semanas, esta fila
+// permitirá comparar el real de entonces contra lo que se esperaba en el
+// momento real, no contra el teórico de hoy (que puede haber cambiado).
+async function comprobarYGuardarSnapshotTecnico() {
+  if (!puedeVerGlobal) return;
+  const fuenteObras = Array.isArray(obrasGlobal) ? obrasGlobal : obras;
+  const semana = lunesDeEstaSemana();
+  const nombres = [...new Set(fuenteObras.map(o => o.tecnico))];
+  const filas = nombres.map(t => ({
+    semana_inicio: semana,
+    tecnico: t,
+    carga_teorica: Math.round(fuenteObras.filter(o => o.tecnico === t && cssObraCuentaParaCarga(o)).reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0))
+  }));
+  if (!filas.length) return;
+  // Igual que con dashboard_snapshots: ignore-duplicates evita error si dos
+  // personas lo disparan casi a la vez, o si ya se tomó hoy la foto de esta semana.
+  await fetch(SUPABASE_URL + '/rest/v1/carga_teorica_snapshots', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal,resolution=ignore-duplicates' },
+    body: JSON.stringify(filas)
+  });
+}
+
 async function renderHistoricoCharts() {
   if (!puedeVerGlobal) return;
   const res = await fetch(SUPABASE_URL + '/rest/v1/dashboard_snapshots?select=*&order=fecha.asc&limit=90', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
@@ -485,36 +540,62 @@ function renderDetalle(resp) {
   document.getElementById('detalleTabla').innerHTML = html;
 }
 
+var chartDetalleTecnico = null;
+
 function abrirRespTecnico(nombre) {
   const f = getFilters();
-  const semana = f.semana || (respuestas[0] ? respuestas[0].semana_inicio : '');
-  const resp = getFilteredResp().filter(r => r.tecnico === nombre && (!semana || r.semana_inicio === semana));
+  // Todas las semanas del técnico dentro del rango elegido arriba — ya no una
+  // sola semana suelta.
+  const resp = getFilteredResp().filter(r => r.tecnico === nombre);
   const obrasTec = obras.filter(o => o.tecnico === nombre);
   const teorico = Math.round(obrasTec.reduce((s, o) => s + (parseFloat(o.carga_teorica_semanal)||0), 0));
-  const real = resp.reduce((s, r) => s + calcCargaReal(r), 0);
 
   document.getElementById('rtTitulo').textContent = nombre;
-  document.getElementById('rtSub').textContent = (semana ? 'Semana del ' + semana : 'Todas las semanas')
-    + ' · teórico ' + teorico + '% · real ' + real + '%';
+  document.getElementById('rtSub').textContent = (f.desde && f.hasta ? 'Del ' + f.desde + ' al ' + f.hasta : 'Todo el histórico')
+    + ' · teórico ' + teorico + '%';
+
+  // Una línea por semana: suma de calcCargaReal de todas las obras de esa
+  // semana para este técnico — el teórico se dibuja como referencia plana,
+  // ya que es un valor fijo, no una serie temporal.
+  const semanasOrdenadas = [...new Set(resp.map(r => r.semana_inicio))].sort();
+  const realPorSemana = semanasOrdenadas.map(sem => Math.round(resp.filter(r => r.semana_inicio === sem).reduce((s,r) => s+calcCargaReal(r), 0)));
+
+  if (chartDetalleTecnico) chartDetalleTecnico.destroy();
+  if (semanasOrdenadas.length) {
+    const ctx = document.getElementById('rtChart').getContext('2d');
+    chartDetalleTecnico = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: semanasOrdenadas,
+        datasets: [
+          { label: 'Real', data: realPorSemana, borderColor: 'rgba(29,158,117,0.9)', backgroundColor: 'rgba(29,158,117,0.1)', fill: true, tension: 0.25 },
+          { label: 'Teórico', data: semanasOrdenadas.map(() => teorico), borderColor: 'rgba(74,74,138,0.7)', borderDash: [5,4], pointRadius: 0, fill: false }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { beginAtZero: true } } }
+    });
+  }
 
   const encuestables = obrasTec.filter(o => ['PDTE. INICIO','ACTIVA','EN PROCESO DE FINALIZACIÓN'].includes(o.estado));
-  const respondidas = new Set(resp.map(r => r.cod_obra));
-  const sinResponder = encuestables.filter(o => !respondidas.has(o.cod_obra));
+  const semanaMasReciente = f.hasta || (respuestas[0] ? respuestas[0].semana_inicio : '');
+  const respondidasEstaSemana = new Set(resp.filter(r => r.semana_inicio === semanaMasReciente).map(r => r.cod_obra));
+  const sinResponder = encuestables.filter(o => !respondidasEstaSemana.has(o.cod_obra));
 
   let html = '';
   if (!resp.length) {
-    html += '<div class="no-data">Sin respuestas de ' + escH(nombre.split(' ')[0]) + ' en esta semana.</div>';
+    html += '<div class="no-data">Sin respuestas de ' + escH(nombre.split(' ')[0]) + ' en este periodo.</div>';
   } else {
     html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.78rem;"><thead><tr style="background:#f5f5f0;">'
-      + ['Nº Obra','Descripción','Rev.PSS','Anot.','Reun.','Anex.','Inf.','Actas','Carga'].map(h =>
+      + ['Semana','Nº Obra','Descripción','Rev.PSS','Anot.','Reun.','Anex.','Inf.','Actas','Carga'].map(h =>
         '<th style="padding:6px 8px;text-align:left;font-weight:500;color:#888;font-size:0.7rem;text-transform:uppercase;border-bottom:0.5px solid #e0e0d8;">' + h + '</th>').join('')
       + '</tr></thead><tbody>'
-      + resp.map(r => {
+      + resp.slice().sort((a,b) => (b.semana_inicio||'').localeCompare(a.semana_inicio||'')).map(r => {
         const carga = calcCargaReal(r);
         const color = carga > 90 ? '#a32d2d' : carga > 70 ? '#854f0b' : '#0f6e56';
         return '<tr style="border-bottom:0.5px solid #f0f0e8;">'
+          + '<td style="padding:5px 8px;color:#888;white-space:nowrap;">' + escH(r.semana_inicio||'') + '</td>'
           + '<td style="padding:5px 8px;"><span style="background:#eeeefa;color:#4a4a8a;padding:1px 6px;border-radius:10px;font-size:0.7rem;">' + escH(r.cod_obra) + '</span></td>'
-          + '<td style="padding:5px 8px;color:#666;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(r.desc_obra||'') + '">' + escH((r.desc_obra||'—').substring(0,60)) + '</td>'
+          + '<td style="padding:5px 8px;color:#666;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escH(r.desc_obra||'') + '">' + escH((r.desc_obra||'—').substring(0,60)) + '</td>'
           + [r.revision_pss,r.anotaciones,r.reuniones,r.anexos,r.informes_mensuales,r.actas_visita].map(v =>
             '<td style="padding:5px 8px;text-align:center;">' + (v||0) + '</td>').join('')
           + '<td style="padding:5px 8px;text-align:center;font-weight:500;color:' + color + ';">' + carga + '%</td>'
@@ -524,7 +605,7 @@ function abrirRespTecnico(nombre) {
   }
   if (sinResponder.length) {
     html += '<div style="margin-top:1rem;font-size:0.78rem;color:#854f0b;background:#faeeda;border-radius:8px;padding:0.6rem 0.9rem;">'
-      + '⏳ Sin respuesta esta semana (' + sinResponder.length + '): '
+      + '⏳ Sin respuesta en la última semana del rango (' + sinResponder.length + '): '
       + sinResponder.slice(0,10).map(o => escH(o.cod_obra)).join(', ')
       + (sinResponder.length > 10 ? '…' : '')
       + '</div>';
@@ -557,6 +638,7 @@ async function init() {
   document.getElementById('mainDash').style.display = 'block';
   renderAll();
   await comprobarYGuardarSnapshot();
+  await comprobarYGuardarSnapshotTecnico();
   await renderHistoricoCharts();
 }
 
