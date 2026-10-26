@@ -95,6 +95,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .estado-FINALIZADA { background: #fcebeb; color: #a32d2d; }
 .estado-SINACTIVIDAD { background: #f0f0e8; color: #888; }
 .estado-PROCESOFIN { background: #fde6e0; color: #c0532b; }
+.estado-TRABAJOSPREVIOS { background: #f0eefa; color: #5b4a9e; }
 .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.85rem; }
 .spinner { width: 24px; height: 24px; border: 2.5px solid #eeeefa; border-top-color: #4a4a8a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 2rem auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -330,6 +331,58 @@ function calcCargaPorSemana(obrasTec) {
 var tecComparando = [];
 var tecExpandidos = [];
 
+// ── OBRAS DE UN TÉCNICO, TODAS (aunque caigan fuera de tus contratos) ──
+// Staffer, representante, delegado y admin pueden ver todas las obras de
+// cualquier técnico, solo lectura: la función obras_de_tecnico las devuelve
+// saltándose el filtro por contrato, pero editar sigue limitado por RLS a lo
+// que ya era tuyo. Si la función no existe todavía o falla, se cae
+// silenciosamente a lo que ya veías antes, sin romper nada.
+var obrasTecnicoCache = {};
+
+function puedeVerTodasLasObras() {
+  return cssEsAdmin() || cssEsStaffer() || cssEsRepresentante() || cssEsDelegado();
+}
+
+function obrasPropiasDe(email) {
+  return obras.filter(o => (o.email||'').toLowerCase() === email);
+}
+
+async function cargarObrasTecnico(email) {
+  if (obrasTecnicoCache[email]) return;
+  if (cssEsAdmin() || !puedeVerTodasLasObras()) {
+    obrasTecnicoCache[email] = obrasPropiasDe(email);
+    return;
+  }
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/obras_de_tecnico', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+      body: JSON.stringify({ p_email: email })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) { obrasTecnicoCache[email] = data; return; }
+    }
+  } catch (e) {}
+  obrasTecnicoCache[email] = obrasPropiasDe(email);
+}
+
+function obrasDeTecnico(email) {
+  return obrasTecnicoCache[email] || obrasPropiasDe(email);
+}
+
+// Para el calendario de la comparativa: si aún no se han cargado todas sus
+// obras, se usa la lista global de carga (tiene estado, carga y fechas de
+// todas), y solo en último caso lo que ya veías.
+function obrasParaCalendario(email) {
+  if (obrasTecnicoCache[email]) return obrasTecnicoCache[email];
+  if (Array.isArray(obrasCargaGlobalReal) && !cssEsAdmin()) {
+    const g = obrasCargaGlobalReal.filter(o => (o.email||'').toLowerCase() === email);
+    if (g.length) return g;
+  }
+  return obrasPropiasDe(email);
+}
+
 // Agrupamos por email, no por nombre — dos grafías distintas del mismo
 // nombre (mayúsculas, tildes, apellidos) ya no crean dos técnicos falsos,
 // porque el email es estable y único de verdad.
@@ -377,7 +430,7 @@ function renderTechTableHead() {
   const flecha = campo => ordenEquipoColumna === campo ? (ordenEquipoAsc ? ' ▲' : ' ▼') : '';
   const th = (campo, label) => '<th class="tech-th" onclick="ordenarEquipoPor(\'' + campo + '\')">' + label + flecha(campo) + '</th>';
   document.getElementById('techTableHead').innerHTML =
-    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('delegacion','Delegación') + th('loteAdif','ADIF') + th('obras','Obras') + th('carga','Carga');
+    '<th style="width:30px;"></th>' + th('nombre','Nombre') + th('territorio','Territorio') + th('delegacion','Delegación') + th('loteAdif','ADIF') + th('obras','Obras') + th('carga','Carga teórica hoy');
 }
 
 // Comparar (casilla) y desplegar detalle (nombre) son dos acciones
@@ -385,17 +438,18 @@ function renderTechTableHead() {
 // detalle abierto, o viceversa. Antes vivían mezcladas en una sola selección,
 // lo que obligaba a elegir entre "ver la barra compacta" o "ver el calendario
 // completo" según cuántos hubiera marcados; separarlas evita esa disyuntiva.
-function toggleComparar(email) {
+async function toggleComparar(email) {
   const idx = tecComparando.indexOf(email);
   if (idx >= 0) tecComparando.splice(idx, 1);
-  else tecComparando.push(email);
+  else { await cargarObrasTecnico(email); tecComparando.push(email); }
   renderTechGrid();
 }
 
-function toggleExpandir(email) {
+async function toggleExpandir(email) {
   const idx = tecExpandidos.indexOf(email);
-  if (idx >= 0) tecExpandidos.splice(idx, 1);
-  else tecExpandidos.push(email);
+  if (idx >= 0) { tecExpandidos.splice(idx, 1); renderTechGrid(); return; }
+  await cargarObrasTecnico(email);
+  tecExpandidos.push(email);
   renderTechGrid();
 }
 
@@ -424,9 +478,11 @@ function renderComparativa() {
   let cals = '';
   tecComparando.forEach(email => {
     const nombre = nombreCanonico(email);
-    const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
+    // El calendario usa TODAS las obras del técnico; el desglose "en tus
+    // contratos / en otros" sigue calculándose sobre las propias, como antes.
+    const obrasTec = obrasParaCalendario(email);
     const cargas = calcCargaPorSemana(obrasTec);
-    const desglose = desgloseCargaTecnico(email, obrasTec.filter(cssObraCuentaParaCarga));
+    const desglose = desgloseCargaTecnico(email, obrasPropiasDe(email).filter(cssObraCuentaParaCarga));
     const cargaTotal = desglose.total;
     const pctClass = cargaTotal >= 100 ? 'pct-over' : cargaTotal >= 85 ? 'pct-warn' : 'pct-ok';
     const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
@@ -465,11 +521,11 @@ function renderTechGrid() {
   // no por nombre, así dos grafías del mismo técnico nunca aparecen como dos
   // personas distintas.
   let fichas = tecnicos.map(t => {
-    const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === t.email);
+    const obrasTec = obrasPropiasDe(t.email);
     const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
     const desglose = desgloseCargaTecnico(t.email, obrasTecActivas);
     const tecObj = tecnicosDB.find(x => (x.email||'').toLowerCase() === t.email);
-    return { email: t.email, nombre: t.nombre, territorio: getTecnicoTerritorio(t.nombre) || '—', delegacion: tecObj?.delegacion || '—', loteAdif: tecObj?.lote_adif || '—', obras: obrasTecActivas.length, carga: desglose.total, cargaOtros: desglose.otros };
+    return { email: t.email, nombre: t.nombre, territorio: getTecnicoTerritorio(t.nombre) || '—', delegacion: tecObj?.delegacion || '—', loteAdif: tecObj?.lote_adif || '—', obras: desglose.n, carga: desglose.total, cargaOtros: desglose.otros };
   });
 
   fichas.sort((a,b) => {
@@ -508,7 +564,7 @@ function renderTechGrid() {
       + '</div></td>'
       + '</tr>';
     const filaDetalle = expandido
-      ? ('<tr><td colspan="5" style="padding:0;background:#fafaf8;border-bottom:0.5px solid #e8e8e0;"><div style="padding:1.25rem 1.5rem;">' + detalleTecnicoHTML(f.email) + '</div></td></tr>')
+      ? ('<tr><td colspan="7" style="padding:0;background:#fafaf8;border-bottom:0.5px solid #e8e8e0;"><div style="padding:1.25rem 1.5rem;">' + detalleTecnicoHTML(f.email) + '</div></td></tr>')
       : '';
     return filaPrincipal + filaDetalle;
   }).join('');
@@ -521,25 +577,28 @@ function renderTechGrid() {
 // para insertarse dentro de la fila desplegable de esa persona en concreto.
 function exportarTecnicoBtn(email) {
   const nombre = nombreCanonico(email);
-  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
+  const obrasTec = obrasDeTecnico(email);
   cssExportarObrasAXlsx(obrasTec, nombre + '.xlsx');
 }
 
 // Reutilizado en la tabla, el detalle y la comparativa — evita repetir la
 // misma lógica de "propio vs otros" en los tres sitios por separado.
+// n = nº de obras que cuentan para carga: de todas las del técnico cuando se
+// dispone de la lista global, no solo de las que caen en tu alcance.
 function desgloseCargaTecnico(email, obrasTecActivas) {
   const cargaPropia = Math.round(obrasTecActivas.reduce((s,o) => s+(parseFloat(o.carga_teorica_semanal)||0), 0));
   if (!Array.isArray(obrasCargaGlobalReal) || cssEsAdmin()) {
-    return { propia: cargaPropia, otros: 0, total: cargaPropia };
+    return { propia: cargaPropia, otros: 0, total: cargaPropia, n: obrasTecActivas.length };
   }
   const misContratos = new Set(cssGetContratos() || []);
-  let sumaGlobal = 0, otros = 0;
+  let sumaGlobal = 0, otros = 0, n = 0;
   obrasCargaGlobalReal.filter(o => (o.email||'').toLowerCase() === email && cssObraCuentaParaCarga(o)).forEach(o => {
     const c = parseFloat(o.carga_teorica_semanal) || 0;
     if (!misContratos.has(o.cod_contrato)) otros += c;
     sumaGlobal += c;
+    n++;
   });
-  return { propia: cargaPropia, otros: Math.round(otros), total: Math.round(sumaGlobal) };
+  return { propia: cargaPropia, otros: Math.round(otros), total: Math.round(sumaGlobal), n: n };
 }
 
 function idSeguro(email) {
@@ -551,7 +610,8 @@ function idSeguro(email) {
 // un filtro, sin tener que reconstruir el calendario ni el resto del panel.
 function filasObrasTecnico(email) {
   const id = idSeguro(email);
-  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
+  const obrasTec = obrasDeTecnico(email);
+  const idsPropios = new Set(obras.map(x => x.id));
   const fEstado = document.getElementById('filtroEstado_' + id)?.value || '';
   const fCliente = (document.getElementById('filtroCliente_' + id)?.value || '').trim().toLowerCase();
   const fDesde = document.getElementById('filtroDesde_' + id)?.value || '';
@@ -566,6 +626,8 @@ function filasObrasTecnico(email) {
   const puedeEditarObras = isStaffer || cssEsDelegado();
   return filtradas.length ? filtradas.map(o => {
     const c = parseFloat(o.carga_teorica_semanal)||0;
+    // Editar solo en las obras que ya eran tuyas; las demás son solo lectura.
+    const editable = puedeEditarObras && (cssEsAdmin() || idsPropios.has(o.id));
     return '<tr><td><span class="pill pill-blue">' + o.cod_obra + '</span></td>'
       + '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (o.descripcion||'') + '">' + (o.descripcion||'—') + '</td>'
       + '<td>' + (o.cliente||'—') + '</td>'
@@ -574,7 +636,7 @@ function filasObrasTecnico(email) {
       + '<td>' + (o.fecha_inicio ? new Date(o.fecha_inicio).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td>' + (o.fecha_fin ? new Date(o.fecha_fin).toLocaleDateString('es-ES') : '—') + '</td>'
       + '<td style="font-weight:500;">' + Math.round(c) + '%</td>'
-      + (puedeEditarObras ? '<td><a class="btn btn-sm" href="contratos.html?editar=' + encodeURIComponent(o.id) + '" title="Editar esta obra en Contratos">✏️</a></td>' : '')
+      + (puedeEditarObras ? '<td>' + (editable ? '<a class="btn btn-sm" href="contratos.html?editar=' + encodeURIComponent(o.id) + '" title="Editar esta obra en Contratos">✏️</a>' : '<span title="Obra de otro contrato: solo lectura" style="color:#ccc;">🔒</span>') + '</td>' : '')
       + '</tr>';
   }).join('') : '<tr><td colspan="' + (puedeEditarObras ? 9 : 8) + '" class="empty">Sin obras con estos filtros</td></tr>';
 }
@@ -587,13 +649,14 @@ function actualizarFiltroObrasTecnico(email) {
 function detalleTecnicoHTML(email) {
   const id = idSeguro(email);
   const nombre = nombreCanonico(email);
-  const obrasTec = obras.filter(o => (o.email||'').toLowerCase() === email);
+  // Todas las obras del técnico, estén o no en tus contratos
+  const obrasTec = obrasDeTecnico(email);
   // Solo las obras "en marcha" cuentan para la carga y el calendario — una
   // obra FINALIZADA (o suspendida, sin actividad, etc.) no debería seguir
   // sumando como si todavía diera trabajo real.
   const obrasTecActivas = obrasTec.filter(cssObraCuentaParaCarga);
   const ini = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('');
-  const desgloseDetalle = desgloseCargaTecnico(email, obrasTecActivas);
+  const desgloseDetalle = desgloseCargaTecnico(email, obrasPropiasDe(email).filter(cssObraCuentaParaCarga));
   const cargaTotal = desgloseDetalle.total;
   const cargas = calcCargaPorSemana(obrasTec);
   const currentWeek = SEMANAS_ATRAS;
@@ -626,7 +689,7 @@ function detalleTecnicoHTML(email) {
   const filtrosHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center;">'
     + '<select id="filtroEstado_' + id + '" onchange="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;">'
     + '<option value="">Todos los estados</option>'
-    + ['PDTE. DESIG. CSS','PDTE. INICIO','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'].map(e => '<option value="' + e + '">' + e + '</option>').join('')
+    + ['PDTE. DESIG. CSS','PDTE. INICIO','TRABAJOS PREVIOS','ACTIVA','SIN ACTIVIDAD','SUSPENDIDA','EN PROCESO DE FINALIZACIÓN','FINALIZADA'].map(e => '<option value="' + e + '">' + e + '</option>').join('')
     + '</select>'
     + '<input type="text" id="filtroCliente_' + id + '" placeholder="Cliente..." oninput="actualizarFiltroObrasTecnico(\'' + email.replace(/'/g,"\\'") + '\')" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid #d0d0c8;width:130px;">'
     + '<span style="font-size:0.72rem;color:#aaa;">Inicio desde</span>'
@@ -642,7 +705,7 @@ function detalleTecnicoHTML(email) {
     + '<div><div class="detalle-name">' + escH(nombre) + '</div>'
     + '<div class="detalle-meta">' + (email||'sin email') + '</div></div>'
     + '<div style="margin-left:auto;text-align:right;"><span class="pct ' + pctClass + '" style="font-size:1.5rem;">' + cargaTotal + '%</span>'
-    + '<div style="font-size:0.72rem;color:#aaa;">carga teórica total</div>'
+    + '<div style="font-size:0.72rem;color:#aaa;">carga teórica hoy</div>'
     + (desgloseDetalle.otros > 0 ? '<div style="font-size:0.68rem;color:#aaa;">' + desgloseDetalle.propia + '% en tus contratos + ' + desgloseDetalle.otros + '% en otros</div>' : '')
     + '</div>'
     + (isStaffer ? '<button class="btn btn-sm" onclick="editarDesdeObras(\'' + nombre.replace(/'/g,"\\'") + '\')">✏️ Editar</button>' : '')
@@ -650,8 +713,7 @@ function detalleTecnicoHTML(email) {
     + '</div>'
     + '<div class="stats-row">'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTecActivas.length + '</div><div class="mini-stat-label">Obras activas</div></div>'
-    + '<div class="mini-stat"><div class="mini-stat-num ' + pctClass + '">' + cargaTotal + '%</div><div class="mini-stat-label">Carga teórica</div></div>'
-    + '<div class="mini-stat"><div class="mini-stat-num">' + Math.max(0, 100-cargaTotal) + '%</div><div class="mini-stat-label">Disponibilidad</div></div>'
+    + '<div class="mini-stat"><div class="mini-stat-num ' + pctClass + '">' + cargaTotal + '%</div><div class="mini-stat-label">Carga teórica hoy</div></div>'
     + '<div class="mini-stat"><div class="mini-stat-num">' + obrasTecActivas.filter(o=>o.fecha_fin && new Date(o.fecha_fin) < new Date(Date.now()+90*864e5)).length + '</div><div class="mini-stat-label">Finalizan en 3m</div></div>'
     + '</div>'
     + '<div class="card-title">Horizonte de carga — próximas ' + SEMANAS_ADELANTE + ' semanas</div>'
@@ -664,6 +726,7 @@ function detalleTecnicoHTML(email) {
     + '<span><div class="cal-legend-cell" style="background:#ef9f27;"></div> 85-100%</span>'
     + '<span><div class="cal-legend-cell" style="background:#e24b4a;"></div> >100%</span>'
     + '</div>'
+    + '<div style="font-size:0.7rem;color:#aaa;margin-top:4px;">El horizonte tiene en cuenta las fechas de inicio y fin de cada obra, así que la semana actual puede diferir de la carga teórica de hoy si alguna obra activa ya pasó su fecha de fin o aún no ha llegado a la de inicio.</div>'
     + '<div class="card-title" style="margin-top:1.25rem;">Obras asignadas</div>'
     + filtrosHTML
     + '<div style="overflow-x:auto;"><table class="obras-table"><thead><tr>'
