@@ -545,5 +545,60 @@ function cssExportarObrasAXlsx(obrasArray, nombreArchivo) {
   ws['!cols'] = [{wch:16},{wch:45},{wch:22},{wch:14},{wch:26},{wch:14},{wch:14},{wch:12},{wch:12},{wch:14}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Obras');
+  
+  // ═══════════════════════════════════════════════════════════════
+// BLOQUEO TEMPORAL DE ACCESO — añadir al FINAL de common.js
+// Muestra una pantalla de aviso encima de cualquier página que cargue
+// common.js a partir de la hora indicada. Para quitarlo: borrar este bloque
+// (o poner una fecha en "hasta").
+// No es una barrera de seguridad: solo impide usar las pantallas.
+// ═══════════════════════════════════════════════════════════════
+var CSS_BLOQUEO = {
+  // Hora de Madrid (en noviembre es UTC+1). 17/11/2026 a las 21:00.
+  desde: new Date('2026-11-17T21:00:00+01:00'),
+  // Cierre definitivo: sin fecha de reapertura.
+  hasta: null,
+  titulo: 'Esta herramienta ha dejado de estar disponible',
+  mensaje: 'Estamos en proceso de migrar al Brain. Esta herramienta ya no está operativa y no se pueden registrar cambios en ella.',
+  // Enlace a la herramienta nueva (déjalo vacío '' para no mostrar botón).
+  enlace: '',
+  textoEnlace: 'Ir a la nueva herramienta',
+  // Los admin_total no se bloquean, para poder seguir trabajando.
+  excepcionAdmin: true,
+  // Páginas que no se bloquean (login para que un admin pueda entrar).
+  paginasExentas: ['login.html']
+};
+
+function cssBloqueoActivo() {
+  const ahora = new Date();
+  if (ahora < CSS_BLOQUEO.desde) return false;
+  if (CSS_BLOQUEO.hasta && ahora >= CSS_BLOQUEO.hasta) return false;
+  const pagina = window.location.pathname.split('/').pop() || 'index.html';
+  if (CSS_BLOQUEO.paginasExentas.indexOf(pagina) !== -1) return false;
+  if (CSS_BLOQUEO.excepcionAdmin && cssEsAdmin()) return false;
+  return true;
+}
+
+function cssMostrarBloqueo() {
+  if (document.getElementById('cssBloqueoOverlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'cssBloqueoOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#1a1a2e;color:#fff;display:flex;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+  ov.innerHTML = '<div style="max-width:460px;">'
+    + '<div style="font-size:2.2rem;margin-bottom:1rem;">🔒</div>'
+    + '<h2 style="font-size:1.25rem;font-weight:500;margin-bottom:0.75rem;">' + escH(CSS_BLOQUEO.titulo) + '</h2>'
+    + '<p style="font-size:0.95rem;line-height:1.5;color:#c8c8e0;">' + escH(CSS_BLOQUEO.mensaje) + '</p>'
+    + (CSS_BLOQUEO.enlace ? '<a href="' + escH(CSS_BLOQUEO.enlace) + '" style="display:inline-block;margin-top:1.25rem;padding:0.6rem 1.2rem;background:#fff;color:#1a1a2e;border-radius:8px;text-decoration:none;font-weight:500;font-size:0.9rem;">' + escH(CSS_BLOQUEO.textoEnlace) + '</a>' : '')
+    + '</div>';
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+}
+
+function cssComprobarBloqueo() {
+  if (cssBloqueoActivo()) cssMostrarBloqueo();
+}
+// Al cargar la página, y cada 30 s por si alguien la tiene abierta cuando llega la hora.
+document.addEventListener('DOMContentLoaded', cssComprobarBloqueo);
+setInterval(cssComprobarBloqueo, 30000);
   XLSX.writeFile(wb, nombreArchivo);
 }
